@@ -21,7 +21,6 @@ export class QueryDelegateImpl implements QueryDelegate {
 
   addedServerQueries: AST[] = [];
 
-  readonly staticQueryParameters = undefined;
   onTransactionCommit(listener: CommitListener): () => void {
     this.#commitListeners.add(listener);
     return () => {

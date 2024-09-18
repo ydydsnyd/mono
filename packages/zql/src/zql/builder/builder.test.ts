@@ -61,8 +61,8 @@ test('source-only', () => {
       {
         getSource,
         createStorage: () => new MemoryStorage(),
-        staticQueryParameters: undefined,
       },
+      undefined,
     ),
   );
 
@@ -104,8 +104,8 @@ test('filter', () => {
       {
         getSource,
         createStorage: () => new MemoryStorage(),
-        staticQueryParameters: undefined,
       },
+      undefined,
     ),
   );
 
@@ -157,8 +157,8 @@ test('self-join', () => {
       {
         getSource,
         createStorage: () => new MemoryStorage(),
-        staticQueryParameters: undefined,
       },
+      undefined,
     ),
   );
 
@@ -347,8 +347,8 @@ test('multi-join', () => {
       {
         getSource,
         createStorage: () => new MemoryStorage(),
-        staticQueryParameters: undefined,
       },
+      undefined,
     ),
   );
 
@@ -459,8 +459,8 @@ test('join with limit', () => {
       {
         getSource,
         createStorage: () => new MemoryStorage(),
-        staticQueryParameters: undefined,
       },
+      undefined,
     ),
   );
 
@@ -533,8 +533,8 @@ test('skip', () => {
       {
         getSource,
         createStorage: () => new MemoryStorage(),
-        staticQueryParameters: undefined,
       },
+      undefined,
     ),
   );
 
