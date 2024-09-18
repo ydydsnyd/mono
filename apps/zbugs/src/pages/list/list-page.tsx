@@ -82,7 +82,7 @@ export default function ListPage() {
           {issues.map(issue => (
             <tr key={issue.id}>
               <td align="left" className="issue-title">
-                <a href={`/issue/${issue.id}`}>{issue.title}</a>
+                <Link href={`/issue/${issue.id}`}>{issue.title}</Link>
               </td>
               <td align="left">
                 {issue.labels.map(label => label.name).join(', ')}
