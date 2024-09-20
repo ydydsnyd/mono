@@ -59,6 +59,14 @@ describe('change-streamer/storer', () => {
     return msgs;
   }
 
+  test('last stored watermark', async () => {
+    expect(await storer.getLastStoredWatermark()).toBe('06');
+
+    await db`TRUNCATE TABLE cdc."ChangeLog"`;
+
+    expect(await storer.getLastStoredWatermark()).toBe(null);
+  });
+
   test('no queueing if not in transaction', async () => {
     const [sub, _, stream] = createSubscriber('00');
 
@@ -273,6 +281,7 @@ describe('change-streamer/storer', () => {
             "tag": "begin",
           },
           "pos": 0n,
+          "precommit": null,
           "watermark": "02",
         },
         {
@@ -280,6 +289,7 @@ describe('change-streamer/storer', () => {
             "tag": "insert",
           },
           "pos": 1n,
+          "precommit": null,
           "watermark": "02",
         },
         {
@@ -288,6 +298,7 @@ describe('change-streamer/storer', () => {
             "tag": "commit",
           },
           "pos": 2n,
+          "precommit": null,
           "watermark": "03",
         },
         {
@@ -296,6 +307,7 @@ describe('change-streamer/storer', () => {
             "tag": "begin",
           },
           "pos": 0n,
+          "precommit": null,
           "watermark": "04",
         },
         {
@@ -303,6 +315,7 @@ describe('change-streamer/storer', () => {
             "tag": "update",
           },
           "pos": 1n,
+          "precommit": null,
           "watermark": "04",
         },
         {
@@ -311,6 +324,7 @@ describe('change-streamer/storer', () => {
             "tag": "commit",
           },
           "pos": 2n,
+          "precommit": null,
           "watermark": "06",
         },
         {
@@ -318,6 +332,7 @@ describe('change-streamer/storer', () => {
             "tag": "begin",
           },
           "pos": 0n,
+          "precommit": null,
           "watermark": "07",
         },
         {
@@ -326,6 +341,7 @@ describe('change-streamer/storer', () => {
             "tag": "commit",
           },
           "pos": 1n,
+          "precommit": "07",
           "watermark": "08",
         },
       ]
@@ -472,6 +488,7 @@ describe('change-streamer/storer', () => {
             "tag": "begin",
           },
           "pos": 0n,
+          "precommit": null,
           "watermark": "07",
         },
         {
@@ -503,6 +520,7 @@ describe('change-streamer/storer', () => {
             "tag": "truncate",
           },
           "pos": 1n,
+          "precommit": null,
           "watermark": "07",
         },
         {
@@ -511,6 +529,7 @@ describe('change-streamer/storer', () => {
             "tag": "commit",
           },
           "pos": 2n,
+          "precommit": "07",
           "watermark": "09",
         },
         {
@@ -518,6 +537,7 @@ describe('change-streamer/storer', () => {
             "tag": "begin",
           },
           "pos": 0n,
+          "precommit": null,
           "watermark": "0a",
         },
         {
@@ -549,6 +569,7 @@ describe('change-streamer/storer', () => {
             "tag": "truncate",
           },
           "pos": 1n,
+          "precommit": null,
           "watermark": "0a",
         },
         {
@@ -557,6 +578,7 @@ describe('change-streamer/storer', () => {
             "tag": "commit",
           },
           "pos": 2n,
+          "precommit": "0a",
           "watermark": "0c",
         },
       ]
