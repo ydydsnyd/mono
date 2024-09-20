@@ -51,6 +51,10 @@ export default function ListPage() {
       </div>
       <div className="list-view-filter-container">
         <span className="filter-label">Filtered by:</span>
+        <span className="label-item">reflect</span>
+        <button className="add-filter">
+          <span className="plus">+</span> Filter
+        </button>
       </div>
       {/* Original filters (hidden) 
       <div>
