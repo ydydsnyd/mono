@@ -49,6 +49,9 @@ export default function ListPage() {
           <span className="issue-count">154</span>
         </h1>
       </div>
+      <div className="list-view-filter-container">
+        <span className="filter-label">Filtered by:</span>
+      </div>
       {/* Original filters (hidden) 
       <div>
         <span className="mr-2">Creator:</span>
@@ -79,8 +82,8 @@ export default function ListPage() {
       <table style={{width: '100%'}}>
         <thead>
           <tr className="header-row">
-            <th className="issue-column"></th>
-            <th className="label-column"></th>
+            <th className="issue-column">Items</th>
+            <th className="label-column">Labels</th>
           </tr>
         </thead>
         <tbody>
