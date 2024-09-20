@@ -1,15 +1,13 @@
-import {assertArray, unreachable} from 'shared/src/asserts.js';
+import {assertArray, notImplemented, unreachable} from 'shared/src/asserts.js';
 import {stringCompare} from 'shared/src/string-compare.js';
 import {expect, test} from 'vitest';
 import {ArrayView} from './array-view.js';
 import {Change} from './change.js';
-import {Node} from './data.js';
 import {Join} from './join.js';
 import {MemorySource} from './memory-source.js';
 import {MemoryStorage} from './memory-storage.js';
 import {Input} from './operator.js';
 import {Schema} from './schema.js';
-import {Stream} from './stream.js';
 import {Take} from './take.js';
 
 test('basics', () => {
@@ -522,6 +520,7 @@ test('collapse', () => {
           id: {type: 'number'},
           issueId: {type: 'number'},
           labelId: {type: 'number'},
+          extra: {type: 'string'},
         },
         isHidden: true,
         compareRows: (r1, r2) => (r1.id as number) - (r2.id as number),
@@ -543,21 +542,18 @@ test('collapse', () => {
     },
   };
 
-  const input = {
+  const input: Input = {
     cleanup() {
-      throw new Error('not implemented');
+      notImplemented();
     },
     fetch() {
-      throw new Error('not implemented');
+      notImplemented();
     },
     destroy() {},
     getSchema() {
       return schema;
     },
     setOutput() {},
-    push(change: Change) {
-      view.push(change);
-    },
   };
 
   const view = new ArrayView(input, {
@@ -583,6 +579,7 @@ test('collapse', () => {
               id: 1,
               issueId: 1,
               labelId: 1,
+              extra: 'a',
             },
             relationships: {
               labels: [
@@ -649,6 +646,7 @@ test('collapse', () => {
             id: 2,
             issueId: 1,
             labelId: 2,
+            extra: 'b',
           },
           relationships: {
             labels: [
@@ -678,6 +676,104 @@ test('collapse', () => {
         {
           id: 2,
           name: 'label2',
+        },
+      ],
+      name: 'issue',
+    },
+  ]);
+
+  // edit the hidden row
+  view.push({
+    type: 'child',
+    row: {
+      id: 1,
+      name: 'issue',
+    },
+    child: {
+      relationshipName: 'labels',
+      change: {
+        type: 'edit',
+        oldRow: {
+          id: 2,
+          issueId: 1,
+          labelId: 2,
+          extra: 'b',
+        },
+        row: {
+          id: 2,
+          issueId: 1,
+          labelId: 2,
+          extra: 'b2',
+        },
+      },
+    },
+  });
+  view.flush();
+
+  expect(data).toEqual([
+    {
+      id: 1,
+      labels: [
+        {
+          id: 1,
+          name: 'label',
+        },
+        {
+          id: 2,
+          name: 'label2',
+        },
+      ],
+      name: 'issue',
+    },
+  ]);
+
+  // edit the leaf
+  view.push({
+    type: 'child',
+    row: {
+      id: 1,
+      name: 'issue',
+    },
+    child: {
+      relationshipName: 'labels',
+      change: {
+        type: 'child',
+        row: {
+          id: 2,
+          issueId: 1,
+          labelId: 2,
+          extra: 'b2',
+        },
+        child: {
+          relationshipName: 'labels',
+          change: {
+            type: 'edit',
+            oldRow: {
+              id: 2,
+              name: 'label2',
+            },
+            row: {
+              id: 2,
+              name: 'label2x',
+            },
+          },
+        },
+      },
+    },
+  });
+  view.flush();
+
+  expect(data).toEqual([
+    {
+      id: 1,
+      labels: [
+        {
+          id: 1,
+          name: 'label',
+        },
+        {
+          id: 2,
+          name: 'label2x',
         },
       ],
       name: 'issue',
@@ -1058,44 +1154,43 @@ test('edit to change the order', () => {
 });
 
 test('edit to preserve relationships', () => {
-  const labelSchema: Schema = {
-    tableName: 'label',
+  const schema: Schema = {
+    tableName: 'issue',
     primaryKey: ['id'],
-    columns: {id: {type: 'number'}, name: {type: 'string'}},
-    sort: [['name', 'asc']],
+    columns: {id: {type: 'number'}, title: {type: 'string'}},
+    sort: [['id', 'asc']],
     isHidden: false,
-    compareRows: (r1, r2) =>
-      stringCompare(r1.name as string, r2.name as string),
-    relationships: {},
+    compareRows: (r1, r2) => (r1.id as number) - (r2.id as number),
+    relationships: {
+      labels: {
+        tableName: 'label',
+        primaryKey: ['id'],
+        columns: {id: {type: 'number'}, name: {type: 'string'}},
+        sort: [['name', 'asc']],
+        isHidden: false,
+        compareRows: (r1, r2) =>
+          stringCompare(r1.name as string, r2.name as string),
+        relationships: {},
+      },
+    },
   };
 
-  class DummyInput implements Input {
-    getSchema(): Schema {
-      return {
-        tableName: 'issue',
-        primaryKey: ['id'],
-        columns: {id: {type: 'number'}, title: {type: 'string'}},
-        sort: [['id', 'asc']],
-        isHidden: false,
-        compareRows: (r1, r2) => (r1.id as number) - (r2.id as number),
-        relationships: {
-          labels: labelSchema,
-        },
-      };
-    }
-    fetch(): Stream<Node> {
+  const input: Input = {
+    getSchema() {
+      return schema;
+    },
+    fetch() {
       unreachable();
-    }
-    cleanup(): Stream<Node> {
+    },
+    cleanup() {
       unreachable();
-    }
-    setOutput(): void {}
-    destroy(): void {
+    },
+    setOutput() {},
+    destroy() {
       unreachable();
-    }
-  }
+    },
+  };
 
-  const input = new DummyInput();
   const view = new ArrayView(input, {
     singular: false,
     relationships: {labels: {singular: false, relationships: {}}},
