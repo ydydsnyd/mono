@@ -53,6 +53,10 @@ h1 {
 
 /* Nav */
 
+.nav-container {
+  height: 100%;
+}
+
 .zero-logo {
   width: 100%;
   height: auto;
@@ -94,7 +98,11 @@ h1 {
   background-color: var(--color-nav-selected);
 }
 
-.user-login {
+.fps-meter {
+  display: block;
+  border-radius: 0.5rem;
+  opacity: 0.3;
+  width: 100%;
   margin-top: auto;
 }
 
@@ -116,6 +124,28 @@ h1 {
 .primary-content {
   width: 100%;
   padding-left: 16rem;
+}
+
+.list-view-header-container {
+  display: flex;
+  margin-bottom: 1.5rem;
+}
+
+.list-view-header {
+  font-size: 2rem;
+  font-weight: 400;
+  margin: 0;
+}
+
+.issue-count {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-background);
+  background-color: var(--color-text-primary);
+  border-radius: 2rem;
+  padding: 0.25rem 0.5rem;
+  vertical-align: middle;
+  margin-left: 1rem;
 }
 
 .primary-content tr.header-row {

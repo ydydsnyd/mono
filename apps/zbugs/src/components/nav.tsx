@@ -3,6 +3,7 @@ import logoURL from '../assets/images/logo.svg';
 import {clearJwt, getJwt} from '../jwt.js';
 import {Link} from './link.js';
 import classNames from 'classnames';
+import {FPSMeter} from '@schickling/fps-meter';
 
 export function Nav() {
   const [jwt, setJwt] = useState(() => {
@@ -50,6 +51,7 @@ export function Nav() {
           </Link>
         </div>
       </div>
+      <FPSMeter className="fps-meter" width={192} height={38} />
       <div className="user-login">
         {jwt === undefined ? (
           <a href="/api/login/github">Login</a>

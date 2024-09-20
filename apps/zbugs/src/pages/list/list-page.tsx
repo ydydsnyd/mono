@@ -43,6 +43,13 @@ export default function ListPage() {
 
   return (
     <>
+      <div className="list-view-header-container">
+        <h1 className="list-view-header">
+          Open Issues
+          <span className="issue-count">154</span>
+        </h1>
+      </div>
+      {/* Original filters (hidden) 
       <div>
         <span className="mr-2">Creator:</span>
         {Array.from(creators.values()).map(creator => (
@@ -67,11 +74,13 @@ export default function ListPage() {
           </Link>
         ))}
       </div>
+      */}
+
       <table style={{width: '100%'}}>
         <thead>
           <tr className="header-row">
-            <th className="issue-column">Issue</th>
-            <th className="label-column">Labels</th>
+            <th className="issue-column"></th>
+            <th className="label-column"></th>
           </tr>
         </thead>
         <tbody>
