@@ -57,6 +57,7 @@ h1 {
 
 .nav-container {
   height: 100%;
+  gap: 2.45rem;
 }
 
 .zero-logo {

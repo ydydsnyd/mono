@@ -10,7 +10,7 @@ export function Nav() {
     return getJwt();
   });
   return (
-    <div className="nav-container flex flex-col gap-8">
+    <div className="nav-container flex flex-col">
       <Link href="/">
         <img src={logoURL} className="zero-logo" />
       </Link>
