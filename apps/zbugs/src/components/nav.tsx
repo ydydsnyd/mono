@@ -9,7 +9,7 @@ export function Nav() {
     return getJwt();
   });
   return (
-    <div className="flex flex-col gap-8">
+    <div className="nav-container flex flex-col gap-8">
       <Link href="/">
         <img src={logoURL} className="zero-logo" />
       </Link>
@@ -17,7 +17,6 @@ export function Nav() {
       <button className="primary-cta">New Issue</button>
 
       <div className="section-issues">
-        <div className="font-bold">Issues</div>
         <div className="pt-2 flex flex-col gap-2">
           <Link
             href="/"
@@ -51,7 +50,7 @@ export function Nav() {
           </Link>
         </div>
       </div>
-      <div className="pt-2 flex flex-col gap-2">
+      <div className="user-login">
         {jwt === undefined ? (
           <a href="/api/login/github">Login</a>
         ) : (
