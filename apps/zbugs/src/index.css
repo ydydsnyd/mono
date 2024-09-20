@@ -181,6 +181,11 @@ h1 {
   vertical-align: 1px;
 }
 
+/* Hiding the old filters for now until we create the new ones */
+.filter-block {
+  display: none;
+}
+
 .primary-content tr.header-row {
   box-shadow: 0px -1px 0px 0px var(--color-light-outline) inset;
 }

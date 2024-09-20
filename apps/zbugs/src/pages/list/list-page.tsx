@@ -56,8 +56,8 @@ export default function ListPage() {
           <span className="plus">+</span> Filter
         </button>
       </div>
-      {/* Original filters (hidden) 
-      <div>
+
+      <div className="filter-block">
         <span className="mr-2">Creator:</span>
         {Array.from(creators.values()).map(creator => (
           <Link
@@ -69,7 +69,7 @@ export default function ListPage() {
           </Link>
         ))}
       </div>
-      <div>
+      <div className="filter-block">
         <span className="mr-2">Label:</span>
         {Array.from(labels.values()).map(label => (
           <Link
@@ -81,7 +81,6 @@ export default function ListPage() {
           </Link>
         ))}
       </div>
-      */}
 
       <table style={{width: '100%'}}>
         <thead>
