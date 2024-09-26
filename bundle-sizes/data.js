@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726693972630,
+  "lastUpdate": 1727348577206,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -48985,6 +48985,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32658,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7f34c07a38ac0d41a533945907fc8be2fe0d547f",
+          "message": "chore: Enable verbatimModuleSyntax in tsconfig (#2473)\n\nThis is the setting that tells us to use type imports for types.\r\n\r\nWe used to have this using `importsNotUsedAsValues` but the option was\r\nremoved.\r\n\r\nThis is the new way to do it and it is also a bit more strict.\r\n\r\nThis lead to a few minor manual changes which I'll comment on in the PR",
+          "timestamp": "2024-09-26T11:00:13Z",
+          "tree_id": "f3d43684dd99210eacaab13480be56891f8c1d53",
+          "url": "https://github.com/rocicorp/mono/commit/7f34c07a38ac0d41a533945907fc8be2fe0d547f"
+        },
+        "date": 1727348559925,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 318317,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55472,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 117499,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32725,
             "unit": "bytes"
           }
         ]
