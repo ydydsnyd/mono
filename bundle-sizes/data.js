@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727348577206,
+  "lastUpdate": 1727557422652,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49029,6 +49029,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32725,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f7f38c37bd748c9b62cec0feac0ca1be0fc7522c",
+          "message": "feat(replicache): Remove license key check (#2481)\n\nThe ReplicacheOption `licenseKey` has been marked as deprecated and is\r\nnow optional. It will be removed in a future release.\r\n\r\nThe `TEST_LICENSE_KEY` export is still there to not break importers.\r\n\r\nThe cli.js now just prints `Replicache no longer needs a license key.`",
+          "timestamp": "2024-09-28T21:01:45Z",
+          "tree_id": "1de8b5dd9ee5d83d7569bab6846d9a9d5c6c5946",
+          "url": "https://github.com/rocicorp/mono/commit/f7f38c37bd748c9b62cec0feac0ca1be0fc7522c"
+        },
+        "date": 1727557406322,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 309675,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53896,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113726,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31546,
             "unit": "bytes"
           }
         ]
