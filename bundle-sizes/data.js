@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727557422652,
+  "lastUpdate": 1727730803104,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49073,6 +49073,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31546,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "113b524d729955bf198a4b9aa2420c7ca5e661a9",
+          "message": "chore: Upgrade valita to 0.3.9 (#2503)\n\nAnd tighten the readonly schema helpers.",
+          "timestamp": "2024-09-30T21:11:17Z",
+          "tree_id": "0bcc92ab0eb9d16e2046f58e0ea7b07edeac387e",
+          "url": "https://github.com/rocicorp/mono/commit/113b524d729955bf198a4b9aa2420c7ca5e661a9"
+        },
+        "date": 1727730786247,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 310886,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54130,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 114036,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31673,
             "unit": "bytes"
           }
         ]
