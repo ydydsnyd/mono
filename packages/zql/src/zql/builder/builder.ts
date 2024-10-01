@@ -128,7 +128,13 @@ function buildPipelineInternal(
   staticQueryParameters: StaticQueryParameters | undefined,
   partitionKey?: string | undefined,
 ): Input {
-  const source = delegate.getSource(ast.table);
+  let source;
+  if (!ast.table) {
+    throw new Error('Static inline sources are not yet implemented');
+  } else {
+    source = delegate.getSource(ast.table);
+  }
+
   const conn = source.connect(must(ast.orderBy), ast.where ?? []);
   let end: Input = conn;
   const {appliedFilters} = conn;

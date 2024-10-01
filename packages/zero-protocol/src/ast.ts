@@ -8,6 +8,7 @@
 
 import * as v from 'shared/src/valita.js';
 import type {CorrelatedSubQuery} from 'zql/src/zql/ast/ast.js';
+import {jsonObjectSchema} from '../../shared/src/json-schema.js';
 
 function readonly<T>(t: v.Type<T>): v.Type<Readonly<T>> {
   return t as v.Type<Readonly<T>>;
@@ -94,7 +95,20 @@ export const correlatedSubquerySchema: v.Type<CorrelatedSubQuery> =
 
 export const astSchema = v.object({
   schema: v.string().optional(),
-  table: v.string(),
+  table: v.string().optional(),
+  querify: v
+    .union(
+      v.object({
+        type: v.literal('literal'),
+        value: v.readonlyArray(jsonObjectSchema),
+      }),
+      v.object({
+        type: v.literal('parameter'),
+        paramType: v.literal('static'),
+        anchor: v.union(v.literal('authData'), v.literal('preMutationRow')),
+      }),
+    )
+    .optional(),
   alias: v.string().optional(),
   where: readonly(v.array(conditionSchema)).optional(),
   related: readonly(v.array(correlatedSubquerySchema)).optional(),

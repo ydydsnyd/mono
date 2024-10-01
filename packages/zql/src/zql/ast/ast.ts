@@ -1,6 +1,7 @@
 import {compareUTF8} from 'compare-utf8';
 import {must} from 'shared/src/must.js';
 import type {Bound} from '../ivm/skip.js';
+import type {ReadonlyJSONObject} from 'shared/src/json.js';
 
 /**
  * As in SQL you can have multiple orderings. We don't currently
@@ -17,7 +18,18 @@ export type InOps = 'IN' | 'NOT IN';
 
 export type AST = {
   readonly schema?: string | undefined;
-  readonly table: string;
+  readonly table?: string | undefined;
+  readonly querify?:
+    | {
+        type: 'literal';
+        value: readonly ReadonlyJSONObject[];
+      }
+    | {
+        type: 'parameter';
+        paramType: 'static';
+        anchor: 'authData' | 'preMutationRow';
+      }
+    | undefined;
 
   // A query would be aliased if the AST is a subquery.
   // e.g., when two subqueries select from the same table
@@ -127,6 +139,7 @@ export function normalizeAST(ast: AST): Required<AST> {
   return {
     schema: ast.schema,
     table: ast.table,
+    querify: ast.querify,
     alias: ast.alias,
     where: ast.where ? sortedWhere(ast.where) : undefined,
     related: ast.related
