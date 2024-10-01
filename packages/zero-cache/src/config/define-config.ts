@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type {AST} from 'zql/src/zql/ast/ast.js';
-import type {Query, SchemaToRow} from 'zql/src/zql/query/query.js';
+import type {Query, RowToSchema, SchemaToRow} from 'zql/src/zql/query/query.js';
 import type {Schema} from 'zql/src/zql/query/schema.js';
 import {ConfigQuery} from './config-query.js';
 import {authDataRef, preMutationRowRef} from './refs.js';
@@ -23,8 +23,15 @@ type SchemaDefs = {
   readonly [table: string]: Schema;
 };
 
-export type Queries<TSchemas extends SchemaDefs> = {
+type AuthDataSchema<T> = RowToSchema<T> & {
+  tableName: '';
+  primaryKey: [''];
+  relationships: Record<string, never>;
+};
+export type Queries<TAuthDataShape, TSchemas extends SchemaDefs> = {
   [K in keyof TSchemas]: Query<TSchemas[K]>;
+} & {
+  querify(row: TAuthDataShape): Query<AuthDataSchema<TAuthDataShape>>;
 };
 
 type InstanceAuthzRule<TAuthDataShape, TSchema extends Schema> = (
@@ -73,14 +80,27 @@ export function runtimeEnv(key: string): EnvRef {
 
 export function defineConfig<TAuthDataShape, TSchemas extends SchemaDefs>(
   schemas: TSchemas,
-  definer: (queries: Queries<TSchemas>) => ZeroConfig<TAuthDataShape, TSchemas>,
+  definer: (
+    queries: Queries<TAuthDataShape, TSchemas>,
+  ) => ZeroConfig<TAuthDataShape, TSchemas>,
 ) {
   const queries = {} as Record<string, Query<Schema>>;
   for (const [name, schema] of Object.entries(schemas)) {
     queries[name] = new ConfigQuery(schema);
   }
 
-  const config = definer(queries as Queries<TSchemas>);
+  (queries as Queries<TAuthDataShape, TSchemas>).querify = (
+    _row: TAuthDataShape,
+  ) =>
+    new ConfigQuery<AuthDataSchema<TAuthDataShape>>({
+      tableName: '',
+      columns: {},
+      primaryKey: [''],
+      relationships: {},
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+
+  const config = definer(queries as Queries<TAuthDataShape, TSchemas>);
   const compiled = compileConfig(config);
   const serializedConfig = JSON.stringify(compiled, null, 2);
   const dest = path.join(process.cwd(), 'zero.config.json');

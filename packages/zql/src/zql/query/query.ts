@@ -59,6 +59,20 @@ export type SchemaToRow<T extends Schema> = {
   [K in keyof T['columns']]: SchemaValueToTSType<T['columns'][K]>;
 };
 
+export type RowToSchema<T> = {
+  columns: {
+    [K in keyof T]: {
+      type: T[K] extends string
+        ? 'string'
+        : T[K] extends number
+        ? 'number'
+        : T[K] extends boolean
+        ? 'boolean'
+        : 'null';
+    };
+  };
+};
+
 export type QueryReturnType<T extends Query<Schema>> = T extends Query<
   Schema,
   infer TReturn
@@ -177,7 +191,7 @@ export interface Query<
   TReturn extends QueryType = DefaultQueryResultRow<TSchema>,
 > {
   select<TFields extends Selector<TSchema>[]>(
-    ...columnName: Expand<TFields>
+    ...columnNames: Expand<TFields>
   ): Query<TSchema, AddSelections<TSchema, TFields, TReturn>>;
 
   related<TRelationship extends keyof TSchema['relationships']>(
