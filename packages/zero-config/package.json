@@ -1,0 +1,15 @@
+{
+  "name": "zero-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {},
+  "dependencies": {
+    "zql": "0.0.0"
+  },
+  "devDependencies": {},
+  "eslintConfig": {
+    "extends": "@rocicorp/eslint-config"
+  },
+  "prettier": "@rocicorp/prettier-config"
+}
