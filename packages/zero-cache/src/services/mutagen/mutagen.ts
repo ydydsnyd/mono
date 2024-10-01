@@ -209,43 +209,47 @@ async function processMutationWithTx(
   const queryPromises: Promise<unknown>[] = [
     incrementLastMutationID(tx, clientGroupID, mutation.clientID, mutation.id),
   ];
+  try {
+    if (!errorMode) {
+      const {ops} = mutation.args[0];
 
-  if (!errorMode) {
-    const {ops} = mutation.args[0];
-
-    for (const op of ops) {
-      switch (op.op) {
-        case 'create':
-          if (!authorizer.canInsert(authData, op)) {
-            // We return if the authorizer fails since
-            // if any write in the transaction fails, the entire set of
-            // write in the transaction is aborted.
-            return;
-          }
-          queryPromises.push(getCreateSQL(tx, op).execute());
-          break;
-        case 'set':
-          if (!authorizer.canUpsert(authData, op)) {
-            return;
-          }
-          queryPromises.push(getSetSQL(tx, op).execute());
-          break;
-        case 'update':
-          if (!authorizer.canUpdate(authData, op)) {
-            return;
-          }
-          queryPromises.push(getUpdateSQL(tx, op).execute());
-          break;
-        case 'delete':
-          if (!authorizer.canDelete(authData, op)) {
-            return;
-          }
-          queryPromises.push(getDeleteSQL(tx, op).execute());
-          break;
-        default:
-          unreachable(op);
+      for (const op of ops) {
+        switch (op.op) {
+          case 'create':
+            if (!authorizer.canInsert(authData, op)) {
+              // We return if the authorizer fails since
+              // if any write in the transaction fails, the entire set of
+              // write in the transaction is aborted.
+              return;
+            }
+            queryPromises.push(getCreateSQL(tx, op).execute());
+            break;
+          case 'set':
+            if (!authorizer.canUpsert(authData, op)) {
+              return;
+            }
+            queryPromises.push(getSetSQL(tx, op).execute());
+            break;
+          case 'update':
+            if (!authorizer.canUpdate(authData, op)) {
+              return;
+            }
+            queryPromises.push(getUpdateSQL(tx, op).execute());
+            break;
+          case 'delete':
+            if (!authorizer.canDelete(authData, op)) {
+              return;
+            }
+            queryPromises.push(getDeleteSQL(tx, op).execute());
+            break;
+          default:
+            unreachable(op);
+        }
       }
     }
+  } catch (e) {
+    // if the authorizer throws we still need to wait for any enqueued promises to complete
+    queryPromises.push(Promise.reject(e));
   }
 
   // Note: An error thrown from any Promise aborts the entire transaction.
