@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727730803104,
+  "lastUpdate": 1727880613619,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49117,6 +49117,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31673,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c6e95a32d6c288b78286520c734699a4c53a59e9",
+          "message": "chore(replicache): Remove makeSubscriptionManager (#2531)\n\nThis hook is no longer used.",
+          "timestamp": "2024-10-02T14:48:02Z",
+          "tree_id": "b46a0827578c32a8a761761f3e5b5d96d974025f",
+          "url": "https://github.com/rocicorp/mono/commit/c6e95a32d6c288b78286520c734699a4c53a59e9"
+        },
+        "date": 1727880596882,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 310714,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54073,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113987,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31566,
             "unit": "bytes"
           }
         ]
