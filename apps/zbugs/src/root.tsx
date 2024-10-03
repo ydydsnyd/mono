@@ -7,34 +7,30 @@ import {useLogin} from './hooks/use-login.js';
 import {ZeroProvider} from 'zero-react/src/use-zero.js';
 import {type Schema, schema} from './domain/schema.js';
 import {Zero} from 'zero-client';
-import {useEffect, useState} from 'react';
+import {useEffect, useMemo} from 'react';
 
 export default function Root() {
   const login = useLogin();
 
-  const [z, setZ] = useState<Zero<Schema> | undefined>();
+  const z = useMemo(
+    () =>
+      new Zero({
+        logLevel: 'info',
+        server: import.meta.env.VITE_PUBLIC_SERVER,
+        userID: login.loginState?.userID ?? 'anon',
+        auth: login.loginState?.token,
+        schema,
+      }),
+    [login],
+  );
 
   useEffect(() => {
-    const z = new Zero({
-      logLevel: 'info',
-      server: import.meta.env.VITE_PUBLIC_SERVER,
-      userID: login.loginState?.userID ?? 'anon',
-      auth: login.loginState?.token,
-      schema,
-    });
-    setZ(z);
-
     // To enable accessing zero in the devtools easily.
     (window as {z?: Zero<Schema>}).z = z;
-
     return () => {
       z.close();
     };
-  }, [login]);
-
-  if (!z) {
-    return null;
-  }
+  }, [z]);
 
   z.query.user.preload();
   z.query.label.preload();
