@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727954032137,
+  "lastUpdate": 1727973598607,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49185,6 +49185,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/e54de01e86833602583666a02ca521ddf1508a31"
         },
         "date": 1727954015664,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 310714,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54073,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113987,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31566,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b143ce8fffc1ffde0bbe5a09144132da00657eb3",
+          "message": "feat(zero): Create an npm package for zero  (#2532)\n\nThis is a pretty extensive commit. It includes the following changes:\r\n\r\n- Added a new package called `zero` which is the main package for the\r\n  Zero framework. It includes:\r\n  - `@rocicorp/zero` which is the client side library.\r\n  - `@rocicorp/zero/react` which is the React bindings for Zero.\r\n  - `@rocicorp/zero/server` which is the server side \"executable\".\r\n- Remove rollup-plugin-dts and all the rollup related files.\r\n- Use tsc --emitDeclarationOnly to generate d.ts files.\r\n- Use tsc to generate the server side js files.\r\n- Use esbuild (with splitting and bundling) to generate the client side.\r\n- `@rocicorp/zero` has a bin that starts the zero cache main file.\r\n- Split tsconfig files into build and type check the world. The\r\n  motivation is to only include the build relevant files in the npm\r\n  package.\r\n- Copies the sqlite3 source into the `@rocicorp/zero` package.\r\n- Add a `tool/install-sqlite3.js` script that installs sqlite3 for the\r\n  `@rocicorp/zero` package. This checks if we are in the monorepo and if\r\n  so, it does not nothing. Otherwise it invokes the `npm install\r\n  --build-from-source`.\r\n- Update apps/zbugs to use the new `@rocicorp/zero` package.",
+          "timestamp": "2024-10-03T16:38:02Z",
+          "tree_id": "316cd6523a89c457c3e4dbcc314c969bc0a17344",
+          "url": "https://github.com/rocicorp/mono/commit/b143ce8fffc1ffde0bbe5a09144132da00657eb3"
+        },
+        "date": 1727973581951,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
