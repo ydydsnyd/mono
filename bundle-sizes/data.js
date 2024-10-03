@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727880613619,
+  "lastUpdate": 1727954032137,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49141,6 +49141,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/c6e95a32d6c288b78286520c734699a4c53a59e9"
         },
         "date": 1727880596882,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 310714,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54073,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113987,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31566,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e54de01e86833602583666a02ca521ddf1508a31",
+          "message": "chore: Simplify prettier scripts (#2548)",
+          "timestamp": "2024-10-03T11:11:49Z",
+          "tree_id": "4e81d8ab236d3f2b8f7cd0fc37e2a3c836e03412",
+          "url": "https://github.com/rocicorp/mono/commit/e54de01e86833602583666a02ca521ddf1508a31"
+        },
+        "date": 1727954015664,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
