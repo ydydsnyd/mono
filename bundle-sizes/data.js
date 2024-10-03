@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727973598607,
+  "lastUpdate": 1727974762374,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49249,6 +49249,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31566,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f1b85dbb5aa3487f3d5d52b6d02a70310921577f",
+          "message": "chore(replicache): Remove usage of enums (#2552)\n\nMotivation, enums are not JavaScript plus types. By removing these we\r\ncan simplify the tool chain in the future.",
+          "timestamp": "2024-10-03T18:57:32+02:00",
+          "tree_id": "c72c908aee4ea54c293b1668b6bb634d2371fca7",
+          "url": "https://github.com/rocicorp/mono/commit/f1b85dbb5aa3487f3d5d52b6d02a70310921577f"
+        },
+        "date": 1727974745947,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 310425,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54126,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113996,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31678,
             "unit": "bytes"
           }
         ]
