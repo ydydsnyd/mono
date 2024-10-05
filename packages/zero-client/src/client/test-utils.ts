@@ -1,7 +1,7 @@
 import type {LogLevel} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
-import {assert} from 'shared/src/asserts.js';
-import {TestLogSink} from 'shared/src/logging-test-utils.js';
+import {assert} from 'shared/dist/asserts.js';
+import {TestLogSink} from 'shared/dist/logging-test-utils.js';
 import type {SinonFakeTimers} from 'sinon';
 import {
   type ConnectedMessage,

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "format": "prettier --write .",
+    "build": "tsc --build",
     "check-format": "prettier --check .",
     "lint": "eslint --ext .ts,.tsx,.js,.jsx src/",
     "test": "vitest run",

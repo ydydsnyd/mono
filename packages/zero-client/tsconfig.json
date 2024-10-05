@@ -1,7 +1,23 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "lib": ["dom", "esnext"]
+    "lib": ["dom", "esnext"],
+    "outDir": "./dist/",
+    "rootDir": "./src/"
   },
-  "include": ["./src/"]
+  "include": ["./src/"],
+  "references": [
+    {
+      "path": "../shared"
+    },
+    {
+      "path": "../replicache"
+    },
+    {
+      "path": "../zero-protocol"
+    },
+    {
+      "path": "../datadog"
+    }
+  ]
 }

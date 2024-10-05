@@ -1,9 +1,9 @@
 import {LogContext} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
 import type {PullRequestV1, PushRequestV1} from 'replicache';
-import {assert} from 'shared/src/asserts.js';
-import {TestLogSink} from 'shared/src/logging-test-utils.js';
-import * as valita from 'shared/src/valita.js';
+import {assert} from 'shared/dist/asserts.js';
+import {TestLogSink} from 'shared/dist/logging-test-utils.js';
+import * as valita from 'shared/dist/valita.js';
 import * as sinon from 'sinon';
 import {afterEach, beforeEach, expect, suite, test} from 'vitest';
 import {ErrorKind, initConnectionMessageSchema} from 'zero-protocol';
@@ -11,8 +11,8 @@ import {
   type Mutation,
   MutationType,
   pushMessageSchema,
-} from 'zero-protocol/src/push.js';
-import type {NullableVersion} from 'zero-protocol/src/version.js';
+} from 'zero-protocol/dist/push.js';
+import type {NullableVersion} from 'zero-protocol/dist/version.js';
 import type {AST} from 'zql/src/zql/ast/ast.js';
 import type {Update} from './crud.js';
 import type {WSString} from './http-string.js';

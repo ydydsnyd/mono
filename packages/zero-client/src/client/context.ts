@@ -1,5 +1,5 @@
 import type {ExperimentalNoIndexDiff} from 'replicache';
-import {assert, unreachable} from 'shared/src/asserts.js';
+import {assert, unreachable} from 'shared/dist/asserts.js';
 import type {AST} from 'zql/src/zql/ast/ast.js';
 import type {Row} from 'zql/src/zql/ivm/data.js';
 import {MemorySource} from 'zql/src/zql/ivm/memory-source.js';

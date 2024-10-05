@@ -1,5 +1,4 @@
 import {resolver} from '@rocicorp/resolver';
-import type {ReadonlyJSONObject} from 'replicache';
 import {afterEach, beforeEach, expect, test, vi} from 'vitest';
 import {
   DatadogLogSink,
@@ -22,7 +21,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function stringifyMany(...messages: ReadonlyJSONObject[]): string {
+function stringifyMany(...messages: object[]): string {
   return messages.map(m => JSON.stringify(m)).join('\n');
 }
 

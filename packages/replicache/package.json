@@ -59,12 +59,12 @@
   },
   "exports": {
     ".": {
-      "types": "./out/replicache/src/mod.d.ts",
-      "default": "./out/replicache.js"
+      "types": "./dist/mod.d.ts",
+      "default": "./dist/replicache.js"
     },
     "./impl": {
-      "types": "./out/replicache/src/impl.d.ts",
-      "default": "./out/impl.js"
+      "types": "./dist/impl.d.ts",
+      "default": "./dist/impl.js"
     }
   },
   "files": [

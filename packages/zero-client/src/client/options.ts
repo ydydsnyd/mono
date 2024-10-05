@@ -1,6 +1,6 @@
 import type {LogLevel} from '@rocicorp/logger';
 import type {KVStoreProvider} from 'replicache';
-import type {MaybePromise} from 'shared/src/types.js';
+import type {MaybePromise} from 'shared/dist/types.js';
 import type {Schema} from './zero.js';
 
 /**

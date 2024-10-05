@@ -18,14 +18,14 @@ import {
   dropDatabase,
 } from 'replicache';
 import {ReplicacheImpl, type ReplicacheImplOptions} from 'replicache/impl';
-import {assert, unreachable} from 'shared/src/asserts.js';
-import {getDocument, getLocation} from 'shared/src/browser-env.js';
-import {getDocumentVisibilityWatcher} from 'shared/src/document-visible.js';
-import {must} from 'shared/src/must.js';
-import {navigator} from 'shared/src/navigator.js';
-import {sleep, sleepWithAbort} from 'shared/src/sleep.js';
-import type {MaybePromise} from 'shared/src/types.js';
-import * as valita from 'shared/src/valita.js';
+import {assert, unreachable} from 'shared/dist/asserts.js';
+import {getDocument, getLocation} from 'shared/dist/browser-env.js';
+import {getDocumentVisibilityWatcher} from 'shared/dist/document-visible.js';
+import {must} from 'shared/dist/must.js';
+import {navigator} from 'shared/dist/navigator.js';
+import {sleep, sleepWithAbort} from 'shared/dist/sleep.js';
+import type {MaybePromise} from 'shared/dist/types.js';
+import * as valita from 'shared/dist/valita.js';
 import {
   type CRUDMutation,
   type CRUDMutationArg,
@@ -45,12 +45,12 @@ import {
   downstreamSchema,
   nullableVersionSchema,
 } from 'zero-protocol';
-import type {ChangeDesiredQueriesMessage} from 'zero-protocol/src/change-desired-queries.js';
+import type {ChangeDesiredQueriesMessage} from 'zero-protocol/dist/change-desired-queries.js';
 import type {
   PullRequestMessage,
   PullResponseBody,
   PullResponseMessage,
-} from 'zero-protocol/src/pull.js';
+} from 'zero-protocol/dist/pull.js';
 import {newQuery} from 'zql/src/zql/query/query-impl.js';
 import type {Query} from 'zql/src/zql/query/query.js';
 import type {TableSchema} from 'zql/src/zql/query/schema.js';
@@ -226,7 +226,7 @@ const enum PingResult {
   Success = 1,
 }
 
-// Keep in sync with packages/replicache/src/replicache-options.ts
+// Keep in sync with packages/replicache/dist/replicache-options.ts
 export interface ReplicacheInternalAPI {
   lastMutationID(): number;
 }
