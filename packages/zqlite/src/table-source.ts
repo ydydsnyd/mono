@@ -1,39 +1,39 @@
 import type {SQLQuery} from '@databases/sql';
-import {assert, unreachable} from 'shared/src/asserts.js';
-import {must} from 'shared/src/must.js';
-import type {Ordering, SimpleCondition} from 'zql/src/zql/ast/ast.js';
-import {assertOrderingIncludesPK} from 'zql/src/zql/builder/builder.js';
-import type {Change} from 'zql/src/zql/ivm/change.js';
+import {assert, unreachable} from 'shared/dist/asserts.js';
+import {must} from 'shared/dist/must.js';
+import type {Ordering, SimpleCondition} from 'zql/dist/zql/ast/ast.js';
+import {assertOrderingIncludesPK} from 'zql/dist/zql/builder/builder.js';
+import type {Change} from 'zql/dist/zql/ivm/change.js';
 import {
   makeComparator,
   type Comparator,
   type Node,
   type Row,
   type Value,
-} from 'zql/src/zql/ivm/data.js';
+} from 'zql/dist/zql/ivm/data.js';
 import {
   generateWithOverlay,
   generateWithStart,
   type Overlay,
-} from 'zql/src/zql/ivm/memory-source.js';
+} from 'zql/dist/zql/ivm/memory-source.js';
 import type {
   Constraint,
   FetchRequest,
   Input,
   Output,
-} from 'zql/src/zql/ivm/operator.js';
+} from 'zql/dist/zql/ivm/operator.js';
 import type {
   PrimaryKey,
   TableSchema,
   SchemaValue,
   ValueType,
-} from 'zql/src/zql/ivm/schema.js';
+} from 'zql/dist/zql/ivm/schema.js';
 import type {
   Source,
   SourceChange,
   SourceInput,
-} from 'zql/src/zql/ivm/source.js';
-import type {Stream} from 'zql/src/zql/ivm/stream.js';
+} from 'zql/dist/zql/ivm/source.js';
+import type {Stream} from 'zql/dist/zql/ivm/stream.js';
 import {Database, Statement} from 'zqlite/src/db.js';
 import {compile, format, sql} from './internal/sql.js';
 import {StatementCache} from './internal/statement-cache.js';

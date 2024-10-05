@@ -8,6 +8,7 @@
     "format": "prettier --write .",
     "check-format": "prettier --check .",
     "check-types": "tsc --noEmit",
+    "build": "tsc --build",
     "build:bin": "tsc -p tsconfig.bin.json",
     "lint": "eslint --ext .ts,.tsx,.js,.jsx src/",
     "test": "vitest run",
