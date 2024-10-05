@@ -10,13 +10,12 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint --ext .ts,.tsx,.js,.jsx src/",
     "test": "vitest run",
-    "test:watch": "vitest watch"
+    "test:watch": "vitest watch",
+    "build": "tsc --build"
   },
   "devDependencies": {
     "@rocicorp/eslint-config": "^0.5.1",
-    "@rocicorp/logger": "^5.2.2",
     "@rocicorp/prettier-config": "^0.2.0",
-    "@rocicorp/rails": "^0.10.0",
     "fast-check": "^3.18.0",
     "nanoid": "^4.0.2",
     "playwright": "^1.43.1",
@@ -30,6 +29,7 @@
   },
   "prettier": "@rocicorp/prettier-config",
   "dependencies": {
+    "@rocicorp/logger": "^5.2.2",
     "@rocicorp/resolver": "^1.0.2",
     "compare-utf8": "^0.1.1",
     "shared": "workspace:*",

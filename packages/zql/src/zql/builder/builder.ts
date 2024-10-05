@@ -1,6 +1,6 @@
-import {assert} from 'shared/src/asserts.js';
-import type {JSONValue} from 'shared/src/json.js';
-import {must} from 'shared/src/must.js';
+import {assert} from 'shared/dist/asserts.js';
+import type {JSONValue} from 'shared/dist/json.js';
+import {must} from 'shared/dist/must.js';
 import type {
   AST,
   LiteralValue,

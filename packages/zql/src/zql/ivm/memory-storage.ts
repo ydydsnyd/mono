@@ -1,4 +1,4 @@
-import type {JSONValue} from 'shared/src/json.js';
+import type {JSONValue} from 'shared/dist/json.js';
 import type {Storage} from './operator.js';
 import BTree from 'btree';
 import type {Stream} from './stream.js';
