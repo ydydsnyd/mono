@@ -17,12 +17,10 @@
     "@rocicorp/logger": "^5.2.2",
     "@rocicorp/prettier-config": "^0.2.0",
     "@rocicorp/rails": "^0.10.0",
-    "btree": "0.0.0",
     "fast-check": "^3.18.0",
     "nanoid": "^4.0.2",
     "playwright": "^1.43.1",
     "replicache": "15.2.1",
-    "shared": "0.0.0",
     "typescript": "^5.5.3",
     "wa-sqlite": "github:rhashimoto/wa-sqlite#ca2084cdd188c56532ba3e272696d0b9e21a23bf",
     "zod": "^3.21.4"
@@ -33,6 +31,8 @@
   "prettier": "@rocicorp/prettier-config",
   "dependencies": {
     "@rocicorp/resolver": "^1.0.2",
-    "compare-utf8": "^0.1.1"
+    "compare-utf8": "^0.1.1",
+    "shared": "workspace:*",
+    "btree": "workspace:*"
   }
 }

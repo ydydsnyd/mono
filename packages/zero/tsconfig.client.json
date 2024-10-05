@@ -1,8 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "noEmit": false,
-    "emitDeclarationOnly": true
-  },
-  "include": ["src/zero.ts", "src/react.ts"]
-}
