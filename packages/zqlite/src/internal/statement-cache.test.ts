@@ -1,4 +1,4 @@
-import {createSilentLogContext} from 'shared/src/logging-test-utils.js';
+import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
 import {expect, test} from 'vitest';
 import {Database} from 'zqlite/src/db.js';
 import {type CachedStatement, StatementCache} from './statement-cache.js';
