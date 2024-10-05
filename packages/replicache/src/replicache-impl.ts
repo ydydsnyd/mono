@@ -1,11 +1,11 @@
 import {consoleLogSink, LogContext} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
-import {AbortError} from 'shared/src/abort-error.js';
-import {assert} from 'shared/src/asserts.js';
-import {getDocument} from 'shared/src/browser-env.js';
-import {getDocumentVisibilityWatcher} from 'shared/src/document-visible.js';
-import type {JSONValue, ReadonlyJSONValue} from 'shared/src/json.js';
-import type {MaybePromise} from 'shared/src/types.js';
+import {AbortError} from 'shared/dist/abort-error.js';
+import {assert} from 'shared/dist/asserts.js';
+import {getDocument} from 'shared/dist/browser-env.js';
+import {getDocumentVisibilityWatcher} from 'shared/dist/document-visible.js';
+import type {JSONValue, ReadonlyJSONValue} from 'shared/dist/json.js';
+import type {MaybePromise} from 'shared/dist/types.js';
 import {PullDelegate, PushDelegate} from './connection-loop-delegates.js';
 import {ConnectionLoop, MAX_DELAY_MS, MIN_DELAY_MS} from './connection-loop.js';
 import {assertCookie, type Cookie} from './cookies.js';

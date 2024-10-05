@@ -1,5 +1,5 @@
 import {expect} from 'chai';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
+import type {ReadonlyJSONValue} from 'shared/dist/json.js';
 import {
   deepFreeze,
   deepFreezeAllowUndefined,

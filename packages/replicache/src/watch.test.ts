@@ -1,6 +1,6 @@
 import {expect} from 'chai';
-import type {JSONValue} from 'shared/src/json.js';
-import {Queue} from 'shared/src/queue.js';
+import type {JSONValue} from 'shared/dist/json.js';
+import {Queue} from 'shared/dist/queue.js';
 import * as sinon from 'sinon';
 import {
   disableAllBackgroundProcesses,

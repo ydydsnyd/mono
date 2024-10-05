@@ -1,8 +1,8 @@
 import {expect} from 'chai';
-import {assert} from 'shared/src/asserts.js';
-import {type JSONObject, assertJSONObject} from 'shared/src/json.js';
-import {randomUint64} from 'shared/src/random-uint64.js';
-import {stringCompare} from 'shared/src/string-compare.js';
+import {assert} from 'shared/dist/asserts.js';
+import {type JSONObject, assertJSONObject} from 'shared/dist/json.js';
+import {randomUint64} from 'shared/dist/random-uint64.js';
+import {stringCompare} from 'shared/dist/string-compare.js';
 import sinon from 'sinon';
 import {LazyStore} from './dag/lazy-store.js';
 import {StoreImpl} from './dag/store-impl.js';

@@ -1,7 +1,7 @@
 import type {LogContext} from '@rocicorp/logger';
 import {compareUTF8, greaterThan, lessThan, lessThanEq} from 'compare-utf8';
-import {assert} from 'shared/src/asserts.js';
-import {deepEqual} from 'shared/src/json.js';
+import {assert} from 'shared/dist/asserts.js';
+import {deepEqual} from 'shared/dist/json.js';
 import {binarySearch} from './binary-search.js';
 import type {
   Diff,

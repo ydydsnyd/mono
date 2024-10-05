@@ -1,8 +1,8 @@
 import {resolver} from '@rocicorp/resolver';
 import {expect} from 'chai';
-import type {JSONValue} from 'shared/src/json.js';
-import {must} from 'shared/src/must.js';
-import {randomUint64} from 'shared/src/random-uint64.js';
+import type {JSONValue} from 'shared/dist/json.js';
+import {must} from 'shared/dist/must.js';
+import {randomUint64} from 'shared/dist/random-uint64.js';
 import * as sinon from 'sinon';
 import {type SinonFakeTimers, useFakeTimers} from 'sinon';
 import type {Cookie} from './cookies.js';

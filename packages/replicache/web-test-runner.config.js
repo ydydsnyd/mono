@@ -4,7 +4,7 @@
 
 import {esbuildPlugin} from '@web/dev-server-esbuild';
 import {playwrightLauncher} from '@web/test-runner-playwright';
-import {makeDefine} from '../shared/src/build.js';
+import {makeDefine} from '../shared/dist/build.js';
 
 const chromium = playwrightLauncher({product: 'chromium'});
 const webkit = playwrightLauncher({product: 'webkit'});

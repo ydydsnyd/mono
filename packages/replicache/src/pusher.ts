@@ -1,4 +1,4 @@
-import {assertObject} from 'shared/src/asserts.js';
+import {assertObject} from 'shared/dist/asserts.js';
 import {
   assertVersionNotSupportedResponse,
   type ClientStateNotFoundResponse,
