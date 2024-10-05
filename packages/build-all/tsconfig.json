@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist/",
+    "rootDir": "./src"
+  },
+  "include": ["./src/"],
+  "extends": "../../tsconfig.json",
+  "references": [
+    {"path": "packages/btree"},
+    {"path": "packages/datadog"},
+    {"path": "packages/replicache"},
+    {"path": "packages/shared"},
+    {"path": "packages/zero"},
+    {"path": "packages/zero-cache"},
+    {"path": "packages/zero-client"},
+    {"path": "packages/zero-integration-test"},
+    {"path": "packages/zero-protocol"},
+    {"path": "packages/zero-react"},
+    {"path": "packages/zql"},
+    {"path": "packages/zqlite"}
+  ]
+}
