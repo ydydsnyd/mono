@@ -5,7 +5,7 @@ import type {Change} from 'zql/dist/zql/ivm/change.js';
 import {makeComparator, type Row, type Value} from 'zql/dist/zql/ivm/data.js';
 import type {SchemaValue} from 'zql/dist/zql/ivm/schema.js';
 import {runCases} from 'zql/dist/zql/ivm/test/source-cases.js';
-import {Database} from 'zqlite/src/db.js';
+import {Database} from './db.js';
 import {compile, sql} from './internal/sql.js';
 import {TableSource, UnsupportedValueError} from './table-source.js';
 

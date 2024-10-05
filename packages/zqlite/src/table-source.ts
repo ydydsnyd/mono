@@ -34,7 +34,7 @@ import type {
   SourceInput,
 } from 'zql/dist/zql/ivm/source.js';
 import type {Stream} from 'zql/dist/zql/ivm/stream.js';
-import {Database, Statement} from 'zqlite/src/db.js';
+import {Database, Statement} from './db.js';
 import {compile, format, sql} from './internal/sql.js';
 import {StatementCache} from './internal/statement-cache.js';
 
@@ -454,8 +454,8 @@ function requestToSQL(
           filter.op === 'ILIKE'
             ? 'LIKE'
             : filter.op === 'NOT ILIKE'
-            ? 'NOT LIKE'
-            : filter.op,
+              ? 'NOT LIKE'
+              : filter.op,
         )} ${filter.value}`,
       );
     }
@@ -580,7 +580,7 @@ function pickColumns(columns: readonly string[], row: Row): readonly Value[] {
 }
 
 function toSQLiteType(v: unknown): unknown {
-  return v === false ? 0 : v === true ? 1 : v ?? null;
+  return v === false ? 0 : v === true ? 1 : (v ?? null);
 }
 
 function* mapFromSQLiteTypes(
