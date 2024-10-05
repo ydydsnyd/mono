@@ -6,7 +6,7 @@
  */
 
 import * as v from 'shared/dist/valita.js';
-import {StatementRunner} from 'zero-cache/src/db/statements.js';
+import {StatementRunner} from 'zero-cache/dist/db/statements.js';
 import {Database} from 'zqlite/dist/db.js';
 
 export const ZERO_VERSION_COLUMN_NAME = '_0_version';

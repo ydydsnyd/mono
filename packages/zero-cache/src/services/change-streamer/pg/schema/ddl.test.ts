@@ -10,8 +10,8 @@ import {
   dropReplicationSlot,
   getConnectionURI,
   testDBs,
-} from 'zero-cache/src/test/db.js';
-import type {PostgresDB} from 'zero-cache/src/types/pg.js';
+} from 'zero-cache/dist/test/db.js';
+import type {PostgresDB} from 'zero-cache/dist/types/pg.js';
 import {createEventTriggerStatements} from './ddl.js';
 
 const SLOT_NAME = 'ddl_test_slot';

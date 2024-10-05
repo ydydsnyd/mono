@@ -1,6 +1,9 @@
 import {jsonObjectSchema} from 'shared/dist/json-schema.js';
 import * as v from 'shared/dist/valita.js';
-import type {FilteredTableSpec, IndexSpec} from 'zero-cache/src/types/specs.js';
+import type {
+  FilteredTableSpec,
+  IndexSpec,
+} from 'zero-cache/dist/types/specs.js';
 import {indexDefinitionsQuery, publishedTableQuery} from './published.js';
 
 // Sent in the 'version' tag of "ddl" event messages. This is used to ensure

@@ -1,10 +1,10 @@
 import {LogContext} from '@rocicorp/logger';
 import {assert, unreachable} from 'shared/dist/asserts.js';
 import {must} from 'shared/dist/must.js';
-import {listTables} from 'zero-cache/src/db/lite-tables.js';
-import {mapLiteDataTypeToZqlSchemaValue} from 'zero-cache/src/types/lite.js';
-import type {RowKey} from 'zero-cache/src/types/row-key.js';
-import type {TableSpec} from 'zero-cache/src/types/specs.js';
+import {listTables} from 'zero-cache/dist/db/lite-tables.js';
+import {mapLiteDataTypeToZqlSchemaValue} from 'zero-cache/dist/types/lite.js';
+import type {RowKey} from 'zero-cache/dist/types/row-key.js';
+import type {TableSpec} from 'zero-cache/dist/types/specs.js';
 import type {AST} from 'zql/dist/zql/ast/ast.js';
 import {buildPipeline} from 'zql/dist/zql/builder/builder.js';
 import type {Change} from 'zql/dist/zql/ivm/change.js';

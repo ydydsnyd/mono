@@ -1,7 +1,7 @@
 import {Database} from 'zqlite/dist/db.js';
 import {beforeEach, describe, test} from 'vitest';
-import {StatementRunner} from 'zero-cache/src/db/statements.js';
-import {expectTables} from 'zero-cache/src/test/lite.js';
+import {StatementRunner} from 'zero-cache/dist/db/statements.js';
+import {expectTables} from 'zero-cache/dist/test/lite.js';
 import {
   initChangeLog,
   logDeleteOp,

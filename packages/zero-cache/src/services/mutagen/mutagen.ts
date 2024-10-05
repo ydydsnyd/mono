@@ -4,7 +4,7 @@ import {resolver} from '@rocicorp/resolver';
 import type {JWTPayload} from 'jose';
 import postgres from 'postgres';
 import {assert, unreachable} from 'shared/dist/asserts.js';
-import {Mode} from 'zero-cache/src/db/transaction-pool.js';
+import {Mode} from 'zero-cache/dist/db/transaction-pool.js';
 import {ErrorKind} from 'zero-protocol';
 import {
   MutationType,

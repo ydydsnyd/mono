@@ -1,8 +1,8 @@
 import {LogContext} from '@rocicorp/logger';
-import {oneAfter} from 'zero-cache/src/types/lexi-version.js';
-import type {PostgresDB} from 'zero-cache/src/types/pg.js';
-import type {Sink, Source} from 'zero-cache/src/types/streams.js';
-import {Subscription} from 'zero-cache/src/types/subscription.js';
+import {oneAfter} from 'zero-cache/dist/types/lexi-version.js';
+import type {PostgresDB} from 'zero-cache/dist/types/pg.js';
+import type {Sink, Source} from 'zero-cache/dist/types/streams.js';
+import {Subscription} from 'zero-cache/dist/types/subscription.js';
 import {RunningState} from '../running-state.js';
 import {
   type ChangeStreamerService,
@@ -211,10 +211,8 @@ class ChangeStreamerImpl implements ChangeStreamerService {
     this.#lc = lc.withContext('component', 'change-streamer');
     this.#replicaVersion = replicaVersion;
     this.#source = source;
-    this.#storer = new Storer(
-      lc,
-      changeDB,
-      commit => this.#stream?.acks.push(commit),
+    this.#storer = new Storer(lc, changeDB, commit =>
+      this.#stream?.acks.push(commit),
     );
     this.#forwarder = new Forwarder();
   }

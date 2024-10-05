@@ -5,11 +5,11 @@ import {assert} from 'shared/dist/asserts.js';
 import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
 import {Queue} from 'shared/dist/queue.js';
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
-import {StatementRunner} from 'zero-cache/src/db/statements.js';
-import {testDBs} from 'zero-cache/src/test/db.js';
-import type {PostgresDB} from 'zero-cache/src/types/pg.js';
-import type {Source} from 'zero-cache/src/types/streams.js';
-import {Subscription} from 'zero-cache/src/types/subscription.js';
+import {StatementRunner} from 'zero-cache/dist/db/statements.js';
+import {testDBs} from 'zero-cache/dist/test/db.js';
+import type {PostgresDB} from 'zero-cache/dist/types/pg.js';
+import type {Source} from 'zero-cache/dist/types/streams.js';
+import {Subscription} from 'zero-cache/dist/types/subscription.js';
 import {Database} from 'zqlite/dist/db.js';
 import {
   getSubscriptionState,

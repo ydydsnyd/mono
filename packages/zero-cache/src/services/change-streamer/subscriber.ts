@@ -1,5 +1,5 @@
 import {assert} from 'shared/dist/asserts.js';
-import {Subscription} from 'zero-cache/src/types/subscription.js';
+import {Subscription} from 'zero-cache/dist/types/subscription.js';
 import type {WatermarkedChange} from './change-streamer-service.js';
 import {type Downstream, ErrorType} from './change-streamer.js';
 

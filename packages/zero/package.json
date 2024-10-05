@@ -56,20 +56,20 @@
   "types": "dist/zero-client/dist/mod.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/zero-client/dist/mod.d.ts",
+      "types": "./dist/zero.d.ts",
       "default": "./dist/zero.js"
     },
     "./react": {
-      "types": "./dist/zero-react/src/mod.d.ts",
+      "types": "./dist/react.d.ts",
       "default": "./dist/react.js"
     },
     "./server": {
-      "types": "./dist/zero-cache/src/server/main.d.ts",
-      "default": "./dist/zero-cache/src/server/main.js"
+      "types": "./dist/server/main.d.ts",
+      "default": "./dist/server/main.js"
     }
   },
   "bin": {
-    "zero-cache": "./dist/zero/src/cli.js"
+    "zero-cache": "./dist/cli.js"
   },
   "files": [
     "dist",

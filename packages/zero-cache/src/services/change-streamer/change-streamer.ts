@@ -1,4 +1,4 @@
-import type {Source} from 'zero-cache/src/types/streams.js';
+import type {Source} from 'zero-cache/dist/types/streams.js';
 import type {Service} from '../service.js';
 import type {
   Change,

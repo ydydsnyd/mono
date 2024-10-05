@@ -12,7 +12,7 @@ import {
   vi,
 } from 'vitest';
 import WebSocket from 'ws';
-import type {Source} from 'zero-cache/src/types/streams.js';
+import type {Source} from 'zero-cache/dist/types/streams.js';
 import {Subscription} from '../../types/subscription.js';
 import {ReplicationMessages} from '../replicator/test-utils.js';
 import {

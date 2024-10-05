@@ -1,19 +1,19 @@
 import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
-import {listIndices, listTables} from 'zero-cache/src/db/lite-tables.js';
+import {listIndices, listTables} from 'zero-cache/dist/db/lite-tables.js';
 import {
   dropReplicationSlot,
   getConnectionURI,
   initDB,
   testDBs,
-} from 'zero-cache/src/test/db.js';
-import {expectTables, initDB as initLiteDB} from 'zero-cache/src/test/lite.js';
-import type {PostgresDB} from 'zero-cache/src/types/pg.js';
+} from 'zero-cache/dist/test/db.js';
+import {expectTables, initDB as initLiteDB} from 'zero-cache/dist/test/lite.js';
+import type {PostgresDB} from 'zero-cache/dist/types/pg.js';
 import type {
   FilteredTableSpec,
   IndexSpec,
   TableSpec,
-} from 'zero-cache/src/types/specs.js';
+} from 'zero-cache/dist/types/specs.js';
 import {Database} from 'zqlite/dist/db.js';
 import {initialSync, replicationSlot} from './initial-sync.js';
 import {fromLexiVersion} from './lsn.js';

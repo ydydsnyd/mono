@@ -3,7 +3,7 @@ import type {LogContext} from '@rocicorp/logger';
 import {
   runSchemaMigrations,
   type VersionMigrationMap,
-} from 'zero-cache/src/db/migration-lite.js';
+} from 'zero-cache/dist/db/migration-lite.js';
 import {initialSync} from './initial-sync.js';
 import type {ShardConfig} from './shard-config.js';
 

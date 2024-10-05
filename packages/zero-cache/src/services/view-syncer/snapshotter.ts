@@ -2,16 +2,16 @@ import {LogContext} from '@rocicorp/logger';
 import {ident} from 'pg-format';
 import {assert} from 'shared/dist/asserts.js';
 import * as v from 'shared/dist/valita.js';
-import {StatementRunner} from 'zero-cache/src/db/statements.js';
+import {StatementRunner} from 'zero-cache/dist/db/statements.js';
 import {
   jsonObjectSchema,
   type JSONValue,
-} from 'zero-cache/src/types/bigint-json.js';
+} from 'zero-cache/dist/types/bigint-json.js';
 import {
   normalizedKeyOrder,
   type RowKey,
   type RowValue,
-} from 'zero-cache/src/types/row-key.js';
+} from 'zero-cache/dist/types/row-key.js';
 import {Database} from 'zqlite/dist/db.js';
 import {
   changeLogEntrySchema as schema,

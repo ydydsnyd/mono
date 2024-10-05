@@ -6,8 +6,8 @@
     "baseUrl": "./packages/",
     "paths": {
       "shared/src/*": ["shared/src/*"],
-      "zero-cache": ["zero-cache/src/mod.ts"],
-      "zero-cache/src/*": ["zero-cache/src/*"]
+      "zero-cache": ["zero-cache/dist/mod.ts"],
+      "zero-cache/dist/*": ["zero-cache/dist/*"]
     }
   },
   "include": [

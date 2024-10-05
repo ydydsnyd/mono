@@ -1,1 +1,1 @@
-import 'zero-cache/src/server/main.js';
+import 'zero-cache/dist/server/main.js';

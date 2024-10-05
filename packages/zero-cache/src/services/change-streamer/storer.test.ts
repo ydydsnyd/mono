@@ -1,9 +1,9 @@
 import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
 import {Queue} from 'shared/dist/queue.js';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
-import {testDBs} from 'zero-cache/src/test/db.js';
-import type {PostgresDB} from 'zero-cache/src/types/pg.js';
-import {Subscription} from 'zero-cache/src/types/subscription.js';
+import {testDBs} from 'zero-cache/dist/test/db.js';
+import type {PostgresDB} from 'zero-cache/dist/types/pg.js';
+import {Subscription} from 'zero-cache/dist/types/subscription.js';
 import {ReplicationMessages} from '../replicator/test-utils.js';
 import type {Commit, Downstream} from './change-streamer.js';
 import {setupCDCTables} from './schema/tables.js';

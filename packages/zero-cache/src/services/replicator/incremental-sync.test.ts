@@ -9,8 +9,8 @@ import {
   test,
   vi,
 } from 'vitest';
-import {expectTables, initDB} from 'zero-cache/src/test/lite.js';
-import {Subscription} from 'zero-cache/src/types/subscription.js';
+import {expectTables, initDB} from 'zero-cache/dist/test/lite.js';
+import {Subscription} from 'zero-cache/dist/types/subscription.js';
 import {Database} from 'zqlite/dist/db.js';
 import {dropReplicationSlot, testDBs} from '../../test/db.js';
 import type {PostgresDB} from '../../types/pg.js';

@@ -10,15 +10,15 @@ import {DatabaseError} from 'pg-protocol';
 import {AbortError} from 'shared/dist/abort-error.js';
 import {deepEqual} from 'shared/dist/json.js';
 import {sleep} from 'shared/dist/sleep.js';
-import {StatementRunner} from 'zero-cache/src/db/statements.js';
-import {stringify} from 'zero-cache/src/types/bigint-json.js';
-import {max, oneAfter} from 'zero-cache/src/types/lexi-version.js';
+import {StatementRunner} from 'zero-cache/dist/db/statements.js';
+import {stringify} from 'zero-cache/dist/types/bigint-json.js';
+import {max, oneAfter} from 'zero-cache/dist/types/lexi-version.js';
 import {
   pgClient,
   registerPostgresTypeParsers,
   type PostgresDB,
-} from 'zero-cache/src/types/pg.js';
-import {Subscription} from 'zero-cache/src/types/subscription.js';
+} from 'zero-cache/dist/types/pg.js';
+import {Subscription} from 'zero-cache/dist/types/subscription.js';
 import {Database} from 'zqlite/dist/db.js';
 import {getSubscriptionState} from '../../replicator/schema/replication-state.js';
 import type {ChangeSource, ChangeStream} from '../change-streamer-service.js';

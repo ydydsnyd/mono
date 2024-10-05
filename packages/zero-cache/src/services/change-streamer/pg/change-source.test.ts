@@ -3,20 +3,20 @@ import {AbortError} from 'shared/dist/abort-error.js';
 import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
 import {Queue} from 'shared/dist/queue.js';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
-import {StatementRunner} from 'zero-cache/src/db/statements.js';
+import {StatementRunner} from 'zero-cache/dist/db/statements.js';
 import {
   dropReplicationSlot,
   getConnectionURI,
   testDBs,
-} from 'zero-cache/src/test/db.js';
-import {DbFile} from 'zero-cache/src/test/lite.js';
+} from 'zero-cache/dist/test/db.js';
+import {DbFile} from 'zero-cache/dist/test/lite.js';
 import {
   oneAfter,
   versionFromLexi,
   versionToLexi,
-} from 'zero-cache/src/types/lexi-version.js';
-import type {PostgresDB} from 'zero-cache/src/types/pg.js';
-import type {Source} from 'zero-cache/src/types/streams.js';
+} from 'zero-cache/dist/types/lexi-version.js';
+import type {PostgresDB} from 'zero-cache/dist/types/pg.js';
+import type {Source} from 'zero-cache/dist/types/streams.js';
 import {getSubscriptionState} from '../../replicator/schema/replication-state.js';
 import type {ChangeSource} from '../change-streamer-service.js';
 import type {Commit, DownstreamChange} from '../change-streamer.js';

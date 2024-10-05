@@ -3,7 +3,7 @@ import {compareUTF8} from 'compare-utf8';
 import {assert} from 'shared/dist/asserts.js';
 import {CustomKeyMap} from 'shared/dist/custom-key-map.js';
 import {difference, intersection, union} from 'shared/dist/set-utils.js';
-import type {JSONObject} from 'zero-cache/src/types/bigint-json.js';
+import type {JSONObject} from 'zero-cache/dist/types/bigint-json.js';
 import type {AST} from 'zql/dist/zql/ast/ast.js';
 import type {LexiVersion} from '../../types/lexi-version.js';
 import {rowIDHash} from '../../types/row-key.js';

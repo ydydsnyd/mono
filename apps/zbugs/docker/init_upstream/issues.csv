@@ -92,11 +92,11 @@ worker=syncer pid=38000 component=view-syncer serviceID=0mrtpo7idt0o3d5a6i
 {""name"":""Error"",""message"":""CVR@00\"" does not match DB@62oupsxs"",
 ""stack"":""Error: CVR@00\"" does not match DB@62oupsxs\n
     at assert (file:///Users/ocean/roci/mono/packages/shared/src/asserts.ts:3:11)\n
-    at ViewSyncerService.#syncQueryPipelineSet (file:///Users/ocean/roci/mono/packages/zero-cache/src/services/view-syncer/view-syncer.ts:435:5)\n
+    at ViewSyncerService.#syncQueryPipelineSet (file:///Users/ocean/roci/mono/packages/zero-cache/dist/services/view-syncer/view-syncer.ts:435:5)\n
     at processTicksAndRejections (node:internal/process/task_queues:95:5)\n
-    at async file:///Users/ocean/roci/mono/packages/zero-cache/src/services/view-syncer/view-syncer.ts:134:11\n
+    at async file:///Users/ocean/roci/mono/packages/zero-cache/dist/services/view-syncer/view-syncer.ts:134:11\n
     at async run (file:///Users/ocean/roci/mono/node_modules/@rocicorp/lock/out/lock.js:47:16)\n
-    at async ViewSyncerService.run (file:///Users/ocean/roci/mono/packages/zero-cache/src/services/view-syncer/view-syncer.ts:115:9)""}
+    at async ViewSyncerService.run (file:///Users/ocean/roci/mono/packages/zero-cache/dist/services/view-syncer/view-syncer.ts:115:9)""}
 ```
 ",
 HC7kWsm0qUYvf2BqjfiD_,2362,Replicator dies when attempting to commit its (begin concurrent) transaction while litestream has the lock,False,1726188938000.0,1726184763000.0,ieK09sy2C_AIWE8KRkrQR,"<img width=""1048"" alt=""Screenshot 2024-09-12 at 16 34 08"" src=""https://github.com/user-attachments/assets/b95390ff-7acc-4975-b2f3-19ff70dfdff1"">

@@ -1,7 +1,7 @@
-import {ZERO_VERSION_COLUMN_NAME} from 'zero-cache/src/services/replicator/schema/replication-state.js';
-import type {LiteDataType} from 'zero-cache/src/types/lite.js';
-import {liteTableName} from 'zero-cache/src/types/names.js';
-import type {ColumnSpec, TableSpec} from 'zero-cache/src/types/specs.js';
+import {ZERO_VERSION_COLUMN_NAME} from 'zero-cache/dist/services/replicator/schema/replication-state.js';
+import type {LiteDataType} from 'zero-cache/dist/types/lite.js';
+import {liteTableName} from 'zero-cache/dist/types/names.js';
+import type {ColumnSpec, TableSpec} from 'zero-cache/dist/types/specs.js';
 
 export const ZERO_VERSION_COLUMN_SPEC: ColumnSpec = {
   pos: Number.MAX_SAFE_INTEGER, // i.e. last

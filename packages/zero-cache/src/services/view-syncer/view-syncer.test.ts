@@ -1,8 +1,8 @@
 import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
 import {Queue} from 'shared/dist/queue.js';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
-import {StatementRunner} from 'zero-cache/src/db/statements.js';
-import {DbFile} from 'zero-cache/src/test/lite.js';
+import {StatementRunner} from 'zero-cache/dist/db/statements.js';
+import {DbFile} from 'zero-cache/dist/test/lite.js';
 import type {
   Downstream,
   PokePartBody,

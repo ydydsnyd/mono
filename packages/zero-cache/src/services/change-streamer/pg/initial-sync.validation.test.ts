@@ -1,7 +1,7 @@
 import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
-import {getConnectionURI, initDB, testDBs} from 'zero-cache/src/test/db.js';
-import type {PostgresDB} from 'zero-cache/src/types/pg.js';
+import {getConnectionURI, initDB, testDBs} from 'zero-cache/dist/test/db.js';
+import type {PostgresDB} from 'zero-cache/dist/types/pg.js';
 import {Database} from 'zqlite/dist/db.js';
 import {initialSync} from './initial-sync.js';
 

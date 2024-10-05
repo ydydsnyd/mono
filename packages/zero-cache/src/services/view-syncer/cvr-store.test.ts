@@ -1,7 +1,7 @@
 import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
 import {beforeEach, describe, expect, test} from 'vitest';
-import {testDBs} from 'zero-cache/src/test/db.js';
-import type {PostgresDB} from 'zero-cache/src/types/pg.js';
+import {testDBs} from 'zero-cache/dist/test/db.js';
+import type {PostgresDB} from 'zero-cache/dist/types/pg.js';
 import {CVRStore} from './cvr-store.js';
 import type {CVRSnapshot} from './cvr.js';
 import {type RowsRow, setupCVRTables} from './schema/cvr.js';

@@ -2,7 +2,10 @@ import {literal} from 'pg-format';
 import type postgres from 'postgres';
 import {equals} from 'shared/dist/set-utils.js';
 import * as v from 'shared/dist/valita.js';
-import type {FilteredTableSpec, IndexSpec} from 'zero-cache/src/types/specs.js';
+import type {
+  FilteredTableSpec,
+  IndexSpec,
+} from 'zero-cache/dist/types/specs.js';
 import {APP_PUBLICATION_PREFIX, INTERNAL_PUBLICATION_PREFIX} from './zero.js';
 
 type PublishedTableQueryResult = {

@@ -1,10 +1,10 @@
 import type postgres from 'postgres';
 import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
 import {afterAll, afterEach, beforeEach, describe, expect, test} from 'vitest';
-import {listTables} from 'zero-cache/src/db/lite-tables.js';
-import {stripCommentsAndWhitespace} from 'zero-cache/src/db/query-test-util.js';
-import {testDBs} from 'zero-cache/src/test/db.js';
-import type {TableSpec} from 'zero-cache/src/types/specs.js';
+import {listTables} from 'zero-cache/dist/db/lite-tables.js';
+import {stripCommentsAndWhitespace} from 'zero-cache/dist/db/query-test-util.js';
+import {testDBs} from 'zero-cache/dist/test/db.js';
+import type {TableSpec} from 'zero-cache/dist/types/specs.js';
 import {Database} from 'zqlite/dist/db.js';
 import {createTableStatement} from './create.js';
 import {mapPostgresToLite} from './lite.js';

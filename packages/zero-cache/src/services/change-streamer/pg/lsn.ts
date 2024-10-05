@@ -3,7 +3,7 @@ import {
   versionFromLexi,
   versionToLexi,
   type LexiVersion,
-} from 'zero-cache/src/types/lexi-version.js';
+} from 'zero-cache/dist/types/lexi-version.js';
 import type {Change} from '../schema/change.js';
 
 /**

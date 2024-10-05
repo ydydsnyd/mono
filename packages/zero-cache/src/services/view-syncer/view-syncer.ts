@@ -4,8 +4,8 @@ import {assert, unreachable} from 'shared/dist/asserts.js';
 import {CustomKeyMap} from 'shared/dist/custom-key-map.js';
 import {must} from 'shared/dist/must.js';
 import {difference} from 'shared/dist/set-utils.js';
-import {stringify} from 'zero-cache/src/types/bigint-json.js';
-import {rowIDHash, type RowKey} from 'zero-cache/src/types/row-key.js';
+import {stringify} from 'zero-cache/dist/types/bigint-json.js';
+import {rowIDHash, type RowKey} from 'zero-cache/dist/types/row-key.js';
 import type {
   ChangeDesiredQueriesBody,
   ChangeDesiredQueriesMessage,

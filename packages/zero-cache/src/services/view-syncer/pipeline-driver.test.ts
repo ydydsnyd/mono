@@ -1,7 +1,7 @@
 import {LogContext} from '@rocicorp/logger';
 import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
 import {beforeEach, describe, expect, test} from 'vitest';
-import {DbFile} from 'zero-cache/src/test/lite.js';
+import {DbFile} from 'zero-cache/dist/test/lite.js';
 import type {AST} from 'zql/dist/zql/ast/ast.js';
 import type {Database as DB} from 'zqlite/dist/db.js';
 import {Database} from 'zqlite/dist/db.js';

@@ -6,13 +6,13 @@ import {
   getConnectionURI,
   initDB,
   testDBs,
-} from 'zero-cache/src/test/db.js';
+} from 'zero-cache/dist/test/db.js';
 import {
   DbFile,
   expectTables as expectLiteTables,
   initDB as initLiteDB,
-} from 'zero-cache/src/test/lite.js';
-import type {PostgresDB} from 'zero-cache/src/types/pg.js';
+} from 'zero-cache/dist/test/lite.js';
+import type {PostgresDB} from 'zero-cache/dist/types/pg.js';
 import {replicationSlot} from './initial-sync.js';
 import {initSyncSchema} from './sync-schema.js';
 

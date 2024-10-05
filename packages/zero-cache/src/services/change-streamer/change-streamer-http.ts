@@ -7,13 +7,13 @@ import Fastify, {
 } from 'fastify';
 import * as v from 'shared/dist/valita.js';
 import WebSocket from 'ws';
-import {jsonValueSchema} from 'zero-cache/src/types/bigint-json.js';
+import {jsonValueSchema} from 'zero-cache/dist/types/bigint-json.js';
 import {
   type Source,
   streamIn,
   streamOut,
-} from 'zero-cache/src/types/streams.js';
-import {URLParams} from 'zero-cache/src/types/url-params.js';
+} from 'zero-cache/dist/types/streams.js';
+import {URLParams} from 'zero-cache/dist/types/url-params.js';
 import {RunningState} from '../running-state.js';
 import type {Service} from '../service.js';
 import type {

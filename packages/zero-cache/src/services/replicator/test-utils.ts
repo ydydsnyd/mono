@@ -2,8 +2,8 @@ import {LogContext} from '@rocicorp/logger';
 import {Pgoutput} from 'pg-logical-replication';
 import {assert} from 'shared/dist/asserts.js';
 import {h32} from 'shared/dist/xxhash.js';
-import {StatementRunner} from 'zero-cache/src/db/statements.js';
-import type {RowKey, RowValue} from 'zero-cache/src/types/row-key.js';
+import {StatementRunner} from 'zero-cache/dist/db/statements.js';
+import type {RowKey, RowValue} from 'zero-cache/dist/types/row-key.js';
 import {Database} from 'zqlite/dist/db.js';
 import type {
   DataChange,
