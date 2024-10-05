@@ -5,7 +5,7 @@ import type {
   ReplicaStateNotifier,
   Replicator,
 } from 'zero-cache/src/services/replicator/replicator.js';
-import {Database} from 'zqlite/src/db.js';
+import {Database} from 'zqlite/dist/db.js';
 import {Notifier} from '../services/replicator/notifier.js';
 import type {Worker} from '../types/processes.js';
 

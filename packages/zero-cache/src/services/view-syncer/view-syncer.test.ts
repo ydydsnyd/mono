@@ -1,5 +1,5 @@
-import {createSilentLogContext} from 'shared/src/logging-test-utils.js';
-import {Queue} from 'shared/src/queue.js';
+import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
+import {Queue} from 'shared/dist/queue.js';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {StatementRunner} from 'zero-cache/src/db/statements.js';
 import {DbFile} from 'zero-cache/src/test/lite.js';
@@ -9,8 +9,8 @@ import type {
   PokeStartBody,
   QueriesPatch,
 } from 'zero-protocol';
-import type {AST} from 'zql/src/zql/ast/ast.js';
-import {Database} from 'zqlite/src/db.js';
+import type {AST} from 'zql/dist/zql/ast/ast.js';
+import {Database} from 'zqlite/dist/db.js';
 import {testDBs} from '../../test/db.js';
 import type {PostgresDB} from '../../types/pg.js';
 import {Subscription} from '../../types/subscription.js';

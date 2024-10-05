@@ -1,4 +1,4 @@
-import {createSilentLogContext} from 'shared/src/logging-test-utils.js';
+import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {listIndices, listTables} from 'zero-cache/src/db/lite-tables.js';
 import {
@@ -14,7 +14,7 @@ import type {
   IndexSpec,
   TableSpec,
 } from 'zero-cache/src/types/specs.js';
-import {Database} from 'zqlite/src/db.js';
+import {Database} from 'zqlite/dist/db.js';
 import {initialSync, replicationSlot} from './initial-sync.js';
 import {fromLexiVersion} from './lsn.js';
 import {getPublicationInfo} from './schema/published.js';

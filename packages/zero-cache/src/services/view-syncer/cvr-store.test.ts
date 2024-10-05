@@ -1,4 +1,4 @@
-import {createSilentLogContext} from 'shared/src/logging-test-utils.js';
+import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
 import {beforeEach, describe, expect, test} from 'vitest';
 import {testDBs} from 'zero-cache/src/test/db.js';
 import type {PostgresDB} from 'zero-cache/src/types/pg.js';

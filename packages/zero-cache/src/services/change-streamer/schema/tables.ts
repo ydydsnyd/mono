@@ -1,6 +1,6 @@
 import {LogContext} from '@rocicorp/logger';
 import postgres from 'postgres';
-import {equals} from 'shared/src/set-utils.js';
+import {equals} from 'shared/dist/set-utils.js';
 import type {PostgresDB} from 'zero-cache/src/types/pg.js';
 import type {Change} from './change.js';
 

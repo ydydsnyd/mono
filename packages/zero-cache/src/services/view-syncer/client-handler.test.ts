@@ -1,4 +1,4 @@
-import {createSilentLogContext} from 'shared/src/logging-test-utils.js';
+import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
 import {describe, expect, test} from 'vitest';
 import type {
   Downstream,

@@ -1,12 +1,12 @@
 import type {LogContext} from '@rocicorp/logger';
-import {unreachable} from 'shared/src/asserts.js';
+import {unreachable} from 'shared/dist/asserts.js';
 import {
   assertJSONValue,
   type JSONObject as SafeJSONObject,
-} from 'shared/src/json.js';
-import * as v from 'shared/src/valita.js';
+} from 'shared/dist/json.js';
+import * as v from 'shared/dist/valita.js';
 import type {Downstream, EntitiesPatchOp, PokePartBody} from 'zero-protocol';
-import type {AST} from 'zql/src/zql/ast/ast.js';
+import type {AST} from 'zql/dist/zql/ast/ast.js';
 import type {JSONObject, JSONValue} from '../../types/bigint-json.js';
 import type {Subscription} from '../../types/subscription.js';
 import {

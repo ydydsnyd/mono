@@ -1,7 +1,7 @@
 import {readFile} from 'node:fs/promises';
 import type {PluginOption} from 'vite';
 import {defineConfig} from 'vitest/config';
-import {config} from '../shared/src/tool/vitest-config.js';
+import {config} from '../shared/dist/tool/vitest-config.js';
 
 /**
  * This plugin creates a default export for `.wasm` files that exports a

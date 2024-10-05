@@ -1,5 +1,5 @@
-import {createSilentLogContext} from 'shared/src/logging-test-utils.js';
-import {Queue} from 'shared/src/queue.js';
+import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
+import {Queue} from 'shared/dist/queue.js';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {testDBs} from 'zero-cache/src/test/db.js';
 import type {PostgresDB} from 'zero-cache/src/types/pg.js';

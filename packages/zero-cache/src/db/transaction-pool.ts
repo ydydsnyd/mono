@@ -1,8 +1,8 @@
 import type {LogContext} from '@rocicorp/logger';
 import {type Resolver, resolver} from '@rocicorp/resolver';
 import type postgres from 'postgres';
-import {assert} from 'shared/src/asserts.js';
-import {Queue} from 'shared/src/queue.js';
+import {assert} from 'shared/dist/asserts.js';
+import {Queue} from 'shared/dist/queue.js';
 import type {PostgresDB, PostgresTransaction} from '../types/pg.js';
 
 type MaybePromise<T> = Promise<T> | T;
@@ -200,12 +200,11 @@ export class TransactionPool {
                 ...result.stmts.map(stmt =>
                   stmt
                     .execute()
-                    .then(
-                      () =>
-                        lc.debug?.(
-                          `Executed statement (${Date.now() - start} ms)`,
-                          (stmt as unknown as Stmt).strings,
-                        ),
+                    .then(() =>
+                      lc.debug?.(
+                        `Executed statement (${Date.now() - start} ms)`,
+                        (stmt as unknown as Stmt).strings,
+                      ),
                     )
                     .catch(e => this.fail(e)),
                 ),

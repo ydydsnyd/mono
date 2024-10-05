@@ -5,7 +5,7 @@ import Fastify, {
   type FastifyReply,
   type FastifyRequest,
 } from 'fastify';
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/dist/valita.js';
 import WebSocket from 'ws';
 import {jsonValueSchema} from 'zero-cache/src/types/bigint-json.js';
 import {

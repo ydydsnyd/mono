@@ -1,4 +1,4 @@
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/dist/valita.js';
 import {astSchema} from 'zero-protocol';
 import {versionFromLexi, versionToLexi} from '../../../types/lexi-version.js';
 import {jsonValueSchema} from '../../../types/bigint-json.js';
@@ -49,14 +49,14 @@ export function cmpVersions(
   return a === null && b === null
     ? 0
     : a === null
-    ? -1
-    : b === null
-    ? 1
-    : a.stateVersion < b.stateVersion
-    ? -1
-    : a.stateVersion > b.stateVersion
-    ? 1
-    : (a.minorVersion ?? 0) - (b.minorVersion ?? 0);
+      ? -1
+      : b === null
+        ? 1
+        : a.stateVersion < b.stateVersion
+          ? -1
+          : a.stateVersion > b.stateVersion
+            ? 1
+            : (a.minorVersion ?? 0) - (b.minorVersion ?? 0);
 }
 
 export function versionToCookie(v: CVRVersion): string {

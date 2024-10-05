@@ -1,7 +1,7 @@
 import {LogContext} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
-import {createSilentLogContext} from 'shared/src/logging-test-utils.js';
-import {randInt} from 'shared/src/rand.js';
+import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
+import {randInt} from 'shared/dist/rand.js';
 import {
   afterEach,
   beforeEach,

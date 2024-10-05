@@ -1,8 +1,8 @@
 import {LogContext} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
-import {assert} from 'shared/src/asserts.js';
-import {Queue} from 'shared/src/queue.js';
-import {promiseVoid} from 'shared/src/resolved-promises.js';
+import {assert} from 'shared/dist/asserts.js';
+import {Queue} from 'shared/dist/queue.js';
+import {promiseVoid} from 'shared/dist/resolved-promises.js';
 import {Mode, TransactionPool} from 'zero-cache/src/db/transaction-pool.js';
 import type {JSONValue} from 'zero-cache/src/types/bigint-json.js';
 import type {PostgresDB} from 'zero-cache/src/types/pg.js';

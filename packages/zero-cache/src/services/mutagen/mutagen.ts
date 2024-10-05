@@ -3,7 +3,7 @@ import type {LogContext} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
 import type {JWTPayload} from 'jose';
 import postgres from 'postgres';
-import {assert, unreachable} from 'shared/src/asserts.js';
+import {assert, unreachable} from 'shared/dist/asserts.js';
 import {Mode} from 'zero-cache/src/db/transaction-pool.js';
 import {ErrorKind} from 'zero-protocol';
 import {
@@ -14,8 +14,8 @@ import {
   type Mutation,
   type SetOp,
   type UpdateOp,
-} from 'zero-protocol/src/push.js';
-import {Database} from 'zqlite/src/db.js';
+} from 'zero-protocol/dist/push.js';
+import {Database} from 'zqlite/dist/db.js';
 import {type ZeroConfig} from '../../config/zero-config.js';
 import {ErrorForClient} from '../../types/error-for-client.js';
 import type {PostgresDB, PostgresTransaction} from '../../types/pg.js';

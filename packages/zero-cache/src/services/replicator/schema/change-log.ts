@@ -1,5 +1,5 @@
-import type {Database} from 'zqlite/src/db.js';
-import * as v from 'shared/src/valita.js';
+import type {Database} from 'zqlite/dist/db.js';
+import * as v from 'shared/dist/valita.js';
 import {StatementRunner} from 'zero-cache/src/db/statements.js';
 import {
   jsonObjectSchema,

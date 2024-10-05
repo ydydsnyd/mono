@@ -1,7 +1,7 @@
 import {LogContext} from '@rocicorp/logger';
-import {AbortError} from 'shared/src/abort-error.js';
-import {createSilentLogContext} from 'shared/src/logging-test-utils.js';
-import {Queue} from 'shared/src/queue.js';
+import {AbortError} from 'shared/dist/abort-error.js';
+import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
+import {Queue} from 'shared/dist/queue.js';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {StatementRunner} from 'zero-cache/src/db/statements.js';
 import {

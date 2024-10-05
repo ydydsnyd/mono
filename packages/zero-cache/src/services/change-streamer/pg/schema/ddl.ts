@@ -1,5 +1,5 @@
-import {jsonObjectSchema} from 'shared/src/json-schema.js';
-import * as v from 'shared/src/valita.js';
+import {jsonObjectSchema} from 'shared/dist/json-schema.js';
+import * as v from 'shared/dist/valita.js';
 import type {FilteredTableSpec, IndexSpec} from 'zero-cache/src/types/specs.js';
 import {indexDefinitionsQuery, publishedTableQuery} from './published.js';
 

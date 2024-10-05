@@ -1,5 +1,5 @@
 import {LogContext} from '@rocicorp/logger';
-import {createSilentLogContext} from 'shared/src/logging-test-utils.js';
+import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {DbFile, expectTables} from 'zero-cache/src/test/lite.js';
 import {MessageProcessor} from '../replicator/incremental-sync.js';

@@ -1,7 +1,7 @@
 import {Lock} from '@rocicorp/lock';
 import type {LogContext} from '@rocicorp/logger';
-import {unreachable} from 'shared/src/asserts.js';
-import * as valita from 'shared/src/valita.js';
+import {unreachable} from 'shared/dist/asserts.js';
+import * as valita from 'shared/dist/valita.js';
 import type {CloseEvent, ErrorEvent, MessageEvent} from 'ws';
 import WebSocket from 'ws';
 import {

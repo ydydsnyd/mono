@@ -1,8 +1,8 @@
 import {LogContext} from '@rocicorp/logger';
-import type {JSONValue} from 'shared/src/json.js';
-import type {Storage} from 'zql/src/zql/ivm/operator.js';
-import type {Stream} from 'zql/src/zql/ivm/stream.js';
-import {Database, Statement} from 'zqlite/src/db.js';
+import type {JSONValue} from 'shared/dist/json.js';
+import type {Storage} from 'zql/dist/zql/ivm/operator.js';
+import type {Stream} from 'zql/dist/zql/ivm/stream.js';
+import {Database, Statement} from 'zqlite/dist/db.js';
 
 export interface ClientGroupStorage {
   /** Creates a {@link Storage} instance for a single operator. */

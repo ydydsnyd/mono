@@ -1,5 +1,5 @@
-import {assert} from 'shared/src/asserts.js';
-import type {Database} from 'zqlite/src/db.js';
+import {assert} from 'shared/dist/asserts.js';
+import type {Database} from 'zqlite/dist/db.js';
 import type {IndexSpec, TableSpec} from '../types/specs.js';
 
 type ColumnInfo = {

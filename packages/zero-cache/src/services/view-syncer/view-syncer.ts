@@ -1,9 +1,9 @@
 import {Lock} from '@rocicorp/lock';
 import type {LogContext} from '@rocicorp/logger';
-import {assert, unreachable} from 'shared/src/asserts.js';
-import {CustomKeyMap} from 'shared/src/custom-key-map.js';
-import {must} from 'shared/src/must.js';
-import {difference} from 'shared/src/set-utils.js';
+import {assert, unreachable} from 'shared/dist/asserts.js';
+import {CustomKeyMap} from 'shared/dist/custom-key-map.js';
+import {must} from 'shared/dist/must.js';
+import {difference} from 'shared/dist/set-utils.js';
 import {stringify} from 'zero-cache/src/types/bigint-json.js';
 import {rowIDHash, type RowKey} from 'zero-cache/src/types/row-key.js';
 import type {
@@ -12,8 +12,8 @@ import type {
   Downstream,
   InitConnectionMessage,
 } from 'zero-protocol';
-import type {AST} from 'zql/src/zql/ast/ast.js';
-import type {Row} from 'zql/src/zql/ivm/data.js';
+import type {AST} from 'zql/dist/zql/ast/ast.js';
+import type {Row} from 'zql/dist/zql/ivm/data.js';
 import type {PostgresDB} from '../../types/pg.js';
 import type {Source} from '../../types/streams.js';
 import {Subscription} from '../../types/subscription.js';

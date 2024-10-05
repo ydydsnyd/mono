@@ -1,7 +1,7 @@
 import {LogContext} from '@rocicorp/logger';
 import assert from 'assert';
 import {jwtVerify, type JWTPayload} from 'jose';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/dist/must.js';
 import {MessagePort} from 'worker_threads';
 import {WebSocketServer, type WebSocket} from 'ws';
 import {type ZeroConfig} from '../config/zero-config.js';

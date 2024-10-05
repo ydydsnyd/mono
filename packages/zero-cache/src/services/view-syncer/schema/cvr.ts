@@ -1,6 +1,6 @@
 import type {LogContext} from '@rocicorp/logger';
 import type postgres from 'postgres';
-import {stringCompare} from 'shared/src/string-compare.js';
+import {stringCompare} from 'shared/dist/string-compare.js';
 import {normalizedKeyOrder, type RowKey} from 'zero-cache/src/types/row-key.js';
 import {
   type JSONObject,

@@ -1,10 +1,10 @@
 import {LogContext} from '@rocicorp/logger';
-import {createSilentLogContext} from 'shared/src/logging-test-utils.js';
+import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
 import {beforeEach, describe, expect, test} from 'vitest';
 import {DbFile} from 'zero-cache/src/test/lite.js';
-import type {AST} from 'zql/src/zql/ast/ast.js';
-import type {Database as DB} from 'zqlite/src/db.js';
-import {Database} from 'zqlite/src/db.js';
+import type {AST} from 'zql/dist/zql/ast/ast.js';
+import type {Database as DB} from 'zqlite/dist/db.js';
+import {Database} from 'zqlite/dist/db.js';
 import {initChangeLog} from '../replicator/schema/change-log.js';
 import {initReplicationState} from '../replicator/schema/replication-state.js';
 import {fakeReplicator, ReplicationMessages} from '../replicator/test-utils.js';

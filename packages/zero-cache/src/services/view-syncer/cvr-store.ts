@@ -1,10 +1,10 @@
 import type {LogContext} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
 import type {MaybeRow, PendingQuery} from 'postgres';
-import {assert} from 'shared/src/asserts.js';
-import {CustomKeyMap} from 'shared/src/custom-key-map.js';
-import {deepEqual, type ReadonlyJSONValue} from 'shared/src/json.js';
-import {must} from 'shared/src/must.js';
+import {assert} from 'shared/dist/asserts.js';
+import {CustomKeyMap} from 'shared/dist/custom-key-map.js';
+import {deepEqual, type ReadonlyJSONValue} from 'shared/dist/json.js';
+import {must} from 'shared/dist/must.js';
 import {astSchema} from 'zero-protocol';
 import type {JSONValue} from '../../types/bigint-json.js';
 import {versionToLexi} from '../../types/lexi-version.js';

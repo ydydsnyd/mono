@@ -2,7 +2,26 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "lib": ["es2022", "dom"],
-    "types": ["node"]
+    "types": ["node"],
+    "outDir": "./dist/",
+    "rootDir": "./src/"
   },
-  "include": ["src/**/*.ts", "src/**/*.js", "bench/**/*.ts", "bench/**/*.js"]
+  "include": ["./src/"],
+  "references": [
+    {
+      "path": "../shared"
+    },
+    {
+      "path": "../zql"
+    },
+    {
+      "path": "../zero-protocol"
+    },
+    {
+      "path": "../datadog"
+    },
+    {
+      "path": "../zqlite"
+    }
+  ]
 }

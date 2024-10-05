@@ -3,8 +3,8 @@ import {
   Pgoutput,
   PgoutputPlugin,
 } from 'pg-logical-replication';
-import {createSilentLogContext} from 'shared/src/logging-test-utils.js';
-import {Queue} from 'shared/src/queue.js';
+import {createSilentLogContext} from 'shared/dist/logging-test-utils.js';
+import {Queue} from 'shared/dist/queue.js';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {
   dropReplicationSlot,

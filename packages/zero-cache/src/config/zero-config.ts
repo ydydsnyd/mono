@@ -3,8 +3,8 @@
  */
 
 import fs from 'node:fs/promises';
-import {must} from 'shared/src/must.js';
-import * as v from 'shared/src/valita.js';
+import {must} from 'shared/dist/must.js';
+import * as v from 'shared/dist/valita.js';
 import {astSchema} from 'zero-protocol';
 
 export type Action = 'select' | 'insert' | 'update' | 'delete';
