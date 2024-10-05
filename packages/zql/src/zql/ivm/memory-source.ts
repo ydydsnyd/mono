@@ -1,5 +1,5 @@
 import BTree from 'btree';
-import {assert, unreachable} from 'shared/src/asserts.js';
+import {assert, unreachable} from 'shared/dist/asserts.js';
 import type {Ordering, OrderPart, SimpleCondition} from '../ast/ast.js';
 import {assertOrderingIncludesPK} from '../builder/builder.js';
 import {createPredicate} from '../builder/filter.js';
