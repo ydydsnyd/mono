@@ -11,7 +11,7 @@ import {
 } from 'replicache';
 import {expect, test, vi} from 'vitest';
 import type {ChangeDesiredQueriesMessage} from 'zero-protocol';
-import type {AST} from 'zql/src/zql/ast/ast.js';
+import type {AST} from 'zql/dist/zql/ast/ast.js';
 import {QueryManager} from './query-manager.js';
 
 test('add', () => {

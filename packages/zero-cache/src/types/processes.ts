@@ -132,7 +132,7 @@ type Proc = Pick<ChildProcess, 'send'> & EventEmitter;
  * (Analogous to the `parentPort: MessagePort | null` of the `"workers"` library).
  */
 export const parentWorker: Worker | null = process.send
-  ? wrap(process as Proc)
+  ? wrap(process as unknown as Proc)
   : null;
 
 const SINGLE_PROCESS = 'SINGLE_PROCESS';

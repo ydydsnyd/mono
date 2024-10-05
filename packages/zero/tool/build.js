@@ -4,8 +4,8 @@ import * as esbuild from 'esbuild';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {builtinModules} from 'node:module';
-import {makeDefine, sharedOptions} from '../../shared/src/build.js';
-import {getExternalFromPackageJSON} from '../../shared/src/tool/get-external-from-package-json.js';
+import {makeDefine, sharedOptions} from '../../shared/dist/build.js';
+import {getExternalFromPackageJSON} from '../../shared/dist/tool/get-external-from-package-json.js';
 
 /**
  * @param {string} path

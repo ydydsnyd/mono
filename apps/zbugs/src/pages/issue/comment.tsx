@@ -1,5 +1,5 @@
 import {useZero} from '../../hooks/use-zero.js';
-import {useQuery} from 'zero-react/src/use-query.js';
+import {useQuery} from 'zero-react/dist/use-query.js';
 import Markdown from '../../components/markdown.js';
 import style from './comment.module.css';
 import {useState} from 'react';

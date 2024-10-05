@@ -12,8 +12,8 @@ import {
   type SetOp,
   type UpdateOp,
 } from 'zero-protocol/dist/push.js';
-import type {Row} from 'zql/src/zql/ivm/data.js';
-import type {SchemaToRow} from 'zql/src/zql/query/query.js';
+import type {Row} from 'zql/dist/zql/ivm/data.js';
+import type {SchemaToRow} from 'zql/dist/zql/query/query.js';
 import {toEntitiesKey} from './keys.js';
 import type {MutatorDefs, WriteTransaction} from './replicache-types.js';
 import type {Schema} from './zero.js';

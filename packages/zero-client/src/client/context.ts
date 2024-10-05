@@ -1,16 +1,16 @@
 import type {ExperimentalNoIndexDiff} from 'replicache';
 import {assert, unreachable} from 'shared/dist/asserts.js';
-import type {AST} from 'zql/src/zql/ast/ast.js';
-import type {Row} from 'zql/src/zql/ivm/data.js';
-import {MemorySource} from 'zql/src/zql/ivm/memory-source.js';
-import {MemoryStorage} from 'zql/src/zql/ivm/memory-storage.js';
-import type {Storage} from 'zql/src/zql/ivm/operator.js';
-import type {Source} from 'zql/src/zql/ivm/source.js';
+import type {AST} from 'zql/dist/zql/ast/ast.js';
+import type {Row} from 'zql/dist/zql/ivm/data.js';
+import {MemorySource} from 'zql/dist/zql/ivm/memory-source.js';
+import {MemoryStorage} from 'zql/dist/zql/ivm/memory-storage.js';
+import type {Storage} from 'zql/dist/zql/ivm/operator.js';
+import type {Source} from 'zql/dist/zql/ivm/source.js';
 import type {
   CommitListener,
   QueryDelegate,
-} from 'zql/src/zql/query/query-impl.js';
-import type {TableSchema} from 'zql/src/zql/query/schema.js';
+} from 'zql/dist/zql/query/query-impl.js';
+import type {TableSchema} from 'zql/dist/zql/query/schema.js';
 import {ENTITIES_KEY_PREFIX} from './keys.js';
 
 export type AddQuery = (ast: AST) => () => void;

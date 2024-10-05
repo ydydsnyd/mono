@@ -3,12 +3,7 @@
   "compilerOptions": {
     "composite": true,
     "noEmit": true,
-    "baseUrl": "./packages/",
-    "paths": {
-      "shared/src/*": ["shared/src/*"],
-      "zero-cache": ["zero-cache/dist/mod.ts"],
-      "zero-cache/dist/*": ["zero-cache/dist/*"]
-    }
+    "baseUrl": "./packages/"
   },
   "include": [
     "vite.config.ts",

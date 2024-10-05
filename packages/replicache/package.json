@@ -60,7 +60,7 @@
   "exports": {
     ".": {
       "types": "./dist/mod.d.ts",
-      "default": "./dist/replicache.js"
+      "default": "./dist/mod.js"
     },
     "./impl": {
       "types": "./dist/impl.d.ts",

@@ -2,7 +2,7 @@ import type {ClientID} from 'replicache';
 import {must} from 'shared/dist/must.js';
 import {h64} from 'shared/dist/xxhash.js';
 import type {ChangeDesiredQueriesMessage, QueriesPatch} from 'zero-protocol';
-import {normalizeAST, type AST} from 'zql/src/zql/ast/ast.js';
+import {normalizeAST, type AST} from 'zql/dist/zql/ast/ast.js';
 import type {ReadTransaction} from '../mod.js';
 import {desiredQueriesPrefixForClient} from './keys.js';
 
