@@ -5,6 +5,7 @@
   "type": "module",
   "module": "true",
   "scripts": {
+    "build": "tsc --build",
     "check-types": "tsc --noEmit",
     "check-types:watch": "tsc --noEmit --watch"
   },

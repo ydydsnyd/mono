@@ -21,6 +21,10 @@
     "zero-protocol": "0.0.0",
     "replicache": "15.2.1"
   },
+  "exports": {
+    ".": "./dist/mod.js",
+    "./dist/": "./dist/"
+  },
   "devDependencies": {
     "@rocicorp/eslint-config": "^0.5.1",
     "@rocicorp/prettier-config": "^0.2.0",
