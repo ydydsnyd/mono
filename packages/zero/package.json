@@ -4,7 +4,7 @@
   "scripts": {
     "prepack": "rm -rf deps && mkdir -p deps/sqlite3 && cp -r ../../deps/sqlite3/* deps/sqlite3/",
     "preinstall": "node tool/install-sqlite3.js",
-    "build": "rm -rf out && npm run build-server && npm run build-client",
+    "build": "rm -rf dist && npm run build-server && npm run build-client",
     "build-client": "tsc -p tsconfig.client.json && tsc-alias -p tsconfig.client.json && node tool/build.js",
     "build-server": "tsc -p tsconfig.server.json && tsc-alias -p tsconfig.server.json",
     "check-types": "tsc --noEmit",
@@ -37,41 +37,42 @@
     "postgres-array": "^3.0.2",
     "semver": "^7.5.4",
     "ws": "^8.18.0",
-    "xxhash-wasm": "^1.0.2"
+    "xxhash-wasm": "^1.0.2",
+    "zero-client": "0.0.0",
+    "zero-cache": "0.0.0",
+    "zero-react": "0.0.0"
   },
   "devDependencies": {
     "@rocicorp/eslint-config": "^0.5.1",
     "@rocicorp/prettier-config": "^0.2.0",
-    "zero-client": "0.0.0",
-    "zero-cache": "0.0.0",
     "esbuild": "^0.20.2",
     "replicache": "15.2.1",
     "tsc-alias": "^1.8.10",
     "typescript": "^5.5.3"
   },
   "type": "module",
-  "main": "out/zero.js",
-  "module": "out/zero.js",
-  "types": "out/zero-client/src/mod.d.ts",
+  "main": "dist/zero.js",
+  "module": "dist/zero.js",
+  "types": "dist/zero-client/dist/mod.d.ts",
   "exports": {
     ".": {
-      "types": "./out/zero-client/src/mod.d.ts",
-      "default": "./out/zero.js"
+      "types": "./dist/zero-client/dist/mod.d.ts",
+      "default": "./dist/zero.js"
     },
     "./react": {
-      "types": "./out/zero-react/src/mod.d.ts",
-      "default": "./out/react.js"
+      "types": "./dist/zero-react/src/mod.d.ts",
+      "default": "./dist/react.js"
     },
     "./server": {
-      "types": "./out/zero-cache/src/server/main.d.ts",
-      "default": "./out/zero-cache/src/server/main.js"
+      "types": "./dist/zero-cache/src/server/main.d.ts",
+      "default": "./dist/zero-cache/src/server/main.js"
     }
   },
   "bin": {
-    "zero-cache": "./out/zero/src/cli.js"
+    "zero-cache": "./dist/zero/src/cli.js"
   },
   "files": [
-    "out",
+    "dist",
     "!*.tsbuildinfo",
     "deps/sqlite3",
     "tool/install-sqlite3.js"

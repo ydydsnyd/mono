@@ -6,17 +6,16 @@
   "include": ["./src/"],
   "extends": "../../tsconfig.json",
   "references": [
-    {"path": "packages/btree"},
-    {"path": "packages/datadog"},
-    {"path": "packages/replicache"},
-    {"path": "packages/shared"},
-    {"path": "packages/zero"},
-    {"path": "packages/zero-cache"},
-    {"path": "packages/zero-client"},
-    {"path": "packages/zero-integration-test"},
-    {"path": "packages/zero-protocol"},
-    {"path": "packages/zero-react"},
-    {"path": "packages/zql"},
-    {"path": "packages/zqlite"}
+    {"path": "../btree"},
+    {"path": "../datadog"},
+    {"path": "../replicache"},
+    {"path": "../shared"},
+    {"path": "../zero"},
+    {"path": "../zero-cache"},
+    {"path": "../zero-client"},
+    {"path": "../zero-protocol"},
+    {"path": "../zero-react"},
+    {"path": "../zql"},
+    {"path": "../zqlite"}
   ]
 }

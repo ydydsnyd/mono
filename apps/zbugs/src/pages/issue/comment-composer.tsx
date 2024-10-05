@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {nanoid} from 'zero-client/src/util/nanoid.js';
+import {nanoid} from 'zero-client/dist/util/nanoid.js';
 import {useLogin} from '../../hooks/use-login.js';
 import {useZero} from '../../hooks/use-zero.js';
 
