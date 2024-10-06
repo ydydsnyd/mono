@@ -448,14 +448,18 @@ export function synchronizedSnapshots(): SynchronizeSnapshotTasks {
         stmt.then(result => exportSnapshot(result[0].snapshot), failExport);
         return [stmt]; // Also return the stmt so that it gets awaited (and errors handled).
       }
-      return snapshotExported.then(snapshotID => [
-        tx.unsafe(`SET TRANSACTION SNAPSHOT '${snapshotID}'`),
-        tx`SET TRANSACTION READ ONLY`.simple(),
-      ]);
+      return snapshotExported.then(snapshotID => {
+        console.log('after export');
+        return [
+          tx.unsafe(`SET TRANSACTION SNAPSHOT '${snapshotID}'`),
+          tx`SET TRANSACTION READ ONLY`.simple(),
+        ];
+      });
     },
 
     setSnapshot: tx =>
       snapshotExported.then(snapshotID => {
+        console.log('set snapshot');
         const stmt = tx.unsafe(`SET TRANSACTION SNAPSHOT '${snapshotID}'`);
         // Intercept the promise to propagate the information to `cleanupExport`.
         stmt.then(captureSnapshot, failCapture);
@@ -506,9 +510,10 @@ export function sharedSnapshot(): {
         return [stmt]; // Also return the stmt so that it gets awaited (and errors handled).
       }
       if (!firstWorkerDone) {
-        return snapshotExported.then(snapshotID => [
-          tx.unsafe(`SET TRANSACTION SNAPSHOT '${snapshotID}'`),
-        ]);
+        return snapshotExported.then(snapshotID => {
+          console.log('first work');
+          return [tx.unsafe(`SET TRANSACTION SNAPSHOT '${snapshotID}'`)];
+        });
       }
       lc.debug?.('All work is done. No need to set snapshot');
       return [];
@@ -534,6 +539,7 @@ export function importSnapshot(snapshotID: string): {
 
   return {
     init: tx => {
+      console.log('init task');
       const stmt = tx.unsafe(`SET TRANSACTION SNAPSHOT '${snapshotID}'`);
       stmt.then(() => resolve(), reject);
       return [stmt];
