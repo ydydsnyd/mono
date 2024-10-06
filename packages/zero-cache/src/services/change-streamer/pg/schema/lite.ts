@@ -1,3 +1,4 @@
+import type {LogContext} from '@rocicorp/logger';
 import {ZERO_VERSION_COLUMN_NAME} from 'zero-cache/src/services/replicator/schema/replication-state.js';
 import type {LiteDataType} from 'zero-cache/src/types/lite.js';
 import {liteTableName} from 'zero-cache/src/types/names.js';
@@ -12,10 +13,12 @@ export const ZERO_VERSION_COLUMN_SPEC: ColumnSpec = {
 };
 
 export function checkDataTypeSupported(pgDataType: string) {
-  mapPostgresToLiteDataType(pgDataType); // Throws on unsupported data types.
+  mapPostgresToLiteDataType(pgDataType);
 }
 
-function mapPostgresToLiteDataType(pgDataType: string): LiteDataType {
+function mapPostgresToLiteDataType(
+  pgDataType: string,
+): LiteDataType | undefined {
   switch (pgDataType) {
     case 'smallint':
     case 'integer':
@@ -57,12 +60,8 @@ function mapPostgresToLiteDataType(pgDataType: string): LiteDataType {
     // case 'time with time zone':
     // case 'time without time zone':
     //   return 'INTEGER';
-    default:
-      if (pgDataType.endsWith('[]')) {
-        throw new Error(`Array types are not supported: ${pgDataType}`);
-      }
-      throw new Error(`The "${pgDataType}" data type is not supported`);
   }
+  return undefined;
 }
 
 // e.g. true, false, 1234, 1234.5678
@@ -100,7 +99,7 @@ function mapPostgresToLiteDefault(
   return match[1];
 }
 
-export function mapPostgresToLite(t: TableSpec): TableSpec {
+export function mapPostgresToLite(t: TableSpec, lc: LogContext): TableSpec {
   const name = liteTableName(t);
   return {
     ...t,
@@ -108,9 +107,17 @@ export function mapPostgresToLite(t: TableSpec): TableSpec {
     name,
     columns: {
       ...Object.fromEntries(
-        Object.entries(t.columns).map(
-          ([col, {pos, dataType: pgType, notNull, dflt}]) => {
+        Object.entries(t.columns)
+          .map(([col, {pos, dataType: pgType, notNull, dflt}]) => {
             const dataType = mapPostgresToLiteDataType(pgType);
+            if (!dataType) {
+              lc.info?.(
+                'Skipping Postgres column with unsuported data type:',
+                col,
+                pgType,
+              );
+              return undefined;
+            }
             return [
               col,
               {
@@ -121,8 +128,8 @@ export function mapPostgresToLite(t: TableSpec): TableSpec {
                 dflt: mapPostgresToLiteDefault(name, col, dataType, dflt),
               } satisfies ColumnSpec,
             ];
-          },
-        ),
+          })
+          .filter(v => v !== undefined),
       ),
       [ZERO_VERSION_COLUMN_NAME]: ZERO_VERSION_COLUMN_SPEC,
     },

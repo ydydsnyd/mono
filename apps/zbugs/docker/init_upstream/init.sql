@@ -171,6 +171,8 @@ CREATE INDEX issue_open_modified_idx ON issue (open, modified);
 
 CREATE INDEX comment_issueid_idx ON "comment" ("issueID");
 
+alter table "user" add column foo date default current_date;
+
 SELECT
     *
 FROM

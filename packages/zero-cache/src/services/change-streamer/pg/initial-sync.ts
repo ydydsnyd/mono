@@ -53,7 +53,7 @@ export async function initialSync(
     const pubNames = publications.map(p => p.pubname);
     lc.info?.(`Upstream is setup with publications [${pubNames}]`);
 
-    createLiteTables(tx, tables);
+    createLiteTables(tx, tables, lc);
     createLiteIndices(tx, indices);
 
     const {database, host} = upstreamDB.options;
@@ -234,9 +234,13 @@ function startTableCopyWorkers(
   return tableCopiers;
 }
 
-function createLiteTables(tx: Database, tables: FilteredTableSpec[]) {
+function createLiteTables(
+  tx: Database,
+  tables: FilteredTableSpec[],
+  lc: LogContext,
+) {
   for (const t of tables) {
-    const liteTable = mapPostgresToLite(t);
+    const liteTable = mapPostgresToLite(t, lc);
     tx.exec(createTableStatement(liteTable));
   }
 }
