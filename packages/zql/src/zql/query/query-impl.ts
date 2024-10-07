@@ -31,6 +31,7 @@ import {
   type TableSchema,
 } from './schema.js';
 import type {TypedView} from './typed-view.js';
+import {SolidView} from '../ivm/solid-view.js';
 
 export function newQuery<
   TSchema extends TableSchema,
@@ -357,6 +358,9 @@ export abstract class AbstractQuery<
   }
 
   abstract materialize(): TypedView<Smash<TReturn>>;
+  materializeSolid(): TypedView<Smash<TReturn>> {
+    throw new Error('unsupported');
+  }
   abstract preload(): {
     cleanup: () => void;
     complete: Promise<void>;
@@ -401,6 +405,23 @@ export class QueryImpl<
     const ast = this._completeAst();
     const removeServerQuery = this.#delegate.addServerQuery(ast);
     const view = new ArrayView(
+      buildPipeline(ast, this.#delegate, undefined),
+      this.#format,
+    );
+    const removeCommitObserver = this.#delegate.onTransactionCommit(() => {
+      view.flush();
+    });
+    view.onDestroy = () => {
+      removeCommitObserver();
+      removeServerQuery();
+    };
+    return view as unknown as TypedView<Smash<TReturn>>;
+  }
+
+  materializeSolid() {
+    const ast = this._completeAst();
+    const removeServerQuery = this.#delegate.addServerQuery(ast);
+    const view = new SolidView(
       buildPipeline(ast, this.#delegate, undefined),
       this.#format,
     );
