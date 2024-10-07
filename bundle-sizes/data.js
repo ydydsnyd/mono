@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728306467659,
+  "lastUpdate": 1728315363430,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49317,6 +49317,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/c9ff113c1d70a3573e1b49a4a476940cca0de9d9"
         },
         "date": 1728306450689,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 310425,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54126,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113996,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31678,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fe4f73f2ee571fb2cf8ad2dbe586c4507d5969f1",
+          "message": "chore(replicache-perf): Cleanup build (#2580)\n\n- Use tsx for build script and remove build for runner.\r\n- Fix typescript errors\r\n- Move idb brenchmark enumeration to idb file.",
+          "timestamp": "2024-10-07T15:34:01Z",
+          "tree_id": "5f1d97748378a80eef07fccd7900a37f5520389d",
+          "url": "https://github.com/rocicorp/mono/commit/fe4f73f2ee571fb2cf8ad2dbe586c4507d5969f1"
+        },
+        "date": 1728315345221,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
