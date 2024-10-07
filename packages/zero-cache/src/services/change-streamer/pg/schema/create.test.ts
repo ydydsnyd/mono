@@ -360,6 +360,7 @@ describe('tables/create', () => {
   });
 
   describe('sqlite', () => {
+    const lc = createSilentLogContext();
     let db: Database;
 
     beforeEach(() => {
@@ -368,7 +369,7 @@ describe('tables/create', () => {
 
     for (const c of cases) {
       test(c.name, () => {
-        const liteTableSpec = mapPostgresToLite(c.srcTableSpec);
+        const liteTableSpec = mapPostgresToLite(lc, c.srcTableSpec);
         db.exec(createTableStatement(liteTableSpec));
 
         const tables = listTables(db);

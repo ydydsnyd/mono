@@ -18,7 +18,7 @@ import {
 } from '../../replicator/schema/replication-state.js';
 import {toLexiVersion} from './lsn.js';
 import {createTableStatement} from './schema/create.js';
-import {checkDataTypeSupported, mapPostgresToLite} from './schema/lite.js';
+import {checkDataTypesSupported, mapPostgresToLite} from './schema/lite.js';
 import {type PublicationInfo} from './schema/published.js';
 import {setupTablesAndReplication} from './schema/zero.js';
 import type {ShardConfig} from './shard-config.js';
@@ -53,7 +53,7 @@ export async function initialSync(
     const pubNames = publications.map(p => p.pubname);
     lc.info?.(`Upstream is setup with publications [${pubNames}]`);
 
-    createLiteTables(tx, tables);
+    createLiteTables(lc, tx, tables);
     createLiteIndices(tx, indices);
 
     const {database, host} = upstreamDB.options;
@@ -151,14 +151,14 @@ function ensurePublishedTables(
       if (!ALLOWED_IDENTIFIER_CHARS.test(table.name)) {
         throw new Error(`Table "${table.name}" has invalid characters.`);
       }
-      for (const [col, spec] of Object.entries(table.columns)) {
+      for (const col of Object.keys(table.columns)) {
         if (!ALLOWED_IDENTIFIER_CHARS.test(col)) {
           throw new Error(
             `Column "${col}" in table "${table.name}" has invalid characters.`,
           );
         }
-        checkDataTypeSupported(spec.dataType);
       }
+      checkDataTypesSupported(lc, table);
     });
 
     return published;
@@ -234,9 +234,13 @@ function startTableCopyWorkers(
   return tableCopiers;
 }
 
-function createLiteTables(tx: Database, tables: FilteredTableSpec[]) {
+function createLiteTables(
+  lc: LogContext,
+  tx: Database,
+  tables: FilteredTableSpec[],
+) {
   for (const t of tables) {
-    const liteTable = mapPostgresToLite(t);
+    const liteTable = mapPostgresToLite(lc, t);
     tx.exec(createTableStatement(liteTable));
   }
 }
