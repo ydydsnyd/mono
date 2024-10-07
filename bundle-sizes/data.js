@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1727974762374,
+  "lastUpdate": 1728306467659,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49273,6 +49273,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/f1b85dbb5aa3487f3d5d52b6d02a70310921577f"
         },
         "date": 1727974745947,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 310425,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54126,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113996,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31678,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c9ff113c1d70a3573e1b49a4a476940cca0de9d9",
+          "message": "chore: Unifify npm run check-types (#2581)\n\nNo need to set noEmit all over. noEmit is true in the root tsconfig.json\r\n\r\nAdd check-types:watch for consistency",
+          "timestamp": "2024-10-07T15:05:52+02:00",
+          "tree_id": "96bbf92c6d0b34dc6a055fb14a44d11ff2540e9d",
+          "url": "https://github.com/rocicorp/mono/commit/c9ff113c1d70a3573e1b49a4a476940cca0de9d9"
+        },
+        "date": 1728306450689,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
