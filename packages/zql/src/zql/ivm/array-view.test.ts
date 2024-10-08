@@ -1,5 +1,9 @@
-import {assertArray, notImplemented, unreachable} from 'shared/src/asserts.js';
-import {stringCompare} from 'shared/src/string-compare.js';
+import {
+  assertArray,
+  notImplemented,
+  unreachable,
+} from '../../../../shared/src/asserts.js';
+import {stringCompare} from '../../../../shared/src/string-compare.js';
 import {expect, test} from 'vitest';
 import {ArrayView} from './array-view.js';
 import type {Change} from './change.js';
