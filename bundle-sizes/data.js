@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728315363430,
+  "lastUpdate": 1728396856278,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49361,6 +49361,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/fe4f73f2ee571fb2cf8ad2dbe586c4507d5969f1"
         },
         "date": 1728315345221,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 310425,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54126,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113996,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31678,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "467cea5a7e27170ddc5293338bca4955b13a4800",
+          "message": "chore: Use relative paths everywhere (#2590)\n\nThis changes to use relative paths everywhere.\r\n\r\nThe only non relative paths remaining are `@rocicorp/zero` in `apps/zbugs`. These should remain because this should use the \"built\" version to use the public API.\r\n\r\nThis removes the \"paths\" in all of our tsconfigs. It also removes the vite-tsconfig-path plugin.\r\n\r\nThis was done using a script (transform.ts in the first commit) and then this script was run over the different packages.\r\n\r\nThis also adds a eslint rule that prevents using 'packagename/...' and 'packagename'.",
+          "timestamp": "2024-10-08T16:12:14+02:00",
+          "tree_id": "9f5d98bffac5786b8ca470b6b0e4bbe779a1dd35",
+          "url": "https://github.com/rocicorp/mono/commit/467cea5a7e27170ddc5293338bca4955b13a4800"
+        },
+        "date": 1728396839653,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
