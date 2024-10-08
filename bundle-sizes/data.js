@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728396856278,
+  "lastUpdate": 1728402402471,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49425,6 +49425,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31678,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3fa82e81276d44a0715c2c6e7655bd8aa1438c2e",
+          "message": "fix(replicache): If Replicache is closed, don't fire subscriptions (#2591)\n\nThis fixes the error at zbugs startup",
+          "timestamp": "2024-10-08T15:44:50Z",
+          "tree_id": "cfd5f6d2f9b7bd153e39fe13e27db623dd1cc1e1",
+          "url": "https://github.com/rocicorp/mono/commit/3fa82e81276d44a0715c2c6e7655bd8aa1438c2e"
+        },
+        "date": 1728402386071,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 310564,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54116,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 114052,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31706,
             "unit": "bytes"
           }
         ]
