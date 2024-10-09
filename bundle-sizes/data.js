@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728402402471,
+  "lastUpdate": 1728461580693,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49469,6 +49469,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31706,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "df92994418e2347da1567a44da74c348754cdcb5",
+          "message": "chore(replicache): Test for subscribe/watch when closed (#2605)\n\nThis is a test for #2591",
+          "timestamp": "2024-10-09T08:11:13Z",
+          "tree_id": "125ae457f8e3bafcdf3296d89de07a8d3a604f6c",
+          "url": "https://github.com/rocicorp/mono/commit/df92994418e2347da1567a44da74c348754cdcb5"
+        },
+        "date": 1728461564420,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 310577,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54186,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113909,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31639,
             "unit": "bytes"
           }
         ]
