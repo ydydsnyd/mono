@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728461580693,
+  "lastUpdate": 1728505738548,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49513,6 +49513,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31639,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "132324914+darkgnotic@users.noreply.github.com",
+            "name": "Darick Tong",
+            "username": "darkgnotic"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fd61cd66a01bb6a2dd8b9e325065e67842a0cf76",
+          "message": "feat(zero-cache): use `warn()` for the warning message (#2611)",
+          "timestamp": "2024-10-09T20:27:03Z",
+          "tree_id": "e789d6ddce3833c758734519185b5b7ff3037b69",
+          "url": "https://github.com/rocicorp/mono/commit/fd61cd66a01bb6a2dd8b9e325065e67842a0cf76"
+        },
+        "date": 1728505721844,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 310654,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54198,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113957,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31713,
             "unit": "bytes"
           }
         ]
