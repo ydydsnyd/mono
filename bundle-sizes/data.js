@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728548827984,
+  "lastUpdate": 1728550377656,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49601,6 +49601,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31713,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "75f2cb4ea07764b4f72b94f04329e3a6acddad52",
+          "message": "fix(zero): Check for runtime environment a different way.\n\nWe only want to check for IDB when user is actually using IDB.\nThis means putting the check lower in Replicache, where it is\nactually used.\n\nEstablish a pattern for doing this with future objects in the future.",
+          "timestamp": "2024-10-09T22:51:06-10:00",
+          "tree_id": "b49618589f960e495a985acbe03d06b6944294c4",
+          "url": "https://github.com/rocicorp/mono/commit/75f2cb4ea07764b4f72b94f04329e3a6acddad52"
+        },
+        "date": 1728550361040,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 310965,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54249,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 114122,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31700,
             "unit": "bytes"
           }
         ]
