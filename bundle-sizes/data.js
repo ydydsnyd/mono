@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728505738548,
+  "lastUpdate": 1728548827984,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49537,6 +49537,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/fd61cd66a01bb6a2dd8b9e325065e67842a0cf76"
         },
         "date": 1728505721844,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 310654,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54198,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113957,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31713,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "535ca23288f7d35ed4e4dee6a28450c1c29ce338",
+          "message": "chore: Update engines (#2624)\n\nFor zero we want >=20\r\n\r\nFor replicache we no longer care because the cli is no longer used.",
+          "timestamp": "2024-10-10T08:25:09Z",
+          "tree_id": "49369cc886bfc8682edd20aea1fd12d08311b31f",
+          "url": "https://github.com/rocicorp/mono/commit/535ca23288f7d35ed4e4dee6a28450c1c29ce338"
+        },
+        "date": 1728548811039,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
