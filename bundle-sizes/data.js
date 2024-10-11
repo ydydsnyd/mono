@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728550377656,
+  "lastUpdate": 1728659128414,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49625,6 +49625,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/75f2cb4ea07764b4f72b94f04329e3a6acddad52"
         },
         "date": 1728550361040,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 310965,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54249,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 114122,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31700,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3032a90e1ab0ec096544488b49e7901305026ee8",
+          "message": "chore: Upgrade TS to 5.6 (#2650)\n\nIt is needed for isolatedDeclarations which should speed up type\r\nchecking.",
+          "timestamp": "2024-10-11T15:03:30Z",
+          "tree_id": "3f2697f35d0b5c30a9aded6a200ff269e1c68e78",
+          "url": "https://github.com/rocicorp/mono/commit/3032a90e1ab0ec096544488b49e7901305026ee8"
+        },
+        "date": 1728659110445,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
