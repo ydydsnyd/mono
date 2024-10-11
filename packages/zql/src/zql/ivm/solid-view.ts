@@ -12,7 +12,7 @@ import type {Change} from './change.js';
 import type {Comparator, Row, Value} from './data.js';
 import type {Input, Output} from './operator.js';
 import type {TableSchema} from './schema.js';
-import {createStore, type SetStoreFunction} from 'solid-js/store';
+import {createStore, produce, type SetStoreFunction} from 'solid-js/store';
 
 /**
  * Called when the view changes. The received data should be considered
@@ -66,7 +66,7 @@ export class SolidView implements Output {
   onDestroy: (() => void) | undefined;
 
   #hydrated = false;
-  #dirty = false;
+  #queuedChanges: Change[] = [];
 
   constructor(
     input: Input,
@@ -114,29 +114,37 @@ export class SolidView implements Output {
       throw new Error("Can't hydrate twice");
     }
     this.#hydrated = true;
-    this.#dirty = true;
-    for (const node of this.#input.fetch({})) {
-      applyChange(
-        this.#root,
-        {type: 'add', node},
-        this.#schema,
-        '',
-        this.#format,
-      );
-    }
-    this.flush();
+    this.#setRoot(
+      produce(draftRoot => {
+        for (const node of this.#input.fetch({})) {
+          applyChange(
+            draftRoot,
+            {type: 'add', node},
+            this.#schema,
+            '',
+            this.#format,
+          );
+        }
+      }),
+    );
   }
 
   push(change: Change): void {
-    this.#dirty = true;
-    applyChange(this.#root, change, this.#schema, '', this.#format);
+    this.#queuedChanges.push(change);
   }
 
   flush() {
-    if (!this.#dirty) {
+    if (this.#queuedChanges.length === 0) {
       return;
     }
-    this.#dirty = false;
+    this.#setRoot(
+      produce(draftRoot => {
+        for (const change of this.#queuedChanges) {
+          applyChange(draftRoot, change, this.#schema, '', this.#format);
+        }
+      }),
+    );
+    this.#queuedChanges.length = 0;
     this.#fireListeners();
   }
 }
