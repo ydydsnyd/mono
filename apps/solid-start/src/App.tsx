@@ -1,20 +1,28 @@
-import {createSignal} from 'solid-js';
+import {createSignal, For} from 'solid-js';
 import solidLogo from './assets/solid.svg';
 import viteLogo from '/vite.svg';
 import './App.css';
 import {Zero} from '@rocicorp/zero';
-import {schema} from './schema';
+import {schema} from './domain/schema.js';
 
 function App() {
   const [count, setCount] = createSignal(0);
   const z = new Zero({
-    server: 'http://localhost:3000',
+    server: 'http://localhost:4848',
     userID: 'anon',
     schema,
     kvStore: 'mem',
   });
 
   console.log(z.clientID);
+
+  const issuesView = z.query.issue
+    .related('creator')
+    .related('labels')
+    .limit(100)
+    .materializeSolid();
+  const issues = issuesView.data;
+  issuesView.hydrate();
 
   return (
     <>
@@ -35,9 +43,19 @@ function App() {
           Edit <code>src/App.tsx</code> and save to test HMR
         </p>
       </div>
-      <p class="read-the-docs">
-        Click on the Vite and Solid logos to learn more
-      </p>
+      <div>
+        <For each={issues} fallback={<div>Loading...</div>}>
+          {issue => (
+            <div>
+              <span>{issue.title}</span>
+              <span>{issue.creator[0]?.name ?? ''}</span>
+              <For each={issue.labels} fallback={<div>Loading...</div>}>
+                {label => <span>{label.name}</span>}
+              </For>
+            </div>
+          )}
+        </For>
+      </div>
     </>
   );
 }

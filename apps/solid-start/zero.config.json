@@ -1,0 +1,329 @@
+{
+  "upstreamDBConnStr": {
+    "tag": "env",
+    "name": "UPSTREAM_URI"
+  },
+  "cvrDBConnStr": {
+    "tag": "env",
+    "name": "CVR_DB_URI"
+  },
+  "changeDBConnStr": {
+    "tag": "env",
+    "name": "CHANGE_DB_URI"
+  },
+  "numSyncWorkers": {
+    "tag": "env",
+    "name": "NUM_SYNC_WORKERS"
+  },
+  "changeStreamerConnStr": {
+    "tag": "env",
+    "name": "CHANGE_STREAMER_URI"
+  },
+  "replicaDBFile": {
+    "tag": "env",
+    "name": "REPLICA_DB_FILE"
+  },
+  "jwtSecret": {
+    "tag": "env",
+    "name": "JWT_SECRET"
+  },
+  "litestream": {
+    "tag": "env",
+    "name": "LITESTREAM"
+  },
+  "warmWebsocket": 32,
+  "shard": {
+    "id": {
+      "tag": "env",
+      "name": "SHARD_ID"
+    },
+    "publications": {
+      "tag": "env",
+      "name": "PUBLICATIONS"
+    }
+  },
+  "log": {
+    "level": {
+      "tag": "env",
+      "name": "LOG_LEVEL"
+    },
+    "format": {
+      "tag": "env",
+      "name": "LOG_FORMAT"
+    }
+  },
+  "rateLimit": {
+    "mutationTransactions": {
+      "algorithm": "sliding-window",
+      "windowMs": 60000,
+      "maxTransactions": 100
+    }
+  },
+  "authorization": {
+    "user": {
+      "table": {
+        "insert": [],
+        "update": [],
+        "delete": []
+      }
+    },
+    "issue": {
+      "row": {
+        "insert": [
+          [
+            "allow",
+            {
+              "table": "user",
+              "where": [
+                {
+                  "type": "simple",
+                  "op": "=",
+                  "field": "id",
+                  "value": {
+                    "type": "static",
+                    "anchor": "authData",
+                    "field": "sub"
+                  }
+                }
+              ],
+              "orderBy": [
+                [
+                  "id",
+                  "asc"
+                ]
+              ]
+            }
+          ]
+        ],
+        "delete": [
+          [
+            "allow",
+            {
+              "table": "issue",
+              "where": [
+                {
+                  "type": "simple",
+                  "op": "=",
+                  "field": "id",
+                  "value": {
+                    "type": "static",
+                    "anchor": "preMutationRow",
+                    "field": "id"
+                  }
+                },
+                {
+                  "type": "simple",
+                  "op": "=",
+                  "field": "creatorID",
+                  "value": {
+                    "type": "static",
+                    "anchor": "authData",
+                    "field": "sub"
+                  }
+                }
+              ],
+              "orderBy": [
+                [
+                  "id",
+                  "asc"
+                ]
+              ]
+            }
+          ],
+          [
+            "allow",
+            {
+              "table": "user",
+              "where": [
+                {
+                  "type": "simple",
+                  "op": "=",
+                  "field": "id",
+                  "value": {
+                    "type": "static",
+                    "anchor": "authData",
+                    "field": "sub"
+                  }
+                },
+                {
+                  "type": "simple",
+                  "op": "=",
+                  "field": "role",
+                  "value": "crew"
+                }
+              ],
+              "orderBy": [
+                [
+                  "id",
+                  "asc"
+                ]
+              ]
+            }
+          ]
+        ]
+      }
+    },
+    "comment": {
+      "row": {
+        "insert": [
+          [
+            "allow",
+            {
+              "table": "user",
+              "where": [
+                {
+                  "type": "simple",
+                  "op": "=",
+                  "field": "id",
+                  "value": {
+                    "type": "static",
+                    "anchor": "authData",
+                    "field": "sub"
+                  }
+                }
+              ],
+              "orderBy": [
+                [
+                  "id",
+                  "asc"
+                ]
+              ]
+            }
+          ]
+        ],
+        "update": [
+          [
+            "allow",
+            {
+              "table": "comment",
+              "where": [
+                {
+                  "type": "simple",
+                  "op": "=",
+                  "field": "id",
+                  "value": {
+                    "type": "static",
+                    "anchor": "preMutationRow",
+                    "field": "id"
+                  }
+                },
+                {
+                  "type": "simple",
+                  "op": "=",
+                  "field": "creatorID",
+                  "value": {
+                    "type": "static",
+                    "anchor": "authData",
+                    "field": "sub"
+                  }
+                }
+              ],
+              "orderBy": [
+                [
+                  "id",
+                  "asc"
+                ]
+              ]
+            }
+          ],
+          [
+            "allow",
+            {
+              "table": "user",
+              "where": [
+                {
+                  "type": "simple",
+                  "op": "=",
+                  "field": "id",
+                  "value": {
+                    "type": "static",
+                    "anchor": "authData",
+                    "field": "sub"
+                  }
+                },
+                {
+                  "type": "simple",
+                  "op": "=",
+                  "field": "role",
+                  "value": "crew"
+                }
+              ],
+              "orderBy": [
+                [
+                  "id",
+                  "asc"
+                ]
+              ]
+            }
+          ]
+        ],
+        "delete": [
+          [
+            "allow",
+            {
+              "table": "comment",
+              "where": [
+                {
+                  "type": "simple",
+                  "op": "=",
+                  "field": "id",
+                  "value": {
+                    "type": "static",
+                    "anchor": "preMutationRow",
+                    "field": "id"
+                  }
+                },
+                {
+                  "type": "simple",
+                  "op": "=",
+                  "field": "creatorID",
+                  "value": {
+                    "type": "static",
+                    "anchor": "authData",
+                    "field": "sub"
+                  }
+                }
+              ],
+              "orderBy": [
+                [
+                  "id",
+                  "asc"
+                ]
+              ]
+            }
+          ],
+          [
+            "allow",
+            {
+              "table": "user",
+              "where": [
+                {
+                  "type": "simple",
+                  "op": "=",
+                  "field": "id",
+                  "value": {
+                    "type": "static",
+                    "anchor": "authData",
+                    "field": "sub"
+                  }
+                },
+                {
+                  "type": "simple",
+                  "op": "=",
+                  "field": "role",
+                  "value": "crew"
+                }
+              ],
+              "orderBy": [
+                [
+                  "id",
+                  "asc"
+                ]
+              ]
+            }
+          ]
+        ]
+      }
+    }
+  }
+}

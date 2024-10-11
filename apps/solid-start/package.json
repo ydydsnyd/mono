@@ -5,14 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "zero": "ZERO_CONFIG_PATH=zero.config.json zero-cache start"
   },
   "dependencies": {
-    "solid-js": "^1.9.1"
+    "solid-js": "^1.9.1",
+    "@rocicorp/zero": "0.2.2024101101+147cdf"
   },
   "devDependencies": {
-    "typescript": "^5.5.3",
+    "typescript": "^5.6.3",
     "vite": "^5.4.1",
     "vite-plugin-solid": "^2.10.2"
   }

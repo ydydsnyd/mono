@@ -358,9 +358,7 @@ export abstract class AbstractQuery<
   }
 
   abstract materialize(): TypedView<Smash<TReturn>>;
-  materializeSolid(): TypedView<Smash<TReturn>> {
-    throw new Error('unsupported');
-  }
+  abstract materializeSolid(): TypedView<Smash<TReturn>>;
   abstract preload(): {
     cleanup: () => void;
     complete: Promise<void>;

@@ -32,7 +32,7 @@ export default function ListPage() {
   )?.id;
   const labelIDs = useQuery(z.query.label.where('name', 'IN', labels));
 
-  let q = z.query.issue.orderBy('modified', 'desc').related('labels');
+  let q = z.query.issue.orderBy('modified', 'desc');
 
   if (status === null) {
     q = q.where('open', true);

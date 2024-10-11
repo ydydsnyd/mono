@@ -20,6 +20,7 @@ const issueSchema = {
     modified: {type: 'number'},
     created: {type: 'number'},
     creatorID: {type: 'string'},
+    assigneeID: {type: 'string', optional: true},
     description: {type: 'string'},
     labelIDs: {type: 'string'},
   },
@@ -46,6 +47,13 @@ const issueSchema = {
     },
     creator: {
       source: 'creatorID',
+      dest: {
+        field: 'id',
+        schema: () => userSchema,
+      },
+    },
+    assignee: {
+      source: 'assigneeID',
       dest: {
         field: 'id',
         schema: () => userSchema,
@@ -88,17 +96,15 @@ const labelSchema = {
 const issueLabelSchema = {
   tableName: 'issueLabel',
   columns: {
-    id: {type: 'string'},
     issueID: {type: 'string'},
     labelID: {type: 'string'},
   },
-  // mutators require an ID field still.
-  primaryKey: ['id'],
+  primaryKey: ['issueID', 'labelID'],
   relationships: {},
 } as const;
 
 export const schema = {
-  version: 1,
+  version: 3,
   tables: {
     user: userSchema,
     issue: issueSchema,

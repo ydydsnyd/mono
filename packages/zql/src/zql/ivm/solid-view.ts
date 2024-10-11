@@ -4,9 +4,9 @@ import {
   assertObject,
   assertUndefined,
   unreachable,
-} from 'shared/src/asserts.js';
-import type {Immutable} from 'shared/src/immutable.js';
-import {must} from 'shared/src/must.js';
+} from '../../../../shared/src/asserts.js';
+import type {Immutable} from '../../../../shared/src/immutable.js';
+import {must} from '../../../../shared/src/must.js';
 import {assertOrderingIncludesPK} from '../builder/builder.js';
 import type {Change} from './change.js';
 import type {Comparator, Row, Value} from './data.js';
@@ -14,6 +14,8 @@ import type {Input, Output} from './operator.js';
 import type {TableSchema} from './schema.js';
 import {createStore, produce, type SetStoreFunction} from 'solid-js/store';
 
+// TODO: The Listener abstraction is likely not relevant for solid
+// since the view.data is itself reactive.
 /**
  * Called when the view changes. The received data should be considered
  * immutable. Caller must not modify it. Passed data is valid until next
@@ -127,6 +129,7 @@ export class SolidView implements Output {
         }
       }),
     );
+    console.log('hydrate setRoot!!!!!');
   }
 
   push(change: Change): void {
@@ -145,6 +148,7 @@ export class SolidView implements Output {
       }),
     );
     this.#queuedChanges.length = 0;
+    console.log('flush setRoot!!!!!');
     this.#fireListeners();
   }
 }
