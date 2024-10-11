@@ -201,7 +201,7 @@ export class ZeroConfig {
 
   constructor(config: ZeroConfigType) {
     this.#config = config;
-    this.#log = new LogConfig(config.log ?? {});
+    this.#log = new LogConfig(config.log);
     this.#shard = new ShardConfig(config.shard);
     if (config.rateLimit) {
       this.#rateLimit = new RateLimitConfig(config.rateLimit);
@@ -295,8 +295,8 @@ export class MutationTransactionLimits {
 
 export class LogConfig {
   readonly #config: LogConfigType;
-  constructor(config: LogConfigType) {
-    this.#config = config;
+  constructor(config: LogConfigType | undefined) {
+    this.#config = config ?? {};
   }
 
   get level() {
