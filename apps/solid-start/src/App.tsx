@@ -6,7 +6,6 @@ import {Zero} from '@rocicorp/zero';
 import {schema} from './domain/schema.js';
 
 function App() {
-  const [count, setCount] = createSignal(0);
   const z = new Zero({
     server: 'http://localhost:4848',
     userID: 'anon',
@@ -16,13 +15,32 @@ function App() {
 
   console.log(z.clientID);
 
-  const issuesView = z.query.issue
-    .related('creator')
-    .related('labels')
-    .limit(100)
-    .materializeSolid();
-  const issues = issuesView.data;
-  issuesView.hydrate();
+  const usersView = z.query.user.materializeSolid();
+  usersView.hydrate();
+  const users = usersView.data;
+
+  const labelsView = z.query.label.limit(6).materializeSolid();
+  labelsView.hydrate();
+  const labels = labelsView.data;
+
+  const [selectedUserID, setSelectedUserID] = createSignal<string | undefined>(
+    undefined,
+  );
+
+  const issues = () => {
+    let issueQuery = z.query.issue
+      .related('creator')
+      .related('labels')
+      .limit(100);
+    const userID = selectedUserID();
+    if (userID) {
+      issueQuery = issueQuery.where('creatorID', '=', userID);
+    }
+    const issuesView = issueQuery.materializeSolid();
+
+    issuesView.hydrate();
+    return issuesView.data;
+  };
 
   return (
     <>
@@ -35,23 +53,63 @@ function App() {
         </a>
       </div>
       <h1>Vite + Solid</h1>
-      <div class="card">
-        <button onClick={() => setCount(count => count + 1)}>
-          count is {count()}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
       <div>
-        <For each={issues} fallback={<div>Loading...</div>}>
+        <button onClick={() => setSelectedUserID(undefined)}>Clear</button>
+        <For each={users}>
+          {user => (
+            <button
+              onClick={() => {
+                selectedUserID() === user.id
+                  ? setSelectedUserID(undefined)
+                  : setSelectedUserID(user.id);
+              }}
+            >
+              {user.name}
+            </button>
+          )}
+        </For>
+        <For each={issues()} fallback={<div>Loading...</div>}>
           {issue => (
             <div>
-              <span>{issue.title}</span>
-              <span>{issue.creator[0]?.name ?? ''}</span>
-              <For each={issue.labels} fallback={<div>Loading...</div>}>
-                {label => <span>{label.name}</span>}
-              </For>
+              <div>{issue.title}</div>
+              <div>Creator:&nbsp;{issue.creator[0]?.name}</div>
+              <div>
+                Labels:&nbsp;
+                <For each={issue.labels}>
+                  {label => (
+                    <>
+                      <button
+                        onClick={() => {
+                          void z.mutate.issueLabel.delete({
+                            issueID: issue.id,
+                            labelID: label.id,
+                          });
+                        }}
+                      >
+                        {label.name}
+                      </button>
+                      ,&nbsp;
+                    </>
+                  )}
+                </For>
+              </div>
+              <div>
+                Add Labels:&nbsp;
+                <For each={labels}>
+                  {label => (
+                    <button
+                      onClick={() => {
+                        void z.mutate.issueLabel.set({
+                          issueID: issue.id,
+                          labelID: label.id,
+                        });
+                      }}
+                    >
+                      {label.name}
+                    </button>
+                  )}
+                </For>
+              </div>
             </div>
           )}
         </For>

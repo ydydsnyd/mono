@@ -1,3 +1,4 @@
+import {startTransition} from 'solid-js';
 import {
   assert,
   assertArray,
@@ -68,7 +69,6 @@ export class SolidView implements Output {
   onDestroy: (() => void) | undefined;
 
   #hydrated = false;
-  #queuedChanges: Change[] = [];
 
   constructor(
     input: Input,
@@ -112,6 +112,7 @@ export class SolidView implements Output {
   }
 
   hydrate() {
+    startTransition;
     if (this.#hydrated) {
       throw new Error("Can't hydrate twice");
     }
@@ -129,26 +130,18 @@ export class SolidView implements Output {
         }
       }),
     );
-    console.log('hydrate setRoot!!!!!');
+    this.flush();
   }
 
   push(change: Change): void {
-    this.#queuedChanges.push(change);
+    this.#setRoot(
+      produce(draftRoot => {
+        applyChange(draftRoot, change, this.#schema, '', this.#format);
+      }),
+    );
   }
 
   flush() {
-    if (this.#queuedChanges.length === 0) {
-      return;
-    }
-    this.#setRoot(
-      produce(draftRoot => {
-        for (const change of this.#queuedChanges) {
-          applyChange(draftRoot, change, this.#schema, '', this.#format);
-        }
-      }),
-    );
-    this.#queuedChanges.length = 0;
-    console.log('flush setRoot!!!!!');
     this.#fireListeners();
   }
 }
@@ -224,6 +217,7 @@ function applyChange(
         const view = parentEntry[relationship];
         assertArray(view);
         const {pos, found} = binarySearch(view, newEntry, schema.compareRows);
+
         assert(!found, 'node already exists');
         view.splice(pos, 0, newEntry);
       }

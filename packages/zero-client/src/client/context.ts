@@ -11,6 +11,7 @@ import type {
   GotCallback,
   QueryDelegate,
 } from '../../../zql/src/zql/query/query-impl.js';
+import {batch} from '../../../zql/src/index.js';
 import type {TableSchema} from '../../../zql/src/zql/query/schema.js';
 import {ENTITIES_KEY_PREFIX} from './keys.js';
 
@@ -71,48 +72,50 @@ export class ZeroContext implements QueryDelegate {
 
   processChanges(changes: ExperimentalNoIndexDiff) {
     try {
-      for (const diff of changes) {
-        const {key} = diff;
-        assert(key.startsWith(ENTITIES_KEY_PREFIX));
-        const slash = key.indexOf('/', ENTITIES_KEY_PREFIX.length);
-        const name = key.slice(ENTITIES_KEY_PREFIX.length, slash);
-        const source = this.getSource(name);
-        if (!source) {
-          continue;
+      batch(() => {
+        for (const diff of changes) {
+          const {key} = diff;
+          assert(key.startsWith(ENTITIES_KEY_PREFIX));
+          const slash = key.indexOf('/', ENTITIES_KEY_PREFIX.length);
+          const name = key.slice(ENTITIES_KEY_PREFIX.length, slash);
+          const source = this.getSource(name);
+          if (!source) {
+            continue;
+          }
+
+          switch (diff.op) {
+            case 'del':
+              assert(typeof diff.oldValue === 'object');
+              source.push({
+                type: 'remove',
+                row: diff.oldValue as Row,
+              });
+              break;
+            case 'add':
+              assert(typeof diff.newValue === 'object');
+              source.push({
+                type: 'add',
+                row: diff.newValue as Row,
+              });
+              break;
+            case 'change':
+              assert(typeof diff.newValue === 'object');
+              assert(typeof diff.oldValue === 'object');
+
+              // Edit changes are not yet supported everywhere. For now we only
+              // generate them in tests.
+              source.push({
+                type: 'edit',
+                row: diff.newValue as Row,
+                oldRow: diff.oldValue as Row,
+              });
+
+              break;
+            default:
+              unreachable(diff);
+          }
         }
-
-        switch (diff.op) {
-          case 'del':
-            assert(typeof diff.oldValue === 'object');
-            source.push({
-              type: 'remove',
-              row: diff.oldValue as Row,
-            });
-            break;
-          case 'add':
-            assert(typeof diff.newValue === 'object');
-            source.push({
-              type: 'add',
-              row: diff.newValue as Row,
-            });
-            break;
-          case 'change':
-            assert(typeof diff.newValue === 'object');
-            assert(typeof diff.oldValue === 'object');
-
-            // Edit changes are not yet supported everywhere. For now we only
-            // generate them in tests.
-            source.push({
-              type: 'edit',
-              row: diff.newValue as Row,
-              oldRow: diff.oldValue as Row,
-            });
-
-            break;
-          default:
-            unreachable(diff);
-        }
-      }
+      });
     } finally {
       this.#endTransaction();
     }
