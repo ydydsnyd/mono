@@ -38,6 +38,9 @@ export class ConfigQuery<
   materialize(): TypedView<Smash<TReturn>> {
     throw new Error('ConfigQuery cannot be materialized');
   }
+  materializeSolid(): TypedView<Smash<TReturn>> {
+    throw new Error('ConfigQuery cannot be materialized');
+  }
 
   preload(): {
     cleanup: () => void;
