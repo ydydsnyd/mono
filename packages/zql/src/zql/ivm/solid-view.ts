@@ -15,8 +15,6 @@ import type {Input, Output} from './operator.js';
 import type {TableSchema} from './schema.js';
 import {createStore, produce, type SetStoreFunction} from 'solid-js/store';
 
-// TODO: The Listener abstraction is likely not relevant for solid
-// since the view.data is itself reactive.
 /**
  * Called when the view changes. The received data should be considered
  * immutable. Caller must not modify it. Passed data is valid until next
