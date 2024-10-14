@@ -1,3 +1,4 @@
+import type {LogContext} from '@rocicorp/logger';
 import * as v from '../../../../../shared/src/valita.js';
 import type {Database} from '../../../../../zqlite/src/db.js';
 import {StatementRunner} from '../../../db/statements.js';
@@ -62,7 +63,8 @@ export const changeLogEntrySchema = v
 
 export type ChangeLogEntry = v.Infer<typeof changeLogEntrySchema>;
 
-export function initChangeLog(db: Database) {
+export function initChangeLog(db: Database, lc: LogContext) {
+  lc.info?.('creating change log schema');
   db.exec(CREATE_CHANGELOG_SCHEMA);
 }
 

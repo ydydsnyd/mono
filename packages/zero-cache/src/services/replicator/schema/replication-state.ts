@@ -8,6 +8,7 @@
 import * as v from '../../../../../shared/src/valita.js';
 import {StatementRunner} from '../../../db/statements.js';
 import {Database} from '../../../../../zqlite/src/db.js';
+import type {LogContext} from '@rocicorp/logger';
 
 export const ZERO_VERSION_COLUMN_NAME = '_0_version';
 
@@ -64,14 +65,18 @@ export function initReplicationState(
   db: Database,
   publications: string[],
   watermark: string,
+  lc: LogContext,
 ) {
+  lc.info?.('creating replication state schema');
   db.exec(CREATE_REPLICATION_STATE_SCHEMA);
+  lc.info?.('inserting replication config');
   db.prepare(
     `
     INSERT INTO "_zero.ReplicationConfig" 
        (replicaVersion, publications) VALUES (?, ?)
     `,
   ).run(watermark, JSON.stringify(publications.sort()));
+  lc.info?.('inserting replication state');
   db.prepare(
     `
     INSERT INTO "_zero.ReplicationState" 

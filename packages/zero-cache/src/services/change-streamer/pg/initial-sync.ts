@@ -76,10 +76,11 @@ export async function initialSync(
         copiers.processReadTask(db => copy(lc, table, db, tx)),
       ),
     );
+    lc.info?.('setting done');
     copiers.setDone();
 
-    initReplicationState(tx, pubNames, toLexiVersion(lsn));
-    initChangeLog(tx);
+    initReplicationState(tx, pubNames, toLexiVersion(lsn), lc);
+    initChangeLog(tx, lc);
     lc.info?.(`Synced initial data from ${pubNames} up to ${lsn}`);
 
     await copiers.done();
