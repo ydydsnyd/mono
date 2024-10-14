@@ -1,23 +1,8 @@
-import {Accessor, createMemo, createSignal, For, onCleanup} from 'solid-js';
+import {createSignal, For} from 'solid-js';
 import './App.css';
-import {Query, QueryType, Smash, TableSchema, Zero} from '@rocicorp/zero';
+import {Zero} from '@rocicorp/zero';
 import {schema} from './domain/schema.js';
-
-function useQuery<TSchema extends TableSchema, TReturn extends QueryType>(
-  querySignal: () => Query<TSchema, TReturn>,
-): Accessor<Smash<TReturn>> {
-  return createMemo(() => {
-    const query = querySignal();
-    const view = query.materializeSolid();
-
-    onCleanup(() => {
-      view.destroy();
-    });
-
-    view.hydrate();
-    return view.data;
-  });
-}
+import {useQuery} from './useQuery.js';
 
 function App() {
   const z = new Zero({
