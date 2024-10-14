@@ -9,7 +9,7 @@
     "zero": "ZERO_CONFIG_PATH=zero.config.json zero-cache start"
   },
   "dependencies": {
-    "@rocicorp/zero": "file:../../packages/zero/rocicorp-zero-0.2.2024101101+147cdf-solid.tgz",
+    "@rocicorp/zero": "file:../../packages/zero/rocicorp-zero-0.2.2024101101+147cdf-solid2.tgz",
     "solid-js": "^1.9.1"
   },
   "devDependencies": {
