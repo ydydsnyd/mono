@@ -1,7 +1,23 @@
-import {createSignal, For} from 'solid-js';
+import {Accessor, createMemo, createSignal, For, onCleanup} from 'solid-js';
 import './App.css';
-import {Zero} from '@rocicorp/zero';
+import {Query, QueryType, Smash, TableSchema, Zero} from '@rocicorp/zero';
 import {schema} from './domain/schema.js';
+
+function useQuery<TSchema extends TableSchema, TReturn extends QueryType>(
+  querySignal: () => Query<TSchema, TReturn>,
+): Accessor<Smash<TReturn>> {
+  return createMemo(() => {
+    const view = querySignal().materializeSolid();
+
+    onCleanup(() => {
+      view.destroy();
+      console.log('cleaned up previous view');
+    });
+
+    view.hydrate();
+    return view.data;
+  });
+}
 
 function App() {
   const z = new Zero({
@@ -11,34 +27,31 @@ function App() {
     kvStore: 'mem',
   });
 
+  z.query.issue.related('creator').related('labels').preload();
+
   console.log(z.clientID);
 
-  const usersView = z.query.user.materializeSolid();
-  usersView.hydrate();
-  const users = usersView.data;
+  const users = useQuery(() => z.query.user);
 
-  const labelsView = z.query.label.limit(6).materializeSolid();
-  labelsView.hydrate();
-  const labels = labelsView.data;
+  const labels = useQuery(() => z.query.label.limit(6));
 
   const [selectedUserID, setSelectedUserID] = createSignal<string | undefined>(
     undefined,
   );
 
-  const issues = () => {
+  const issues = useQuery(() => {
     let issueQuery = z.query.issue
       .related('creator')
       .related('labels')
       .limit(100);
     const userID = selectedUserID();
+
+    console.log('creating query for', userID);
     if (userID) {
       issueQuery = issueQuery.where('creatorID', '=', userID);
     }
-    const issuesView = issueQuery.materializeSolid();
-
-    issuesView.hydrate();
-    return issuesView.data;
-  };
+    return issueQuery;
+  });
 
   return (
     <>
@@ -47,7 +60,7 @@ function App() {
         <div>
           Filter to creator:
           <button onClick={() => setSelectedUserID(undefined)}>Clear</button>
-          <For each={users}>
+          <For each={users()}>
             {user => (
               <button
                 onClick={() => {
@@ -89,7 +102,7 @@ function App() {
                 </div>
                 <div>
                   Add Labels:&nbsp;
-                  <For each={labels}>
+                  <For each={labels()}>
                     {label => (
                       <button
                         onClick={() => {
