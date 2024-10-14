@@ -7,11 +7,11 @@ function useQuery<TSchema extends TableSchema, TReturn extends QueryType>(
   querySignal: () => Query<TSchema, TReturn>,
 ): Accessor<Smash<TReturn>> {
   return createMemo(() => {
-    const view = querySignal().materializeSolid();
+    const query = querySignal();
+    const view = query.materializeSolid();
 
     onCleanup(() => {
       view.destroy();
-      console.log('cleaned up previous view');
     });
 
     view.hydrate();
@@ -46,7 +46,6 @@ function App() {
       .limit(100);
     const userID = selectedUserID();
 
-    console.log('creating query for', userID);
     if (userID) {
       issueQuery = issueQuery.where('creatorID', '=', userID);
     }
