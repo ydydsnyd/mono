@@ -357,6 +357,7 @@ export abstract class AbstractQuery<
   }
 
   abstract materialize(): TypedView<Smash<TReturn>>;
+  abstract materializeWithStatus(): [TypedView<Smash<TReturn>>, Promise<void>];
   abstract preload(): {
     cleanup: () => void;
     complete: Promise<void>;
@@ -398,8 +399,17 @@ export class QueryImpl<
   }
 
   materialize(): TypedView<Smash<TReturn>> {
+    return this.materializeWithStatus()[0];
+  }
+
+  materializeWithStatus(): [TypedView<Smash<TReturn>>, Promise<void>] {
     const ast = this._completeAst();
-    const removeServerQuery = this.#delegate.addServerQuery(ast);
+    const {resolve, promise: complete} = resolver<void>();
+    const removeServerQuery = this.#delegate.addServerQuery(ast, got => {
+      if (got) {
+        resolve();
+      }
+    });
     const view = new ArrayView(
       buildPipeline(ast, this.#delegate, undefined),
       this.#format,
@@ -411,7 +421,7 @@ export class QueryImpl<
       removeCommitObserver();
       removeServerQuery();
     };
-    return view as unknown as TypedView<Smash<TReturn>>;
+    return [view as unknown as TypedView<Smash<TReturn>>, complete];
   }
 
   preload(): {

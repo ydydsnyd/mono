@@ -13,6 +13,19 @@ export function useQuery<
   TSchema extends TableSchema,
   TReturn extends QueryType,
 >(q: Query<TSchema, TReturn>, enable: boolean = true): Smash<TReturn> {
+  return useQueryWithStatus(q, enable).snapshot;
+}
+
+export function useQueryWithStatus<
+  TSchema extends TableSchema,
+  TReturn extends QueryType,
+>(
+  q: Query<TSchema, TReturn>,
+  enable: boolean = true,
+): {
+  snapshot: Smash<TReturn>;
+  status: 'partial' | 'complete';
+} {
   // TODO: Consider exposing singular on Query? The motivation is that we do not
   // want to export QueryImpl.
   const queryImpl = q as QueryImpl<TSchema, TReturn>;
@@ -23,11 +36,22 @@ export function useQuery<
   const [, setView] = useState<TypedView<Smash<TReturn>> | undefined>(
     undefined,
   );
+  const [status, setStatus] = useState<'partial' | 'complete'>('partial');
 
   useLayoutEffect(() => {
     if (enable) {
-      const view = q.materialize();
+      const [view, status] = q.materializeWithStatus();
       setView(view);
+      let disposed = false;
+      status
+        .then(() => {
+          if (!disposed) {
+            setStatus('complete');
+          }
+        })
+        .catch(err => {
+          console.error(err);
+        });
       const unsubscribe = view.addListener(snap => {
         // snapshot can contain `undefined`
         setSnapshot(
@@ -36,6 +60,7 @@ export function useQuery<
       });
       view.hydrate();
       return () => {
+        disposed = true;
         unsubscribe();
         view.destroy();
       };
@@ -53,5 +78,8 @@ export function useQuery<
     ),
   ]);
 
-  return snapshot;
+  return {
+    status,
+    snapshot,
+  };
 }
