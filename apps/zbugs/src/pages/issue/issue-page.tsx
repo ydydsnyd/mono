@@ -22,15 +22,14 @@ export default function IssuePage() {
   const z = useZero();
   const [match, params] = useRoute('/issue/:id');
 
-  const qs = new URLSearchParams(useSearch());
-  const status = qs.get('status')?.toLowerCase();
-
   let idField: 'id' | 'shortID' = 'id';
   const id = params?.id ?? '';
   if (isNumeric(id)) {
     idField = 'shortID';
   }
 
+  const qs = new URLSearchParams(useSearch());
+  const status = qs.get('status')?.toLowerCase();
   if (status === undefined) {
     const newParams = new URLSearchParams(qs);
     newParams.set('status', 'all');
