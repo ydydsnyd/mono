@@ -7,53 +7,14 @@ import {navigate} from 'wouter/use-browser-location';
 import Filter, {type Selection} from '../../components/filter.js';
 import {Link} from '../../components/link.js';
 import {useElementSize} from '../../hooks/use-element-size.js';
-import {useZero} from '../../hooks/use-zero.js';
 import {mark} from '../../perf-log.js';
 import IssueLink from '../../components/issue-link.js';
+import {useBuildListQuery} from '../../hooks/use-build-list-query.js';
 
 let firstRowRendered = false;
 export default function ListPage() {
-  const z = useZero();
-
   const qs = new URLSearchParams(useSearch());
-  const status = qs.get('status')?.toLowerCase() ?? 'open';
-  const creator = qs.get('creator');
-  const assignee = qs.get('assignee');
-  const labels = qs.getAll('label');
-
-  // TODO: this can go away once we have filter-by-subquery, you should be able
-  // to filter by label.name directly.
-  const creatorID = useQuery(
-    z.query.user.where('login', creator ?? '').one(),
-    creator !== null,
-  )?.id;
-  const assigneeID = useQuery(
-    z.query.user.where('login', assignee ?? '').one(),
-    assignee !== null,
-  )?.id;
-  const labelIDs = useQuery(z.query.label.where('name', 'IN', labels));
-
-  let q = z.query.issue.orderBy('modified', 'desc').related('labels');
-
-  if (status === 'open') {
-    q = q.where('open', true);
-  } else if (status === 'closed') {
-    q = q.where('open', false);
-  }
-
-  if (creatorID) {
-    q = q.where('creatorID', creatorID);
-  }
-
-  if (assigneeID) {
-    q = q.where('assigneeID', assigneeID);
-  }
-
-  for (const labelID of labelIDs) {
-    q = q.where('labelIDs', 'LIKE', `%${labelID.id}%`);
-  }
-
-  const issues = useQuery(q);
+  const status = qs.get('status')?.toLowerCase();
 
   const addFilter = (
     key: string,
@@ -81,6 +42,12 @@ export default function ListPage() {
     }
   };
 
+  if (status === undefined) {
+    navigate(addFilter('status', 'open'));
+  }
+
+  const issues = useQuery(useBuildListQuery(qs));
+
   const Row = ({index, style}: {index: number; style: CSSProperties}) => {
     const issue = issues[index];
     if (firstRowRendered === false) {
@@ -101,6 +68,7 @@ export default function ListPage() {
           })}
           issue={issue}
           title={issue.title}
+          searchParams={qs}
         >
           {issue.title}
         </IssueLink>
@@ -126,7 +94,7 @@ export default function ListPage() {
     <>
       <div className="list-view-header-container">
         <h1 className="list-view-header">
-          {status.charAt(0).toUpperCase() + status.slice(1)} Issues
+          {status && status.charAt(0).toUpperCase() + status.slice(1)} Issues
           <span className="issue-count">{issues.length}</span>
         </h1>
       </div>

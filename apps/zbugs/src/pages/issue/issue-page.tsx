@@ -1,7 +1,7 @@
 import {useQuery} from '@rocicorp/zero/react';
 import {useEffect, useMemo, useState} from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
-import {useRoute} from 'wouter';
+import {useRoute, useSearch} from 'wouter';
 import {navigate} from 'wouter/use-browser-location';
 import statusClosed from '../../assets/icons/issue-closed.svg';
 import statusOpen from '../../assets/icons/issue-open.svg';
@@ -14,14 +14,27 @@ import {useZero} from '../../hooks/use-zero.js';
 import {isNumeric} from '../../util.js';
 import CommentComposer from './comment-composer.js';
 import Comment from './comment.js';
+import {Link} from '../../components/link.js';
+import {useBuildListQuery} from '../../hooks/use-build-list-query.js';
+import {issueUrl} from '../../components/issue-link.js';
 
 export default function IssuePage() {
   const z = useZero();
   const [match, params] = useRoute('/issue/:id');
+
+  const qs = new URLSearchParams(useSearch());
+  const status = qs.get('status')?.toLowerCase();
+
   let idField: 'id' | 'shortID' = 'id';
   const id = params?.id ?? '';
   if (isNumeric(id)) {
     idField = 'shortID';
+  }
+
+  if (status === undefined) {
+    const newParams = new URLSearchParams(qs);
+    newParams.set('status', 'all');
+    navigate(issueUrl({id}, newParams));
   }
 
   // todo: one should be in the schema
@@ -36,11 +49,12 @@ export default function IssuePage() {
 
   const [editing, setEditing] = useState<typeof issue | null>(null);
   const [edits, setEdits] = useState<Partial<typeof issue>>({});
+
   useEffect(() => {
     if (match && issue?.shortID !== undefined && idField !== 'shortID') {
-      window.location.replace(`/issue/${issue.shortID}`);
+      navigate(issueUrl(issue, qs));
     }
-  }, [issue?.shortID, idField, match]);
+  }, [issue, idField, match, qs]);
 
   const save = () => {
     if (!editing) {
@@ -58,12 +72,23 @@ export default function IssuePage() {
 
   const next = useQuery(
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    z.query.issue.orderBy('modified', 'desc').start(issue!).one(),
+    useBuildListQuery(qs, 'desc').start(issue!).one(),
     issue !== undefined,
   );
   useKeypress('j', () => {
     if (next) {
-      navigate(`/issue/${next.id}`);
+      navigate(issueUrl(next, qs));
+    }
+  });
+
+  const prev = useQuery(
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    useBuildListQuery(qs, 'asc').start(issue!).one(),
+    issue !== undefined,
+  );
+  useKeypress('k', () => {
+    if (prev) {
+      navigate(issueUrl(prev, qs));
     }
   });
 
@@ -101,9 +126,12 @@ export default function IssuePage() {
       <div className="issue-detail">
         <div className="issue-topbar">
           <div className="issue-breadcrumb">
-            <span className="breadcrumb-item">Open issues</span>
+            <Link href={'/?' + qs.toString()} className="breadcrumb-item">
+              {status && status.charAt(0).toUpperCase() + status.slice(1)}{' '}
+              issues
+            </Link>
             <span className="breadcrumb-item">&rarr;</span>
-            <span className="breadcrumb-item">ZB-15</span>
+            <span className="breadcrumb-item">ZB-{issue.shortID}</span>
           </div>
           <div className="edit-buttons">
             {!editing ? (

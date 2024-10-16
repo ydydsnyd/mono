@@ -22,7 +22,7 @@ export function Nav() {
 
   const [showIssueModal, setShowIssueModal] = useState(false);
 
-  const addStatusParam = (status: 'closed' | 'all' | undefined) => {
+  const addStatusParam = (status: 'open' | 'closed' | 'all') => {
     const newParams = new URLSearchParams(qs);
     if (status === undefined) {
       newParams.delete('status');
@@ -49,7 +49,7 @@ export function Nav() {
 
         <div className="section-tabs">
           <Link
-            href={addStatusParam(undefined)}
+            href={addStatusParam('open')}
             className={classNames('nav-item', {
               'nav-active': !qs.has('status'),
             })}
