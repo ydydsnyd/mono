@@ -1,4 +1,4 @@
-import {useQuery} from '@rocicorp/zero/react';
+import {useQuery, useQueryWithStatus} from '@rocicorp/zero/react';
 import classNames from 'classnames';
 import {type CSSProperties, useRef} from 'react';
 import {FixedSizeList as List} from 'react-window';
@@ -9,6 +9,7 @@ import {Link} from '../../components/link.js';
 import {useElementSize} from '../../hooks/use-element-size.js';
 import {useZero} from '../../hooks/use-zero.js';
 import {mark} from '../../perf-log.js';
+import ShimmerList from '../../components/shimmer-list.js';
 
 let firstRowRendered = false;
 export default function ListPage() {
@@ -52,7 +53,7 @@ export default function ListPage() {
     q = q.where('labelIDs', 'LIKE', `%${labelID.id}%`);
   }
 
-  const issues = useQuery(q);
+  const {snapshot: issues, status: issuesStatus} = useQueryWithStatus(q);
 
   const addFilter = (
     key: string,
@@ -153,17 +154,24 @@ export default function ListPage() {
       </div>
 
       <div className="issue-list" ref={tableWrapperRef}>
-        {size && (
-          <List
-            className="virtual-list"
-            width={size.width}
-            height={size.height}
-            itemSize={56}
-            itemCount={issues.length}
-          >
-            {Row}
-          </List>
-        )}
+        {size &&
+          (issues.length === 0 && issuesStatus === 'partial' ? (
+            <ShimmerList
+              itemSize={56}
+              width={size.width}
+              height={size.height}
+            />
+          ) : (
+            <List
+              className="virtual-list"
+              width={size.width}
+              height={size.height}
+              itemSize={56}
+              itemCount={issues.length}
+            >
+              {Row}
+            </List>
+          ))}
       </div>
     </>
   );
