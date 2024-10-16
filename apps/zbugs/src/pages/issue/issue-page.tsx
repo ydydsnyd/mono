@@ -1,8 +1,6 @@
 import {useQuery} from '@rocicorp/zero/react';
 import {useMemo, useState} from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
-import {useRoute} from 'wouter';
-import {navigate} from 'wouter/use-browser-location';
 import statusClosed from '../../assets/icons/issue-closed.svg';
 import statusOpen from '../../assets/icons/issue-open.svg';
 import Markdown from '../../components/markdown.js';
@@ -13,20 +11,22 @@ import CommentComposer from './comment-composer.js';
 import Comment from './comment.js';
 import LabelPicker from '../../components/label-picker.js';
 import UserPicker from '../../components/user-picker.js';
+import {useMatch, useNavigate} from 'react-router-dom';
 
 export default function IssuePage() {
   const z = useZero();
-  const [match, params] = useRoute('/issue/:id');
+  const match = useMatch('/issue/:id');
+  const navigate = useNavigate();
 
   // todo: one should be in the schema
   const q = z.query.issue
-    .where('id', params?.id ?? '')
+    .where('id', match?.params?.id ?? '')
     .related('creator', creator => creator.one())
     .related('assignee', assignee => assignee.one())
     .related('labels')
     .related('comments', q => q.orderBy('created', 'asc'))
     .one();
-  const issue = useQuery(q, match);
+  const issue = useQuery(q, !!match);
 
   const [editing, setEditing] = useState<typeof issue | null>(null);
   const [edits, setEdits] = useState<Partial<typeof issue>>({});

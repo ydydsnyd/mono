@@ -1,5 +1,5 @@
 import type {ReactNode} from 'react';
-import {navigate} from 'wouter/use-browser-location';
+import {useNavigate} from 'react-router-dom';
 
 /**
  * The Link from wouter uses onClick and there's no way to change it.
@@ -16,6 +16,7 @@ export function Link({
   className?: string;
   title?: string;
 }) {
+  const navigate = useNavigate();
   const isPrimary = (e: React.MouseEvent) => {
     if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.button !== 0) {
       return false;

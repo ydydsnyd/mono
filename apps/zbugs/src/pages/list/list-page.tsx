@@ -2,19 +2,19 @@ import {useQuery} from '@rocicorp/zero/react';
 import classNames from 'classnames';
 import {type CSSProperties, useRef} from 'react';
 import {FixedSizeList as List} from 'react-window';
-import {useSearch} from 'wouter';
-import {navigate} from 'wouter/use-browser-location';
 import Filter, {type Selection} from '../../components/filter.js';
 import {Link} from '../../components/link.js';
 import {useElementSize} from '../../hooks/use-element-size.js';
 import {useZero} from '../../hooks/use-zero.js';
 import {mark} from '../../perf-log.js';
+import {useNavigate, useSearchParams} from 'react-router-dom';
 
 let firstRowRendered = false;
 export default function ListPage() {
   const z = useZero();
 
-  const qs = new URLSearchParams(useSearch());
+  const [qs] = useSearchParams();
+  const navigate = useNavigate();
   const status = qs.get('status');
   const creator = qs.get('creator');
   const assignee = qs.get('assignee');

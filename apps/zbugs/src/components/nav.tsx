@@ -2,7 +2,7 @@ import logoURL from '../assets/images/logo.svg';
 import {Link} from './link.js';
 import classNames from 'classnames';
 import {FPSMeter} from '@schickling/fps-meter';
-import {useSearch} from 'wouter';
+import {useSearchParams} from 'react-router-dom';
 import {useLogin} from '../hooks/use-login.js';
 import IssueComposer from '../pages/issue/issue-composer.js';
 import {useState} from 'react';
@@ -10,7 +10,7 @@ import {useZero} from '../hooks/use-zero.js';
 import {useQuery} from 'zero-react/src/use-query.js';
 
 export function Nav() {
-  const qs = new URLSearchParams(useSearch());
+  const [qs] = useSearchParams();
   const login = useLogin();
 
   const zero = useZero();

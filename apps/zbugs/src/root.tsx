@@ -1,7 +1,7 @@
 import {Zero} from '@rocicorp/zero';
 import {ZeroProvider} from '@rocicorp/zero/react';
 import {useEffect, useState} from 'react';
-import {Route, Switch} from 'wouter';
+import {BrowserRouter, Route, Routes} from 'react-router-dom';
 import {Nav} from './components/nav.js';
 import {type Schema} from './domain/schema.js';
 import ErrorPage from './pages/error/error-page.js';
@@ -24,11 +24,13 @@ export default function Root() {
           <Nav />
         </div>
         <div className="primary-content">
-          <Switch>
-            <Route path="/" component={ListPage} />
-            <Route path="/issue/:id" component={IssuePage} />
-            <Route component={ErrorPage} />
-          </Switch>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" Component={ListPage} />
+              <Route path="/issue/:id" Component={IssuePage} />
+              <Route Component={ErrorPage} />
+            </Routes>
+          </BrowserRouter>
         </div>
       </div>
     </ZeroProvider>
