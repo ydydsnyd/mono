@@ -20,7 +20,6 @@ import type {
   Parameter,
   Query,
   QueryType,
-  SchemaToRow,
   Selector,
   Smash,
 } from './query.js';
@@ -28,6 +27,7 @@ import {
   isFieldRelationship,
   isJunctionRelationship,
   type PullSchemaForRelationship,
+  type SchemaToRow,
   type TableSchema,
 } from './schema.js';
 import type {TypedView} from './typed-view.js';

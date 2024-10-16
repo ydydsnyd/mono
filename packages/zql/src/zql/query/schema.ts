@@ -1,7 +1,29 @@
-import type {TableSchemaBase} from '../ivm/schema.js';
+import type {SchemaValue, TableSchemaBase} from '../ivm/schema.js';
 
 export type TableSchema = TableSchemaBase & {
   readonly relationships: {readonly [name: string]: Relationship};
+};
+
+/**
+ * Given a schema value, return the TypeScript type.
+ *
+ * This allows us to create the correct return type for a
+ * query that has a selection.
+ */
+export type SchemaValueToTSType<T extends SchemaValue> =
+  | (T extends {type: 'string'}
+      ? string
+      : T extends {type: 'number'}
+      ? number
+      : T extends {type: 'boolean'}
+      ? boolean
+      : T extends {type: 'null'}
+      ? null
+      : never)
+  | (T extends {optional: true} ? undefined : never);
+
+export type SchemaToRow<T extends TableSchema> = {
+  [K in keyof T['columns']]: SchemaValueToTSType<T['columns'][K]>;
 };
 
 /**

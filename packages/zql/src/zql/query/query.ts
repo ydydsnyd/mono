@@ -1,8 +1,12 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import type {Row} from '../ivm/data.js';
-import type {SchemaValue} from '../ivm/schema.js';
 import type {Source} from '../ivm/source.js';
-import type {PullSchemaForRelationship, TableSchema} from './schema.js';
+import type {
+  PullSchemaForRelationship,
+  SchemaToRow,
+  SchemaValueToTSType,
+  TableSchema,
+} from './schema.js';
 import type {TypedView} from './typed-view.js';
 
 /**
@@ -26,24 +30,6 @@ type SmashOne<T extends QueryType> = T['row'] & {
     : never;
 };
 
-/**
- * Given a schema value, return the TypeScript type.
- *
- * This allows us to create the correct return type for a
- * query that has a selection.
- */
-type SchemaValueToTSType<T extends SchemaValue> =
-  | (T extends {type: 'string'}
-      ? string
-      : T extends {type: 'number'}
-      ? number
-      : T extends {type: 'boolean'}
-      ? boolean
-      : T extends {type: 'null'}
-      ? null
-      : never)
-  | (T extends {optional: true} ? undefined : never);
-
 export type GetFieldTypeNoNullOrUndefined<
   TSchema extends TableSchema,
   TColumn extends keyof TSchema['columns'],
@@ -54,10 +40,6 @@ export type GetFieldTypeNoNullOrUndefined<
       null | undefined
     >[]
   : Exclude<SchemaValueToTSType<TSchema['columns'][TColumn]>, null | undefined>;
-
-export type SchemaToRow<T extends TableSchema> = {
-  [K in keyof T['columns']]: SchemaValueToTSType<T['columns'][K]>;
-};
 
 export type QueryReturnType<T extends Query<TableSchema>> = T extends Query<
   TableSchema,

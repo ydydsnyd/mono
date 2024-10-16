@@ -14,7 +14,7 @@ import {
 import type {Row} from '../../../zql/src/zql/ivm/data.js';
 import type {PrimaryKey} from '../../../zql/src/zql/ivm/schema.js';
 import type {NormalizedPrimaryKey} from '../../../zql/src/zql/query/normalize-table-schema.js';
-import type {SchemaToRow} from '../../../zql/src/zql/query/query.js';
+import type {SchemaToRow} from '../../../zql/src/zql/query/schema.js';
 import {toPrimaryKeyString} from './keys.js';
 import type {NormalizedSchema} from './normalized-schema.js';
 import type {MutatorDefs, WriteTransaction} from './replicache-types.js';
