@@ -28,12 +28,13 @@ export default function IssuePage() {
     idField = 'shortID';
   }
 
-  const qs = new URLSearchParams(useSearch());
+  const search = useSearch();
+  const qs = new URLSearchParams(search);
   const status = qs.get('status')?.toLowerCase();
   if (status === undefined) {
     const newParams = new URLSearchParams(qs);
     newParams.set('status', 'all');
-    navigate(issueUrl({id}, newParams));
+    navigate(issueUrl({id}, newParams), {replace: true});
   }
 
   // todo: one should be in the schema
@@ -51,9 +52,9 @@ export default function IssuePage() {
 
   useEffect(() => {
     if (match && issue?.shortID !== undefined && idField !== 'shortID') {
-      navigate(issueUrl(issue, qs));
+      navigate(issueUrl(issue, search));
     }
-  }, [issue, idField, match, qs]);
+  }, [issue, idField, match, search]);
 
   const save = () => {
     if (!editing) {

@@ -43,7 +43,7 @@ export default function ListPage() {
   };
 
   if (status === undefined) {
-    navigate(addFilter('status', 'open'));
+    navigate(addFilter('status', 'open'), {replace: true});
   }
 
   const issues = useQuery(useBuildListQuery(qs));

@@ -23,10 +23,11 @@ export default function IssueLink({
 
 export function issueUrl(
   issue: {id: string; shortID?: number | undefined},
-  searchParams: URLSearchParams,
+  search: URLSearchParams | string,
 ) {
+  const searchStr = search.toString();
   return (
     `/issue/${issue.shortID ?? issue.id}` +
-    (searchParams.size > 0 ? '?' + searchParams.toString() : '')
+    (searchStr.length > 0 ? '?' + searchStr : '')
   );
 }
