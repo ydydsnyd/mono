@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1728659128414,
+  "lastUpdate": 1729172265210,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49689,6 +49689,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31700,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fa51e097c29189aa33829b92fd8e661fabe80438",
+          "message": "chore(replicache): Switch to vitest (#2710)\n\nThis involved a few things:\r\n\r\nThe `package.json` scripts now have `test-chromium`, `test-firefox` and `test-webkit`. `test` just calls these in sequence. It is less efficient than running them concurrently but overall it is still faster.\r\n\r\n`worker-test.ts` (the file loaded in a worker) was pulling in `vitest` which was not allowed. I removed the deps in there.\r\n\r\nAll the tests files now import `expect`, `test`, `describe` etc",
+          "timestamp": "2024-10-17T15:35:50+02:00",
+          "tree_id": "e88a921f5e34325443a7af841e50a7adf58f60bd",
+          "url": "https://github.com/rocicorp/mono/commit/fa51e097c29189aa33829b92fd8e661fabe80438"
+        },
+        "date": 1729172248449,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 310965,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54249,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 114122,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31691,
             "unit": "bytes"
           }
         ]
