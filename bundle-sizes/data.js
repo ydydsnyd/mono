@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729172265210,
+  "lastUpdate": 1729183090018,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49713,6 +49713,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/fa51e097c29189aa33829b92fd8e661fabe80438"
         },
         "date": 1729172248449,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 310965,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54249,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 114122,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31691,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b6027a72f2d5a3b15bb14091ea7a5361af11946e",
+          "message": "chore(replicache): A few stragglers from the vitest refactor (#2712)",
+          "timestamp": "2024-10-17T16:36:15Z",
+          "tree_id": "a0bdcb87dfcd808ca16e131d2464a0004dc917c0",
+          "url": "https://github.com/rocicorp/mono/commit/b6027a72f2d5a3b15bb14091ea7a5361af11946e"
+        },
+        "date": 1729183073318,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
