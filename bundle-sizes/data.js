@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729183090018,
+  "lastUpdate": 1729246136715,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49777,6 +49777,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31691,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b6b4044c5718aeef2999c06ed4693d93f4cb00e3",
+          "message": "chore: Update valita to 0.3.11 (#2730)\n\nTo pick up tuple concat for use with PrimaryKey type.",
+          "timestamp": "2024-10-18T12:06:59+02:00",
+          "tree_id": "81441ee237a7e9e0cedfc68248d7e6c4a83c4192",
+          "url": "https://github.com/rocicorp/mono/commit/b6b4044c5718aeef2999c06ed4693d93f4cb00e3"
+        },
+        "date": 1729246120273,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 312270,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54492,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 114763,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31874,
             "unit": "bytes"
           }
         ]
