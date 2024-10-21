@@ -1,9 +1,19 @@
-import MarkdownBase from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import {lazy, Suspense} from 'react';
+import {useMarkdown} from '../hooks/use-markdown.js';
 
-/**
- * Do not import this component directly. Use `Markdown` instead.
- */
+// Mermaid is a pretty huge library so we're going to lazy load it
+const MarkdownExtended = lazy(() => import('./markdown-extended.js'));
+
 export default function Markdown({children}: {children: string}) {
-  return <MarkdownBase rehypePlugins={[remarkGfm]}>{children}</MarkdownBase>;
+  const text = useMarkdown(children);
+
+  if (children.includes('```mermaid')) {
+    return (
+      <Suspense fallback={<div dangerouslySetInnerHTML={{__html: text}}></div>}>
+        <MarkdownExtended fallback={text}>{children}</MarkdownExtended>
+      </Suspense>
+    );
+  }
+
+  return <div dangerouslySetInnerHTML={{__html: text}}></div>;
 }
