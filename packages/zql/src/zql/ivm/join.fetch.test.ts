@@ -748,7 +748,7 @@ function fetchTest(t: FetchTest) {
       const ordering = t.sorts?.[i] ?? [['id', 'asc']];
       const source = new MemorySource(`t${i}`, t.columns[i], t.primaryKeys[i]);
       for (const row of rows) {
-        source.push({type: 'add', row});
+        source.push({type: 'add', fanoutSeq: undefined, row});
       }
       const snitch = new Snitch(source.connect(ordering), String(i), log);
       return {

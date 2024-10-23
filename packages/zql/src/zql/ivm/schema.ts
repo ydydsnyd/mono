@@ -22,7 +22,7 @@ export type TableSchemaBase = {
  * Information about the nodes output by an operator.
  */
 export type TableSchema = TableSchemaBase & {
-  readonly relationships: {[key: string]: TableSchema};
+  readonly relationships: {readonly [key: string]: TableSchema};
   readonly isHidden: boolean;
   readonly compareRows: (r1: Row, r2: Row) => number;
   readonly sort: Ordering;

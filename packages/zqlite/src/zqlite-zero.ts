@@ -109,6 +109,7 @@ export class ZQLiteZero<S extends Schema> {
         //console.log('Adding', value);
         await must(this.zeroContext.getSource(tableName)).push({
           type: 'add',
+          fanoutSeq: undefined,
           row: value,
         });
       },
@@ -116,6 +117,7 @@ export class ZQLiteZero<S extends Schema> {
         assertNotInBatch(tableName, 'set');
         await must(this.zeroContext.getSource(tableName)).push({
           type: 'add',
+          fanoutSeq: undefined,
           row: value,
         });
       },
@@ -129,10 +131,12 @@ export class ZQLiteZero<S extends Schema> {
         const mergedValue = {...existingEntity, ...value};
         await must(this.zeroContext.getSource(tableName)).push({
           type: 'remove',
+          fanoutSeq: undefined,
           row: existingEntity,
         });
         await must(this.zeroContext.getSource(tableName)).push({
           type: 'add',
+          fanoutSeq: undefined,
           row: mergedValue,
         });
       },
@@ -145,6 +149,7 @@ export class ZQLiteZero<S extends Schema> {
         if (!existingEntity) throw new Error(`Entity with id ${id} not found`);
         await must(this.zeroContext.getSource(tableName)).push({
           type: 'remove',
+          fanoutSeq: undefined,
           row: existingEntity,
         });
       },

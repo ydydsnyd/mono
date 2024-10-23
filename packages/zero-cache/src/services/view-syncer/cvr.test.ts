@@ -539,14 +539,12 @@ describe('view-syncer/cvr', () => {
           ast: {
             table: 'zero.clients',
             schema: '',
-            where: [
-              {
-                type: 'simple',
-                op: '=',
-                field: 'clientGroupID',
-                value: 'abc123',
-              },
-            ],
+            where: {
+              type: 'simple',
+              op: '=',
+              field: 'clientGroupID',
+              value: 'abc123',
+            },
             orderBy: [
               ['shardID', 'asc'],
               ['clientGroupID', 'asc'],

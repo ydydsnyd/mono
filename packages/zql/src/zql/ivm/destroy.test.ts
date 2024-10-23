@@ -20,6 +20,7 @@ test('destroy source connections', () => {
 
   const msg1 = {
     type: 'add',
+    fanoutSeq: undefined,
     row: {a: 3},
   } as const;
   ms.push(msg1);
@@ -31,6 +32,7 @@ test('destroy source connections', () => {
 
   const msg2 = {
     type: 'add',
+    fanoutSeq: undefined,
     row: {a: 2},
   } as const;
   ms.push(msg2);
@@ -48,6 +50,7 @@ test('destroy source connections', () => {
   snitch2.destroy();
   const msg3 = {
     type: 'add',
+    fanoutSeq: undefined,
     row: {a: 1},
   } as const;
   ms.push(msg3);
@@ -104,6 +107,7 @@ test('destroy a pipeline from the view', () => {
 
   source1.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       a: 'a',
       b: 'b-source-1',
@@ -111,6 +115,7 @@ test('destroy a pipeline from the view', () => {
   });
   source2.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       a: 'a',
       b: 'b-source-2',
@@ -136,6 +141,7 @@ test('destroy a pipeline from the view', () => {
 
   source2.push({
     type: 'remove',
+    fanoutSeq: undefined,
     row: {
       a: 'a',
       b: 'b-source-2',

@@ -12,13 +12,30 @@ function addData(queryDelegate: QueryDelegate) {
   const labelSource = must(queryDelegate.getSource('label'));
   const issueLabelSource = must(queryDelegate.getSource('issueLabel'));
 
-  userSource.push({type: 'add', row: {id: '001', name: 'Alice'}});
-  userSource.push({type: 'add', row: {id: '002', name: 'Bob'}});
-  userSource.push({type: 'add', row: {id: '003', name: 'Charlie'}});
-  userSource.push({type: 'add', row: {id: '004', name: 'Daniel'}});
+  userSource.push({
+    type: 'add',
+    fanoutSeq: undefined,
+    row: {id: '001', name: 'Alice'},
+  });
+  userSource.push({
+    type: 'add',
+    fanoutSeq: undefined,
+    row: {id: '002', name: 'Bob'},
+  });
+  userSource.push({
+    type: 'add',
+    fanoutSeq: undefined,
+    row: {id: '003', name: 'Charlie'},
+  });
+  userSource.push({
+    type: 'add',
+    fanoutSeq: undefined,
+    row: {id: '004', name: 'Daniel'},
+  });
 
   issueSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '101',
       title: 'Issue 1',
@@ -29,6 +46,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   issueSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '102',
       title: 'Issue 2',
@@ -39,6 +57,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   issueSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '103',
       title: 'Issue 3',
@@ -50,6 +69,7 @@ function addData(queryDelegate: QueryDelegate) {
 
   issueSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '104',
       title: 'Issue 4',
@@ -60,6 +80,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   issueSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '105',
       title: 'Issue 5',
@@ -70,6 +91,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   issueSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '106',
       title: 'Issue 6',
@@ -80,6 +102,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   issueSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '107',
       title: 'Issue 7',
@@ -90,6 +113,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   issueSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '108',
       title: 'Issue 8',
@@ -100,6 +124,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   issueSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '109',
       title: 'Issue 9',
@@ -110,6 +135,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   issueSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '110',
       title: 'Issue 10',
@@ -121,6 +147,7 @@ function addData(queryDelegate: QueryDelegate) {
 
   commentSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '201',
       issueId: '101',
@@ -131,6 +158,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   commentSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '202',
       issueId: '101',
@@ -141,6 +169,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   commentSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '203',
       issueId: '101',
@@ -151,6 +180,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   commentSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '204',
       issueId: '102',
@@ -161,6 +191,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   commentSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '205',
       issueId: '102',
@@ -171,6 +202,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   commentSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '206',
       issueId: '102',
@@ -181,6 +213,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   commentSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '207',
       issueId: '103',
@@ -191,6 +224,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   commentSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '208',
       issueId: '103',
@@ -201,6 +235,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   commentSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '209',
       issueId: '103',
@@ -211,6 +246,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   commentSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '210',
       issueId: '105',
@@ -221,6 +257,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   commentSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '211',
       issueId: '105',
@@ -231,6 +268,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   commentSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '212',
       issueId: '105',
@@ -242,47 +280,76 @@ function addData(queryDelegate: QueryDelegate) {
 
   revisionSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {id: '301', commentId: '209', text: 'Revision 1', authorId: '001'},
   });
   revisionSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {id: '302', commentId: '209', text: 'Revision 2', authorId: '001'},
   });
   revisionSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {id: '303', commentId: '209', text: 'Revision 3', authorId: '001'},
   });
   revisionSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {id: '304', commentId: '208', text: 'Revision 1', authorId: '002'},
   });
   revisionSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {id: '305', commentId: '208', text: 'Revision 2', authorId: '002'},
   });
   revisionSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {id: '306', commentId: '208', text: 'Revision 3', authorId: '002'},
   });
   revisionSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {id: '307', commentId: '211', text: 'Revision 1', authorId: '003'},
   });
   revisionSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {id: '308', commentId: '211', text: 'Revision 2', authorId: '003'},
   });
   revisionSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {id: '309', commentId: '211', text: 'Revision 3', authorId: '003'},
   });
 
-  labelSource.push({type: 'add', row: {id: '401', name: 'bug'}});
-  labelSource.push({type: 'add', row: {id: '402', name: 'feature'}});
+  labelSource.push({
+    type: 'add',
+    fanoutSeq: undefined,
+    row: {id: '401', name: 'bug'},
+  });
+  labelSource.push({
+    type: 'add',
+    fanoutSeq: undefined,
+    row: {id: '402', name: 'feature'},
+  });
 
-  issueLabelSource.push({type: 'add', row: {issueId: '103', labelId: '401'}});
-  issueLabelSource.push({type: 'add', row: {issueId: '102', labelId: '401'}});
-  issueLabelSource.push({type: 'add', row: {issueId: '102', labelId: '402'}});
+  issueLabelSource.push({
+    type: 'add',
+    fanoutSeq: undefined,
+    row: {issueId: '103', labelId: '401'},
+  });
+  issueLabelSource.push({
+    type: 'add',
+    fanoutSeq: undefined,
+    row: {issueId: '102', labelId: '401'},
+  });
+  issueLabelSource.push({
+    type: 'add',
+    fanoutSeq: undefined,
+    row: {issueId: '102', labelId: '402'},
+  });
 }
 
 describe('kitchen sink query', () => {

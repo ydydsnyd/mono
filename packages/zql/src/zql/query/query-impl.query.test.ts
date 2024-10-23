@@ -104,6 +104,7 @@ function addData(queryDelegate: QueryDelegate) {
   const issueLabelSource = must(queryDelegate.getSource('issueLabel'));
   userSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '0001',
       name: 'Alice',
@@ -111,6 +112,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   userSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '0002',
       name: 'Bob',
@@ -118,6 +120,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   issueSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '0001',
       title: 'issue 1',
@@ -128,6 +131,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   issueSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '0002',
       title: 'issue 2',
@@ -139,6 +143,7 @@ function addData(queryDelegate: QueryDelegate) {
 
   commentSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '0001',
       authorId: '0001',
@@ -148,6 +153,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   commentSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '0002',
       authorId: '0002',
@@ -157,6 +163,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   revisionSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '0001',
       authorId: '0001',
@@ -167,6 +174,7 @@ function addData(queryDelegate: QueryDelegate) {
 
   labelSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: '0001',
       name: 'label 1',
@@ -174,6 +182,7 @@ function addData(queryDelegate: QueryDelegate) {
   });
   issueLabelSource.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       issueId: '0001',
       labelId: '0001',
@@ -220,6 +229,7 @@ describe('bare select', () => {
 
     queryDelegate.getSource('issue').push({
       type: 'add',
+      fanoutSeq: undefined,
       row: {
         id: '0001',
         title: 'title',
@@ -242,6 +252,7 @@ describe('bare select', () => {
 
     queryDelegate.getSource('issue').push({
       type: 'remove',
+      fanoutSeq: undefined,
       row: {
         id: '0001',
       },
@@ -255,6 +266,7 @@ describe('bare select', () => {
     const queryDelegate = new QueryDelegateImpl();
     queryDelegate.getSource('issue').push({
       type: 'add',
+      fanoutSeq: undefined,
       row: {
         id: '0001',
         title: 'title',
@@ -289,6 +301,7 @@ describe('bare select', () => {
 
     queryDelegate.getSource('issue').push({
       type: 'add',
+      fanoutSeq: undefined,
       row: {
         id: '0001',
         title: 'title',
@@ -319,6 +332,7 @@ describe('bare select', () => {
 
     queryDelegate.getSource('issue').push({
       type: 'add',
+      fanoutSeq: undefined,
       row: {
         id: '0002',
         title: 'title2',
@@ -387,6 +401,7 @@ describe('joins and filters', () => {
 
     queryDelegate.getSource('issue').push({
       type: 'remove',
+      fanoutSeq: undefined,
       row: {
         id: '0001',
         title: 'issue 1',
@@ -403,6 +418,7 @@ describe('joins and filters', () => {
 
     queryDelegate.getSource('issue').push({
       type: 'add',
+      fanoutSeq: undefined,
       row: {
         id: '0001',
         title: 'issue 1',
@@ -495,6 +511,7 @@ describe('joins and filters', () => {
 
     queryDelegate.getSource('issue').push({
       type: 'remove',
+      fanoutSeq: undefined,
       row: {
         id: '0001',
         title: 'issue 1',
@@ -505,6 +522,7 @@ describe('joins and filters', () => {
     });
     queryDelegate.getSource('issue').push({
       type: 'remove',
+      fanoutSeq: undefined,
       row: {
         id: '0002',
         title: 'issue 2',

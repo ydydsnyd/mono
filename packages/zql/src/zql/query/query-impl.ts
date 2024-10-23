@@ -2,7 +2,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {resolver} from '@rocicorp/resolver';
 import {assert} from '../../../../shared/src/asserts.js';
-import type {AST, Ordering} from '../../../../zero-protocol/src/ast.js';
+import type {
+  AST,
+  Condition,
+  Ordering,
+} from '../../../../zero-protocol/src/ast.js';
 import type {Row} from '../../../../zero-protocol/src/data.js';
 import {buildPipeline, type BuilderDelegate} from '../builder/builder.js';
 import {ArrayView, type Format} from '../ivm/array-view.js';
@@ -266,19 +270,30 @@ export abstract class AbstractQuery<
       op = opOrValue as Operator;
     }
 
+    let cond: Condition = {
+      type: 'simple',
+      op,
+      field: field as string,
+      value,
+    };
+
+    const existingWhere = this.#ast.where;
+    if (existingWhere) {
+      if (existingWhere.type === 'and') {
+        cond = flattenCondition('and', [...existingWhere.conditions, cond]);
+      } else {
+        cond = {
+          type: 'and',
+          conditions: [existingWhere, cond],
+        };
+      }
+    }
+
     return this._newQuery(
       this.#schema,
       {
         ...this.#ast,
-        where: [
-          ...(this.#ast.where ?? []),
-          {
-            type: 'simple',
-            op,
-            field: field as string,
-            value,
-          },
-        ],
+        where: cond,
       },
       this.#format,
     );
@@ -459,4 +474,20 @@ function addPrimaryKeysToAst(schema: NormalizedTableSchema, ast: AST): AST {
     ...ast,
     orderBy: addPrimaryKeys(schema, ast.orderBy),
   };
+}
+
+function flattenCondition(
+  type: 'and' | 'or',
+  conditions: Condition[],
+): Condition {
+  const flattened: Condition[] = [];
+  for (const c of conditions) {
+    if (c.type === type) {
+      flattened.push(...c.conditions);
+    } else {
+      flattened.push(c);
+    }
+  }
+
+  return {type, conditions: flattened};
 }

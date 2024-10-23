@@ -1,9 +1,9 @@
 import {BTree} from '../../../../btree/src/mod.js';
 import {assert, unreachable} from '../../../../shared/src/asserts.js';
 import type {
+  Condition,
   Ordering,
   OrderPart,
-  SimpleCondition,
 } from '../../../../zero-protocol/src/ast.js';
 import type {Row, Value} from '../../../../zero-protocol/src/data.js';
 import type {PrimaryKey} from '../../../../zero-protocol/src/primary-key.js';
@@ -105,7 +105,7 @@ export class MemorySource implements Source {
 
   connect(
     sort: Ordering,
-    optionalFilters?: SimpleCondition[] | undefined,
+    optionalFilters?: Condition | undefined,
   ): SourceInput {
     const input: SourceInput = {
       getSchema: () => this.#getSchema(connection),
@@ -125,7 +125,14 @@ export class MemorySource implements Source {
       output: undefined,
       sort,
       compareRows: makeComparator(sort),
-      optionalFilters: (optionalFilters ?? []).map(f => createPredicate(f)),
+      // TODO: normalize filters to DNF and don't do this in connect but on fetch.
+      // If it is DNF and done on fetch then it'll only be a string of ANDs
+      optionalFilters:
+        optionalFilters && optionalFilters.type === 'and'
+          ? optionalFilters.conditions
+              .filter(c => c.type === 'simple')
+              .map(c => createPredicate(c))
+          : [],
     };
     assertOrderingIncludesPK(sort, this.#primaryKey);
     this.#connections.push(connection);
@@ -364,6 +371,7 @@ export class MemorySource implements Source {
         ? change
         : {
             type: change.type,
+            fanoutSeq: change.fanoutSeq,
             node: {
               row: change.row,
               relationships: {},
@@ -571,11 +579,11 @@ function splitEditChange(
 
   const removeOverlay: Overlay = {
     outputIndex: overlay.outputIndex,
-    change: {type: 'remove', row: oldRow},
+    change: {type: 'remove', fanoutSeq: undefined, row: oldRow},
   };
   const addOverlay: Overlay = {
     outputIndex: overlay.outputIndex,
-    change: {type: 'add', row},
+    change: {type: 'add', fanoutSeq: undefined, row},
   };
 
   const cmp = compare(oldRow, row);

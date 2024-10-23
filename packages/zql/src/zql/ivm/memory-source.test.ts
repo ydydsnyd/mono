@@ -114,6 +114,7 @@ test('push edit change', () => {
 
   ms.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {a: 'a', b: 'b', c: 'c'},
   });
 
@@ -122,6 +123,7 @@ test('push edit change', () => {
 
   ms.push({
     type: 'edit',
+    fanoutSeq: undefined,
     oldRow: {a: 'a', b: 'b', c: 'c'},
     row: {a: 'a', b: 'b2', c: 'c2'},
   });
@@ -324,14 +326,23 @@ test('overlayForConstraint', () => {
 
   expect(
     overlayForConstraintForTest(
-      {outputIndex: 0, change: {type: 'add', row: {a: 'b'}}},
+      {
+        outputIndex: 0,
+        change: {type: 'add', fanoutSeq: undefined, row: {a: 'b'}},
+      },
       {key: 'a', value: 'b'},
     ),
-  ).toEqual({outputIndex: 0, change: {type: 'add', row: {a: 'b'}}});
+  ).toEqual({
+    outputIndex: 0,
+    change: {type: 'add', fanoutSeq: undefined, row: {a: 'b'}},
+  });
 
   expect(
     overlayForConstraintForTest(
-      {outputIndex: 0, change: {type: 'add', row: {a: 'c'}}},
+      {
+        outputIndex: 0,
+        change: {type: 'add', fanoutSeq: undefined, row: {a: 'c'}},
+      },
       {key: 'a', value: 'b'},
     ),
   ).toEqual(undefined);
@@ -346,20 +357,20 @@ test('overlayForStartAt', () => {
     overlayForStartAtForTest(
       {
         outputIndex: 0,
-        change: {type: 'add', row: {id: 1}},
+        change: {type: 'add', fanoutSeq: undefined, row: {id: 1}},
       },
       {id: 1},
       compare,
     ),
   ).toEqual({
     outputIndex: 0,
-    change: {type: 'add', row: {id: 1}},
+    change: {type: 'add', fanoutSeq: undefined, row: {id: 1}},
   });
   expect(
     overlayForStartAtForTest(
       {
         outputIndex: 0,
-        change: {type: 'add', row: {id: 1}},
+        change: {type: 'add', fanoutSeq: undefined, row: {id: 1}},
       },
       {id: 0},
       compare,
@@ -372,7 +383,7 @@ test('overlayForStartAt', () => {
     overlayForStartAtForTest(
       {
         outputIndex: 0,
-        change: {type: 'add', row: {id: 1}},
+        change: {type: 'add', fanoutSeq: undefined, row: {id: 1}},
       },
       {id: 2},
       compare,

@@ -23,6 +23,7 @@ export function maybeSplitAndPushEditChange(
     // operator.
     output.push({
       type: 'remove',
+      fanoutSeq: change.fanoutSeq,
       node: {
         row: change.oldRow,
         relationships: {},
@@ -31,6 +32,7 @@ export function maybeSplitAndPushEditChange(
   } else if (!oldWasPresent && newIsPresent) {
     output.push({
       type: 'add',
+      fanoutSeq: change.fanoutSeq,
       node: {
         row: change.row,
         relationships: {},

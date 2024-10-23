@@ -308,11 +308,13 @@ test('pushing values does the correct writes and outputs', () => {
      */
     source.push({
       type: 'add',
+      fanoutSeq: undefined,
       row: {a: 1, b: 2.123, c: 0},
     });
 
     expect(outputted.shift()).toEqual({
       type: 'add',
+      fanoutSeq: undefined,
       node: {
         relationships: {},
         row: {
@@ -326,6 +328,7 @@ test('pushing values does the correct writes and outputs', () => {
 
     source.push({
       type: 'remove',
+      fanoutSeq: undefined,
       row: {a: 1, b: 2.123},
     });
 
@@ -344,6 +347,7 @@ test('pushing values does the correct writes and outputs', () => {
     expect(() => {
       source.push({
         type: 'remove',
+        fanoutSeq: undefined,
         row: {a: 1, b: 2.123},
       });
     }).toThrow();
@@ -352,11 +356,13 @@ test('pushing values does the correct writes and outputs', () => {
 
     source.push({
       type: 'add',
+      fanoutSeq: undefined,
       row: {a: 1, b: 2.123, c: 1},
     });
 
     expect(outputted.shift()).toEqual({
       type: 'add',
+      fanoutSeq: undefined,
       node: {
         relationships: {},
         row: {
@@ -371,6 +377,7 @@ test('pushing values does the correct writes and outputs', () => {
     expect(() => {
       source.push({
         type: 'add',
+        fanoutSeq: undefined,
         row: {a: 1, b: 2.123, c: 1},
       });
     }).toThrow();
@@ -378,6 +385,7 @@ test('pushing values does the correct writes and outputs', () => {
     // bigint rows
     source.push({
       type: 'add',
+      fanoutSeq: undefined,
       row: {
         a: BigInt(Number.MAX_SAFE_INTEGER),
         b: 3.456,
@@ -387,6 +395,7 @@ test('pushing values does the correct writes and outputs', () => {
 
     expect(outputted.shift()).toEqual({
       type: 'add',
+      fanoutSeq: undefined,
       node: {
         relationships: {},
         row: {
@@ -406,6 +415,7 @@ test('pushing values does the correct writes and outputs', () => {
     expect(() => {
       source.push({
         type: 'add',
+        fanoutSeq: undefined,
         row: {
           a: BigInt(Number.MAX_SAFE_INTEGER) + 1n,
           b: 0,
@@ -418,6 +428,7 @@ test('pushing values does the correct writes and outputs', () => {
     expect(() => {
       source.push({
         type: 'add',
+        fanoutSeq: undefined,
         row: {
           a: 0,
           b: BigInt(Number.MIN_SAFE_INTEGER) - 1n,
@@ -434,12 +445,14 @@ test('pushing values does the correct writes and outputs', () => {
     // edit changes
     source.push({
       type: 'edit',
+      fanoutSeq: undefined,
       row: {a: BigInt(1), b: 2.123, c: 0} as unknown as Row,
       oldRow: {a: BigInt(1), b: 2.123, c: 1} as unknown as Row,
     });
 
     expect(outputted.shift()).toEqual({
       type: 'edit',
+      fanoutSeq: undefined,
       oldRow: {a: 1, b: 2.123, c: true},
       row: {a: 1, b: 2.123, c: false},
     });
@@ -452,11 +465,13 @@ test('pushing values does the correct writes and outputs', () => {
     // edit pk should fall back to remove and insert
     source.push({
       type: 'edit',
+      fanoutSeq: undefined,
       oldRow: {a: 1, b: 2.123, c: 0},
       row: {a: 1, b: 3, c: 0},
     });
     expect(outputted.shift()).toEqual({
       type: 'edit',
+      fanoutSeq: undefined,
       oldRow: {a: 1, b: 2.123, c: false},
       row: {a: 1, b: 3, c: false},
     });
@@ -469,6 +484,7 @@ test('pushing values does the correct writes and outputs', () => {
     expect(() => {
       source.push({
         type: 'edit',
+        fanoutSeq: undefined,
         row: {a: 11, b: 2.123, c: 0},
         oldRow: {a: 12, b: 2.123, c: 1},
       });
@@ -478,6 +494,7 @@ test('pushing values does the correct writes and outputs', () => {
     expect(() => {
       source.push({
         type: 'edit',
+        fanoutSeq: undefined,
         row: {
           a: BigInt(Number.MAX_SAFE_INTEGER),
           b: BigInt(Number.MAX_SAFE_INTEGER) + 1n,

@@ -100,7 +100,7 @@ export class ArrayView implements Output {
     for (const node of this.#input.fetch({})) {
       applyChange(
         this.#root,
-        {type: 'add', node},
+        {type: 'add', fanoutSeq: undefined, node},
         this.#schema,
         '',
         this.#format,
@@ -145,7 +145,7 @@ function applyChange(
           for (const node of children) {
             applyChange(
               parentEntry,
-              {type: change.type, node},
+              {type: change.type, fanoutSeq: undefined, node},
               childSchema,
               relationship,
               format,
@@ -208,7 +208,7 @@ function applyChange(
         for (const node of children) {
           applyChange(
             newEntry,
-            {type: 'add', node},
+            {type: 'add', fanoutSeq: undefined, node},
             childSchema,
             relationship,
             childFormat,

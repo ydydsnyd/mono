@@ -43,14 +43,12 @@ import {type SyncContext, ViewSyncerService} from './view-syncer.js';
 const EXPECTED_LMIDS_AST: AST = {
   schema: '',
   table: 'zero.clients',
-  where: [
-    {
-      type: 'simple',
-      op: '=',
-      field: 'clientGroupID',
-      value: '9876',
-    },
-  ],
+  where: {
+    type: 'simple',
+    op: '=',
+    field: 'clientGroupID',
+    value: '9876',
+  },
   orderBy: [
     ['shardID', 'asc'],
     ['clientGroupID', 'asc'],
@@ -216,14 +214,12 @@ describe('view-syncer/service', () => {
 
   const ISSUES_QUERY: AST = {
     table: 'issues',
-    where: [
-      {
-        type: 'simple',
-        field: 'id',
-        op: 'IN',
-        value: ['1', '2', '3', '4'],
-      },
-    ],
+    where: {
+      type: 'simple',
+      field: 'id',
+      op: 'IN',
+      value: ['1', '2', '3', '4'],
+    },
     orderBy: [['id', 'asc']],
   };
 

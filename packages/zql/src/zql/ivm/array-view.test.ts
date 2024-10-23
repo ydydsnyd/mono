@@ -20,8 +20,8 @@ test('basics', () => {
     {a: {type: 'number'}, b: {type: 'string'}},
     ['a'],
   );
-  ms.push({row: {a: 1, b: 'a'}, type: 'add'});
-  ms.push({row: {a: 2, b: 'b'}, type: 'add'});
+  ms.push({fanoutSeq: undefined, row: {a: 1, b: 'a'}, type: 'add'});
+  ms.push({fanoutSeq: undefined, row: {a: 2, b: 'b'}, type: 'add'});
 
   const view = new ArrayView(
     ms.connect([
@@ -47,7 +47,7 @@ test('basics', () => {
   expect(callCount).toBe(1);
   expect(() => view.hydrate()).toThrow("Can't hydrate twice");
 
-  ms.push({row: {a: 3, b: 'c'}, type: 'add'});
+  ms.push({fanoutSeq: undefined, row: {a: 3, b: 'c'}, type: 'add'});
 
   // We don't get called until flush.
   expect(callCount).toBe(1);
@@ -60,9 +60,9 @@ test('basics', () => {
     {a: 3, b: 'c'},
   ]);
 
-  ms.push({row: {a: 2, b: 'b'}, type: 'remove'});
+  ms.push({fanoutSeq: undefined, row: {a: 2, b: 'b'}, type: 'remove'});
   expect(callCount).toBe(2);
-  ms.push({row: {a: 1, b: 'a'}, type: 'remove'});
+  ms.push({fanoutSeq: undefined, row: {a: 1, b: 'a'}, type: 'remove'});
   expect(callCount).toBe(2);
 
   view.flush();
@@ -70,7 +70,7 @@ test('basics', () => {
   expect(data).toEqual([{a: 3, b: 'c'}]);
 
   unlisten();
-  ms.push({row: {a: 3, b: 'c'}, type: 'remove'});
+  ms.push({fanoutSeq: undefined, row: {a: 3, b: 'c'}, type: 'remove'});
   expect(callCount).toBe(3);
 
   view.flush();
@@ -84,7 +84,7 @@ test('single-format', () => {
     {a: {type: 'number'}, b: {type: 'string'}},
     ['a'],
   );
-  ms.push({row: {a: 1, b: 'a'}, type: 'add'});
+  ms.push({fanoutSeq: undefined, row: {a: 1, b: 'a'}, type: 'add'});
 
   const view = new ArrayView(
     ms.connect([
@@ -107,11 +107,11 @@ test('single-format', () => {
 
   // trying to add another element should be an error
   // pipeline should have been configured with a limit of one
-  expect(() => ms.push({row: {a: 2, b: 'b'}, type: 'add'})).toThrow(
-    'single output already exists',
-  );
+  expect(() =>
+    ms.push({fanoutSeq: undefined, row: {a: 2, b: 'b'}, type: 'add'}),
+  ).toThrow('single output already exists');
 
-  ms.push({row: {a: 1, b: 'a'}, type: 'remove'});
+  ms.push({fanoutSeq: undefined, row: {a: 1, b: 'a'}, type: 'remove'});
 
   // no call until flush
   expect(data).toEqual({a: 1, b: 'a'});
@@ -159,18 +159,22 @@ test('tree', () => {
   );
   ms.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {id: 1, name: 'foo', childID: 2},
   });
   ms.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {id: 2, name: 'foobar', childID: null},
   });
   ms.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {id: 3, name: 'mon', childID: 4},
   });
   ms.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {id: 4, name: 'monkey', childID: null},
   });
 
@@ -241,7 +245,11 @@ test('tree', () => {
   ]);
 
   // add parent with child
-  ms.push({type: 'add', row: {id: 5, name: 'chocolate', childID: 2}});
+  ms.push({
+    type: 'add',
+    fanoutSeq: undefined,
+    row: {id: 5, name: 'chocolate', childID: 2},
+  });
   view.flush();
   expect(data).toEqual([
     {
@@ -295,7 +303,11 @@ test('tree', () => {
   ]);
 
   // remove parent with child
-  ms.push({type: 'remove', row: {id: 5, name: 'chocolate', childID: 2}});
+  ms.push({
+    type: 'remove',
+    fanoutSeq: undefined,
+    row: {id: 5, name: 'chocolate', childID: 2},
+  });
   view.flush();
   expect(data).toEqual([
     {
@@ -339,6 +351,7 @@ test('tree', () => {
   // remove just child
   ms.push({
     type: 'remove',
+    fanoutSeq: undefined,
     row: {
       id: 2,
       name: 'foobar',
@@ -376,6 +389,7 @@ test('tree', () => {
   // add child
   ms.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {
       id: 2,
       name: 'foobaz',
@@ -431,10 +445,12 @@ test('tree-single', () => {
   );
   ms.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {id: 1, name: 'foo', childID: 2},
   });
   ms.push({
     type: 'add',
+    fanoutSeq: undefined,
     row: {id: 2, name: 'foobar', childID: null},
   });
 
@@ -484,6 +500,7 @@ test('tree-single', () => {
   // remove the child
   ms.push({
     type: 'remove',
+    fanoutSeq: undefined,
     row: {id: 2, name: 'foobar', childID: null},
   });
   view.flush();
@@ -498,6 +515,7 @@ test('tree-single', () => {
   // remove the parent
   ms.push({
     type: 'remove',
+    fanoutSeq: undefined,
     row: {id: 1, name: 'foo', childID: 2},
   });
   view.flush();
@@ -601,10 +619,7 @@ test('collapse', () => {
       },
     },
   } as const;
-  view.push({
-    type: 'add',
-    ...changeSansType,
-  });
+  view.push({type: 'add', fanoutSeq: undefined, ...changeSansType});
   view.flush();
 
   expect(data).toEqual([
@@ -620,23 +635,18 @@ test('collapse', () => {
     },
   ]);
 
-  view.push({
-    type: 'remove',
-    ...changeSansType,
-  });
+  view.push({type: 'remove', fanoutSeq: undefined, ...changeSansType});
   view.flush();
 
   expect(data).toEqual([]);
 
-  view.push({
-    type: 'add',
-    ...changeSansType,
-  });
+  view.push({type: 'add', fanoutSeq: undefined, ...changeSansType});
   // no commit
   expect(data).toEqual([]);
 
   view.push({
     type: 'child',
+    fanoutSeq: undefined,
     row: {
       id: 1,
       name: 'issue',
@@ -645,6 +655,7 @@ test('collapse', () => {
       relationshipName: 'labels',
       change: {
         type: 'add',
+        fanoutSeq: undefined,
         node: {
           row: {
             id: 2,
@@ -689,6 +700,7 @@ test('collapse', () => {
   // edit the hidden row
   view.push({
     type: 'child',
+    fanoutSeq: undefined,
     row: {
       id: 1,
       name: 'issue',
@@ -697,6 +709,7 @@ test('collapse', () => {
       relationshipName: 'labels',
       change: {
         type: 'edit',
+        fanoutSeq: undefined,
         oldRow: {
           id: 2,
           issueId: 1,
@@ -734,6 +747,7 @@ test('collapse', () => {
   // edit the leaf
   view.push({
     type: 'child',
+    fanoutSeq: undefined,
     row: {
       id: 1,
       name: 'issue',
@@ -742,6 +756,7 @@ test('collapse', () => {
       relationshipName: 'labels',
       change: {
         type: 'child',
+        fanoutSeq: undefined,
         row: {
           id: 2,
           issueId: 1,
@@ -752,6 +767,7 @@ test('collapse', () => {
           relationshipName: 'labels',
           change: {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {
               id: 2,
               name: 'label2',
@@ -882,10 +898,7 @@ test('collapse-single', () => {
       },
     },
   } as const;
-  view.push({
-    type: 'add',
-    ...changeSansType,
-  });
+  view.push({type: 'add', fanoutSeq: undefined, ...changeSansType});
   view.flush();
 
   expect(data).toEqual([
@@ -906,8 +919,8 @@ test('basic with edit pushes', () => {
     {a: {type: 'number'}, b: {type: 'string'}},
     ['a'],
   );
-  ms.push({row: {a: 1, b: 'a'}, type: 'add'});
-  ms.push({row: {a: 2, b: 'b'}, type: 'add'});
+  ms.push({fanoutSeq: undefined, row: {a: 1, b: 'a'}, type: 'add'});
+  ms.push({fanoutSeq: undefined, row: {a: 2, b: 'b'}, type: 'add'});
 
   const view = new ArrayView(ms.connect([['a', 'asc']]));
 
@@ -927,7 +940,12 @@ test('basic with edit pushes', () => {
 
   expect(callCount).toBe(1);
 
-  ms.push({type: 'edit', row: {a: 2, b: 'b2'}, oldRow: {a: 2, b: 'b'}});
+  ms.push({
+    type: 'edit',
+    fanoutSeq: undefined,
+    row: {a: 2, b: 'b2'},
+    oldRow: {a: 2, b: 'b'},
+  });
 
   // We don't get called until flush.
   expect(callCount).toBe(1);
@@ -939,7 +957,12 @@ test('basic with edit pushes', () => {
     {a: 2, b: 'b2'},
   ]);
 
-  ms.push({type: 'edit', row: {a: 3, b: 'b3'}, oldRow: {a: 2, b: 'b2'}});
+  ms.push({
+    type: 'edit',
+    fanoutSeq: undefined,
+    row: {a: 3, b: 'b3'},
+    oldRow: {a: 2, b: 'b2'},
+  });
 
   view.flush();
   expect(callCount).toBe(3);
@@ -963,7 +986,7 @@ test('tree edit', () => {
     {id: 3, name: 'mon', data: 'c', childID: 4},
     {id: 4, name: 'monkey', data: 'd', childID: null},
   ] as const) {
-    ms.push({type: 'add', row});
+    ms.push({type: 'add', fanoutSeq: undefined, row});
   }
 
   const join = new Join({
@@ -1041,6 +1064,7 @@ test('tree edit', () => {
   // Edit root
   ms.push({
     type: 'edit',
+    fanoutSeq: undefined,
     oldRow: {id: 1, name: 'foo', data: 'a', childID: 2},
     row: {id: 1, name: 'foo', data: 'a2', childID: 2},
   });
@@ -1102,7 +1126,7 @@ test('edit to change the order', () => {
     {a: 20, b: 'b'},
     {a: 30, b: 'c'},
   ] as const) {
-    ms.push({row, type: 'add'});
+    ms.push({row, fanoutSeq: undefined, type: 'add'});
   }
 
   const view = new ArrayView(ms.connect([['a', 'asc']]));
@@ -1121,6 +1145,7 @@ test('edit to change the order', () => {
 
   ms.push({
     type: 'edit',
+    fanoutSeq: undefined,
     oldRow: {a: 20, b: 'b'},
     row: {a: 5, b: 'b2'},
   });
@@ -1133,6 +1158,7 @@ test('edit to change the order', () => {
 
   ms.push({
     type: 'edit',
+    fanoutSeq: undefined,
     oldRow: {a: 5, b: 'b2'},
     row: {a: 4, b: 'b3'},
   });
@@ -1146,6 +1172,7 @@ test('edit to change the order', () => {
 
   ms.push({
     type: 'edit',
+    fanoutSeq: undefined,
     oldRow: {a: 4, b: 'b3'},
     row: {a: 20, b: 'b4'},
   });
@@ -1201,6 +1228,7 @@ test('edit to preserve relationships', () => {
   });
   view.push({
     type: 'add',
+    fanoutSeq: undefined,
     node: {
       row: {id: 1, title: 'issue1'},
       relationships: {
@@ -1215,6 +1243,7 @@ test('edit to preserve relationships', () => {
   });
   view.push({
     type: 'add',
+    fanoutSeq: undefined,
     node: {
       row: {id: 2, title: 'issue2'},
       relationships: {
@@ -1260,6 +1289,7 @@ test('edit to preserve relationships', () => {
 
   view.push({
     type: 'edit',
+    fanoutSeq: undefined,
     oldRow: {id: 1, title: 'issue1'},
     row: {id: 1, title: 'issue1 changed'},
   });
@@ -1292,6 +1322,7 @@ test('edit to preserve relationships', () => {
   // And now edit to change order
   view.push({
     type: 'edit',
+    fanoutSeq: undefined,
     oldRow: {id: 1, title: 'issue1 changed'},
     row: {id: 3, title: 'issue1 is now issue3'},
   });

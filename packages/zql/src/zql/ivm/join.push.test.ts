@@ -37,7 +37,7 @@ suite('push one:many', () => {
     ...base,
     name: 'fetch one parent, remove parent',
     sources: [[{id: 'i1'}], []],
-    pushes: [[0, {type: 'remove', row: {id: 'i1'}}]],
+    pushes: [[0, {type: 'remove', fanoutSeq: undefined, row: {id: 'i1'}}]],
     expectedLog: [
       ['0', 'push', {type: 'remove', row: {id: 'i1'}}],
       ['1', 'cleanup', {constraint: {key: 'issueID', value: 'i1'}}],
@@ -46,6 +46,7 @@ suite('push one:many', () => {
     expectedOutput: [
       {
         type: 'remove',
+        fanoutSeq: undefined,
         node: {
           row: {
             id: 'i1',
@@ -62,7 +63,12 @@ suite('push one:many', () => {
     ...base,
     name: 'fetch one child, remove child',
     sources: [[], [{id: 'c1', issueID: 'i1'}]],
-    pushes: [[1, {type: 'remove', row: {id: 'c1', issueID: 'i1'}}]],
+    pushes: [
+      [
+        1,
+        {type: 'remove', fanoutSeq: undefined, row: {id: 'c1', issueID: 'i1'}},
+      ],
+    ],
     expectedLog: [
       ['1', 'push', {type: 'remove', row: {id: 'c1', issueID: 'i1'}}],
       ['0', 'fetch', {constraint: {key: 'id', value: 'i1'}}],
@@ -75,7 +81,7 @@ suite('push one:many', () => {
     ...base,
     name: 'fetch one child, add parent',
     sources: [[], [{id: 'c1', issueID: 'i1'}]],
-    pushes: [[0, {type: 'add', row: {id: 'i1'}}]],
+    pushes: [[0, {type: 'add', fanoutSeq: undefined, row: {id: 'i1'}}]],
     expectedLog: [
       ['0', 'push', {type: 'add', row: {id: 'i1'}}],
       ['1', 'fetch', {constraint: {key: 'issueID', value: 'i1'}}],
@@ -84,6 +90,7 @@ suite('push one:many', () => {
     expectedOutput: [
       {
         type: 'add',
+        fanoutSeq: undefined,
         node: {
           row: {
             id: 'i1',
@@ -106,7 +113,7 @@ suite('push one:many', () => {
         {id: 'c2', issueID: 'i1'},
       ],
     ],
-    pushes: [[0, {type: 'add', row: {id: 'i1'}}]],
+    pushes: [[0, {type: 'add', fanoutSeq: undefined, row: {id: 'i1'}}]],
     expectedLog: [
       ['0', 'push', {type: 'add', row: {id: 'i1'}}],
       ['1', 'fetch', {constraint: {key: 'issueID', value: 'i1'}}],
@@ -115,6 +122,7 @@ suite('push one:many', () => {
     expectedOutput: [
       {
         type: 'add',
+        fanoutSeq: undefined,
         node: {
           row: {
             id: 'i1',
@@ -134,7 +142,7 @@ suite('push one:many', () => {
     ...base,
     name: 'fetch one child, add wrong parent',
     sources: [[], [{id: 'c1', issueID: 'i1'}]],
-    pushes: [[0, {type: 'add', row: {id: 'i2'}}]],
+    pushes: [[0, {type: 'add', fanoutSeq: undefined, row: {id: 'i2'}}]],
     expectedLog: [
       ['0', 'push', {type: 'add', row: {id: 'i2'}}],
       ['1', 'fetch', {constraint: {key: 'issueID', value: 'i2'}}],
@@ -143,6 +151,7 @@ suite('push one:many', () => {
     expectedOutput: [
       {
         type: 'add',
+        fanoutSeq: undefined,
         node: {
           row: {
             id: 'i2',
@@ -159,7 +168,9 @@ suite('push one:many', () => {
     ...base,
     name: 'fetch one parent, add child',
     sources: [[{id: 'i1'}], []],
-    pushes: [[1, {type: 'add', row: {id: 'c1', issueID: 'i1'}}]],
+    pushes: [
+      [1, {type: 'add', fanoutSeq: undefined, row: {id: 'c1', issueID: 'i1'}}],
+    ],
     expectedLog: [
       ['1', 'push', {type: 'add', row: {id: 'c1', issueID: 'i1'}}],
       ['0', 'fetch', {constraint: {key: 'id', value: 'i1'}}],
@@ -168,6 +179,7 @@ suite('push one:many', () => {
     expectedOutput: [
       {
         type: 'child',
+        fanoutSeq: undefined,
         row: {
           id: 'i1',
         },
@@ -175,6 +187,7 @@ suite('push one:many', () => {
           relationshipName: 'comments',
           change: {
             type: 'add',
+            fanoutSeq: undefined,
             node: {
               row: {
                 id: 'c1',
@@ -192,7 +205,9 @@ suite('push one:many', () => {
     ...base,
     name: 'fetch one parent, add wrong child',
     sources: [[{id: 'i1'}], []],
-    pushes: [[1, {type: 'add', row: {id: 'c1', issueID: 'i2'}}]],
+    pushes: [
+      [1, {type: 'add', fanoutSeq: undefined, row: {id: 'c1', issueID: 'i2'}}],
+    ],
     expectedLog: [
       ['1', 'push', {type: 'add', row: {id: 'c1', issueID: 'i2'}}],
       ['0', 'fetch', {constraint: {key: 'id', value: 'i2'}}],
@@ -205,7 +220,7 @@ suite('push one:many', () => {
     ...base,
     name: 'fetch one parent, one child, remove parent',
     sources: [[{id: 'i1'}], [{id: 'c1', issueID: 'i1'}]],
-    pushes: [[0, {type: 'remove', row: {id: 'i1'}}]],
+    pushes: [[0, {type: 'remove', fanoutSeq: undefined, row: {id: 'i1'}}]],
     expectedLog: [
       ['0', 'push', {type: 'remove', row: {id: 'i1'}}],
       ['1', 'cleanup', {constraint: {key: 'issueID', value: 'i1'}}],
@@ -214,6 +229,7 @@ suite('push one:many', () => {
     expectedOutput: [
       {
         type: 'remove',
+        fanoutSeq: undefined,
         node: {
           row: {
             id: 'i1',
@@ -236,7 +252,7 @@ suite('push one:many', () => {
         {id: 'c2', issueID: 'i1'},
       ],
     ],
-    pushes: [[0, {type: 'remove', row: {id: 'i1'}}]],
+    pushes: [[0, {type: 'remove', fanoutSeq: undefined, row: {id: 'i1'}}]],
     expectedLog: [
       ['0', 'push', {type: 'remove', row: {id: 'i1'}}],
       ['1', 'cleanup', {constraint: {key: 'issueID', value: 'i1'}}],
@@ -245,6 +261,7 @@ suite('push one:many', () => {
     expectedOutput: [
       {
         type: 'remove',
+        fanoutSeq: undefined,
         node: {
           row: {
             id: 'i1',
@@ -265,11 +282,14 @@ suite('push one:many', () => {
     name: 'no fetch, add parent, add child, add child, remove child, remove parent',
     sources: [[], []],
     pushes: [
-      [0, {type: 'add', row: {id: 'i1'}}],
-      [1, {type: 'add', row: {id: 'c1', issueID: 'i1'}}],
-      [1, {type: 'add', row: {id: 'c2', issueID: 'i1'}}],
-      [1, {type: 'remove', row: {id: 'c1', issueID: 'i1'}}],
-      [0, {type: 'remove', row: {id: 'i1'}}],
+      [0, {type: 'add', fanoutSeq: undefined, row: {id: 'i1'}}],
+      [1, {type: 'add', fanoutSeq: undefined, row: {id: 'c1', issueID: 'i1'}}],
+      [1, {type: 'add', fanoutSeq: undefined, row: {id: 'c2', issueID: 'i1'}}],
+      [
+        1,
+        {type: 'remove', fanoutSeq: undefined, row: {id: 'c1', issueID: 'i1'}},
+      ],
+      [0, {type: 'remove', fanoutSeq: undefined, row: {id: 'i1'}}],
     ],
     expectedLog: [
       ['0', 'push', {type: 'add', row: {id: 'i1'}}],
@@ -287,6 +307,7 @@ suite('push one:many', () => {
     expectedOutput: [
       {
         type: 'add',
+        fanoutSeq: undefined,
         node: {
           row: {
             id: 'i1',
@@ -298,6 +319,7 @@ suite('push one:many', () => {
       },
       {
         type: 'child',
+        fanoutSeq: undefined,
         row: {
           id: 'i1',
         },
@@ -305,6 +327,7 @@ suite('push one:many', () => {
           relationshipName: 'comments',
           change: {
             type: 'add',
+            fanoutSeq: undefined,
             node: {
               row: {
                 id: 'c1',
@@ -317,6 +340,7 @@ suite('push one:many', () => {
       },
       {
         type: 'child',
+        fanoutSeq: undefined,
         row: {
           id: 'i1',
         },
@@ -324,6 +348,7 @@ suite('push one:many', () => {
           relationshipName: 'comments',
           change: {
             type: 'add',
+            fanoutSeq: undefined,
             node: {
               row: {
                 id: 'c2',
@@ -336,6 +361,7 @@ suite('push one:many', () => {
       },
       {
         type: 'child',
+        fanoutSeq: undefined,
         row: {
           id: 'i1',
         },
@@ -343,6 +369,7 @@ suite('push one:many', () => {
           relationshipName: 'comments',
           change: {
             type: 'remove',
+            fanoutSeq: undefined,
             node: {
               row: {
                 id: 'c1',
@@ -355,6 +382,7 @@ suite('push one:many', () => {
       },
       {
         type: 'remove',
+        fanoutSeq: undefined,
         node: {
           row: {
             id: 'i1',
@@ -402,6 +430,7 @@ suite('push one:many', () => {
           0,
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'i1', text: 'issue 1'},
             row: {id: 'i1', text: 'issue 1 edited'},
           },
@@ -422,6 +451,7 @@ suite('push one:many', () => {
       expectedOutput: [
         {
           type: 'edit',
+          fanoutSeq: undefined,
           row: {
             id: 'i1',
             text: 'issue 1 edited',
@@ -449,6 +479,7 @@ suite('push one:many', () => {
           1,
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c1', issueID: 'i1', text: 'comment 1'},
             row: {id: 'c1', issueID: 'i1', text: 'comment 1 edited'},
           },
@@ -470,6 +501,7 @@ suite('push one:many', () => {
       expectedOutput: [
         {
           type: 'child',
+          fanoutSeq: undefined,
           row: {
             id: 'i1',
             text: 'issue 1',
@@ -487,6 +519,7 @@ suite('push one:many', () => {
                 text: 'comment 1 edited',
               },
               type: 'edit',
+              fanoutSeq: undefined,
             },
             relationshipName: 'comments',
           },
@@ -512,6 +545,7 @@ suite('push one:many', () => {
           1,
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c1', issueID: 'i1', text: 'comment 1'},
             row: {id: 'c1', issueID: 'i2', text: 'comment 1.2'},
           },
@@ -540,6 +574,7 @@ suite('push one:many', () => {
       expectedOutput: [
         {
           type: 'child',
+          fanoutSeq: undefined,
           row: {
             id: 'i1',
             text: 'issue 1',
@@ -547,6 +582,7 @@ suite('push one:many', () => {
           child: {
             change: {
               type: 'remove',
+              fanoutSeq: undefined,
               node: {
                 row: {
                   id: 'c1',
@@ -561,6 +597,7 @@ suite('push one:many', () => {
         },
         {
           type: 'child',
+          fanoutSeq: undefined,
           row: {
             id: 'i2',
             text: 'issue 2',
@@ -568,6 +605,7 @@ suite('push one:many', () => {
           child: {
             change: {
               type: 'add',
+              fanoutSeq: undefined,
               node: {
                 row: {
                   id: 'c1',
@@ -602,6 +640,7 @@ suite('push one:many', () => {
           0,
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'i1', text: 'issue 1'},
             row: {id: 'i3', text: 'issue 1.3'},
           },
@@ -629,6 +668,7 @@ suite('push one:many', () => {
       expectedOutput: [
         {
           type: 'edit',
+          fanoutSeq: undefined,
           oldRow: {
             id: 'i1',
             text: 'issue 1',
@@ -640,9 +680,11 @@ suite('push one:many', () => {
         },
         {
           type: 'child',
+          fanoutSeq: undefined,
           child: {
             change: {
               type: 'remove',
+              fanoutSeq: undefined,
               node: {
                 row: {
                   id: 'c1',
@@ -661,6 +703,7 @@ suite('push one:many', () => {
         },
         {
           type: 'child',
+          fanoutSeq: undefined,
           child: {
             change: {
               node: {
@@ -672,6 +715,7 @@ suite('push one:many', () => {
                 },
               },
               type: 'add',
+              fanoutSeq: undefined,
             },
             relationshipName: 'comments',
           },
@@ -705,7 +749,9 @@ suite('push many:one', () => {
     ...base,
     name: 'fetch one child, add parent',
     sources: [[], [{id: 'u1'}]],
-    pushes: [[0, {type: 'add', row: {id: 'i1', ownerID: 'u1'}}]],
+    pushes: [
+      [0, {type: 'add', fanoutSeq: undefined, row: {id: 'i1', ownerID: 'u1'}}],
+    ],
     expectedLog: [
       ['0', 'push', {type: 'add', row: {id: 'i1', ownerID: 'u1'}}],
       ['1', 'fetch', {constraint: {key: 'id', value: 'u1'}}],
@@ -714,6 +760,7 @@ suite('push many:one', () => {
     expectedOutput: [
       {
         type: 'add',
+        fanoutSeq: undefined,
         node: {
           row: {
             id: 'i1',
@@ -731,7 +778,9 @@ suite('push many:one', () => {
     ...base,
     name: 'fetch one child, add wrong parent',
     sources: [[], [{id: 'u1'}]],
-    pushes: [[0, {type: 'add', row: {id: 'i1', ownerID: 'u2'}}]],
+    pushes: [
+      [0, {type: 'add', fanoutSeq: undefined, row: {id: 'i1', ownerID: 'u2'}}],
+    ],
     expectedLog: [
       ['0', 'push', {type: 'add', row: {id: 'i1', ownerID: 'u2'}}],
       ['1', 'fetch', {constraint: {key: 'id', value: 'u2'}}],
@@ -740,6 +789,7 @@ suite('push many:one', () => {
     expectedOutput: [
       {
         type: 'add',
+        fanoutSeq: undefined,
         node: {
           row: {
             id: 'i1',
@@ -757,7 +807,7 @@ suite('push many:one', () => {
     ...base,
     name: 'fetch one parent, add child',
     sources: [[{id: 'i1', ownerID: 'u1'}], []],
-    pushes: [[1, {type: 'add', row: {id: 'u1'}}]],
+    pushes: [[1, {type: 'add', fanoutSeq: undefined, row: {id: 'u1'}}]],
     expectedLog: [
       ['1', 'push', {type: 'add', row: {id: 'u1'}}],
       ['0', 'fetch', {constraint: {key: 'ownerID', value: 'u1'}}],
@@ -766,6 +816,7 @@ suite('push many:one', () => {
     expectedOutput: [
       {
         type: 'child',
+        fanoutSeq: undefined,
         row: {
           id: 'i1',
           ownerID: 'u1',
@@ -774,6 +825,7 @@ suite('push many:one', () => {
           relationshipName: 'owner',
           change: {
             type: 'add',
+            fanoutSeq: undefined,
             node: {
               row: {
                 id: 'u1',
@@ -796,7 +848,7 @@ suite('push many:one', () => {
       ],
       [],
     ],
-    pushes: [[1, {type: 'add', row: {id: 'u1'}}]],
+    pushes: [[1, {type: 'add', fanoutSeq: undefined, row: {id: 'u1'}}]],
     expectedLog: [
       ['1', 'push', {type: 'add', row: {id: 'u1'}}],
       ['0', 'fetch', {constraint: {key: 'ownerID', value: 'u1'}}],
@@ -810,6 +862,7 @@ suite('push many:one', () => {
     expectedOutput: [
       {
         type: 'child',
+        fanoutSeq: undefined,
         row: {
           id: 'i1',
           ownerID: 'u1',
@@ -818,6 +871,7 @@ suite('push many:one', () => {
           relationshipName: 'owner',
           change: {
             type: 'add',
+            fanoutSeq: undefined,
             node: {
               row: {
                 id: 'u1',
@@ -829,6 +883,7 @@ suite('push many:one', () => {
       },
       {
         type: 'child',
+        fanoutSeq: undefined,
         row: {
           id: 'i2',
           ownerID: 'u1',
@@ -837,6 +892,7 @@ suite('push many:one', () => {
           relationshipName: 'owner',
           change: {
             type: 'add',
+            fanoutSeq: undefined,
             node: {
               row: {
                 id: 'u1',
@@ -884,6 +940,7 @@ suite('push many:one', () => {
           1,
           {
             type: 'edit',
+            fanoutSeq: undefined,
             row: {id: 'u1', text: 'user 1'},
             oldRow: {id: 'u2', text: 'user 2'},
           },
@@ -912,6 +969,7 @@ suite('push many:one', () => {
       expectedOutput: [
         {
           type: 'child',
+          fanoutSeq: undefined,
           row: {
             id: 'i1',
             ownerID: 'u1',
@@ -921,6 +979,7 @@ suite('push many:one', () => {
             relationshipName: 'owner',
             change: {
               type: 'add',
+              fanoutSeq: undefined,
               node: {
                 row: {
                   id: 'u1',
@@ -933,6 +992,7 @@ suite('push many:one', () => {
         },
         {
           type: 'child',
+          fanoutSeq: undefined,
           row: {
             id: 'i2',
             ownerID: 'u1',
@@ -942,6 +1002,7 @@ suite('push many:one', () => {
             relationshipName: 'owner',
             change: {
               type: 'add',
+              fanoutSeq: undefined,
               node: {
                 row: {
                   id: 'u1',
@@ -970,6 +1031,7 @@ suite('push many:one', () => {
           1,
           {
             type: 'edit',
+            fanoutSeq: undefined,
             row: {id: 'u2', text: 'user 2 changed'},
             oldRow: {id: 'u2', text: 'user 2'},
           },
@@ -1011,6 +1073,7 @@ suite('push many:one', () => {
           1,
           {
             type: 'edit',
+            fanoutSeq: undefined,
             row: {id: 'u1', text: 'user 1 changed'},
             oldRow: {id: 'u1', text: 'user 1'},
           },
@@ -1037,6 +1100,7 @@ suite('push many:one', () => {
       expectedOutput: [
         {
           type: 'child',
+          fanoutSeq: undefined,
           row: {
             id: 'i1',
             ownerID: 'u1',
@@ -1045,6 +1109,7 @@ suite('push many:one', () => {
           child: {
             change: {
               type: 'edit',
+              fanoutSeq: undefined,
               oldRow: {
                 id: 'u1',
                 text: 'user 1',
@@ -1059,6 +1124,7 @@ suite('push many:one', () => {
         },
         {
           type: 'child',
+          fanoutSeq: undefined,
           row: {
             id: 'i2',
             ownerID: 'u1',
@@ -1067,6 +1133,7 @@ suite('push many:one', () => {
           child: {
             change: {
               type: 'edit',
+              fanoutSeq: undefined,
               oldRow: {
                 id: 'u1',
                 text: 'user 1',
@@ -1110,7 +1177,12 @@ suite('push one:many:many', () => {
     ...base,
     name: 'fetch one parent, one child, add grandchild',
     sources: [[{id: 'i1'}], [{id: 'c1', issueID: 'i1'}], []],
-    pushes: [[2, {type: 'add', row: {id: 'r1', commentID: 'c1'}}]],
+    pushes: [
+      [
+        2,
+        {type: 'add', fanoutSeq: undefined, row: {id: 'r1', commentID: 'c1'}},
+      ],
+    ],
     expectedLog: [
       ['2', 'push', {type: 'add', row: {id: 'r1', commentID: 'c1'}}],
       ['1', 'fetch', {constraint: {key: 'id', value: 'c1'}}],
@@ -1120,6 +1192,7 @@ suite('push one:many:many', () => {
     expectedOutput: [
       {
         type: 'child',
+        fanoutSeq: undefined,
         row: {
           id: 'i1',
         },
@@ -1127,6 +1200,7 @@ suite('push one:many:many', () => {
           relationshipName: 'comments',
           change: {
             type: 'child',
+            fanoutSeq: undefined,
             row: {
               id: 'c1',
               issueID: 'i1',
@@ -1135,6 +1209,7 @@ suite('push one:many:many', () => {
               relationshipName: 'revisions',
               change: {
                 type: 'add',
+                fanoutSeq: undefined,
                 node: {
                   row: {
                     id: 'r1',
@@ -1154,7 +1229,9 @@ suite('push one:many:many', () => {
     ...base,
     name: 'fetch one parent, one grandchild, add child',
     sources: [[{id: 'i1'}], [], [{id: 'r1', commentID: 'c1'}]],
-    pushes: [[1, {type: 'add', row: {id: 'c1', issueID: 'i1'}}]],
+    pushes: [
+      [1, {type: 'add', fanoutSeq: undefined, row: {id: 'c1', issueID: 'i1'}}],
+    ],
     expectedLog: [
       ['1', 'push', {type: 'add', row: {id: 'c1', issueID: 'i1'}}],
       ['2', 'fetch', {constraint: {key: 'commentID', value: 'c1'}}],
@@ -1164,6 +1241,7 @@ suite('push one:many:many', () => {
     expectedOutput: [
       {
         type: 'child',
+        fanoutSeq: undefined,
         row: {
           id: 'i1',
         },
@@ -1171,6 +1249,7 @@ suite('push one:many:many', () => {
           relationshipName: 'comments',
           change: {
             type: 'add',
+            fanoutSeq: undefined,
             node: {
               row: {
                 id: 'c1',
@@ -1192,7 +1271,7 @@ suite('push one:many:many', () => {
     ...base,
     name: 'fetch one child, one grandchild, add parent',
     sources: [[], [{id: 'c1', issueID: 'i1'}], [{id: 'r1', commentID: 'c1'}]],
-    pushes: [[0, {type: 'add', row: {id: 'i1'}}]],
+    pushes: [[0, {type: 'add', fanoutSeq: undefined, row: {id: 'i1'}}]],
     expectedLog: [
       ['0', 'push', {type: 'add', row: {id: 'i1'}}],
       ['1', 'fetch', {constraint: {key: 'issueID', value: 'i1'}}],
@@ -1202,6 +1281,7 @@ suite('push one:many:many', () => {
     expectedOutput: [
       {
         type: 'add',
+        fanoutSeq: undefined,
         node: {
           row: {
             id: 'i1',
@@ -1231,7 +1311,7 @@ suite('push one:many:many', () => {
       [{id: 'c1', issueID: 'i1'}],
       [{id: 'r1', commentID: 'c1'}],
     ],
-    pushes: [[0, {type: 'remove', row: {id: 'i1'}}]],
+    pushes: [[0, {type: 'remove', fanoutSeq: undefined, row: {id: 'i1'}}]],
     expectedLog: [
       ['0', 'push', {type: 'remove', row: {id: 'i1'}}],
       ['1', 'cleanup', {constraint: {key: 'issueID', value: 'i1'}}],
@@ -1241,6 +1321,7 @@ suite('push one:many:many', () => {
     expectedOutput: [
       {
         type: 'remove',
+        fanoutSeq: undefined,
         node: {
           row: {
             id: 'i1',
@@ -1297,7 +1378,7 @@ suite('push one:many:one', () => {
     name: 'fetch one parent, one child, add grandchild',
     sources: [[{id: 'i1'}], [{issueID: 'i1', labelID: 'l1'}], []],
     sorts,
-    pushes: [[2, {type: 'add', row: {id: 'l1'}}]],
+    pushes: [[2, {type: 'add', fanoutSeq: undefined, row: {id: 'l1'}}]],
     expectedLog: [
       ['2', 'push', {type: 'add', row: {id: 'l1'}}],
       ['1', 'fetch', {constraint: {key: 'labelID', value: 'l1'}}],
@@ -1307,6 +1388,7 @@ suite('push one:many:one', () => {
     expectedOutput: [
       {
         type: 'child',
+        fanoutSeq: undefined,
         row: {
           id: 'i1',
         },
@@ -1314,6 +1396,7 @@ suite('push one:many:one', () => {
           relationshipName: 'issuelabels',
           change: {
             type: 'child',
+            fanoutSeq: undefined,
             row: {
               issueID: 'i1',
               labelID: 'l1',
@@ -1322,6 +1405,7 @@ suite('push one:many:one', () => {
               relationshipName: 'labels',
               change: {
                 type: 'add',
+                fanoutSeq: undefined,
                 node: {
                   row: {
                     id: 'l1',
@@ -1341,7 +1425,16 @@ suite('push one:many:one', () => {
     name: 'fetch one parent, one grandchild, add child',
     sources: [[{id: 'i1'}], [], [{id: 'l1'}]],
     sorts,
-    pushes: [[1, {type: 'add', row: {issueID: 'i1', labelID: 'l1'}}]],
+    pushes: [
+      [
+        1,
+        {
+          type: 'add',
+          fanoutSeq: undefined,
+          row: {issueID: 'i1', labelID: 'l1'},
+        },
+      ],
+    ],
     expectedLog: [
       ['1', 'push', {type: 'add', row: {issueID: 'i1', labelID: 'l1'}}],
       ['2', 'fetch', {constraint: {key: 'id', value: 'l1'}}],
@@ -1351,6 +1444,7 @@ suite('push one:many:one', () => {
     expectedOutput: [
       {
         type: 'child',
+        fanoutSeq: undefined,
         row: {
           id: 'i1',
         },
@@ -1358,6 +1452,7 @@ suite('push one:many:one', () => {
           relationshipName: 'issuelabels',
           change: {
             type: 'add',
+            fanoutSeq: undefined,
             node: {
               row: {
                 issueID: 'i1',
@@ -1385,7 +1480,7 @@ suite('push one:many:one', () => {
       [],
     ],
     sorts,
-    pushes: [[2, {type: 'add', row: {id: 'l1'}}]],
+    pushes: [[2, {type: 'add', fanoutSeq: undefined, row: {id: 'l1'}}]],
     expectedLog: [
       ['2', 'push', {type: 'add', row: {id: 'l1'}}],
       ['1', 'fetch', {constraint: {key: 'labelID', value: 'l1'}}],
@@ -1405,6 +1500,7 @@ suite('push one:many:one', () => {
     expectedOutput: [
       {
         type: 'child',
+        fanoutSeq: undefined,
         row: {
           id: 'i1',
         },
@@ -1412,6 +1508,7 @@ suite('push one:many:one', () => {
           relationshipName: 'issuelabels',
           change: {
             type: 'child',
+            fanoutSeq: undefined,
             row: {
               issueID: 'i1',
               labelID: 'l1',
@@ -1420,6 +1517,7 @@ suite('push one:many:one', () => {
               relationshipName: 'labels',
               change: {
                 type: 'add',
+                fanoutSeq: undefined,
                 node: {
                   row: {
                     id: 'l1',
@@ -1433,6 +1531,7 @@ suite('push one:many:one', () => {
       },
       {
         type: 'child',
+        fanoutSeq: undefined,
         row: {
           id: 'i2',
         },
@@ -1440,6 +1539,7 @@ suite('push one:many:one', () => {
           relationshipName: 'issuelabels',
           change: {
             type: 'child',
+            fanoutSeq: undefined,
             row: {
               issueID: 'i2',
               labelID: 'l1',
@@ -1448,6 +1548,7 @@ suite('push one:many:one', () => {
               relationshipName: 'labels',
               change: {
                 type: 'add',
+                fanoutSeq: undefined,
                 node: {
                   row: {
                     id: 'l1',
@@ -1560,7 +1661,7 @@ function makeSource(
 ): {source: MemorySource; snitch: Snitch} {
   const source = new MemorySource('test', columns, primaryKeys);
   for (const row of rows) {
-    source.push({type: 'add', row});
+    source.push({type: 'add', fanoutSeq: undefined, row});
   }
   const snitch = new Snitch(source.connect(ordering), snitchName, log);
   return {
@@ -1786,6 +1887,7 @@ describe('edit assignee', () => {
           'issue',
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {
               issueID: 'i1',
               text: 'first issue',
@@ -2033,6 +2135,7 @@ describe('edit assignee', () => {
           'issue',
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {
               issueID: 'i1',
               text: 'first issue',
@@ -2322,6 +2425,7 @@ describe('edit assignee', () => {
           'issue',
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {
               issueID: 'i1',
               text: 'first issue',
@@ -2565,6 +2669,7 @@ describe('edit assignee', () => {
           'issue',
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {
               issueID: 'i1',
               text: 'first issue',

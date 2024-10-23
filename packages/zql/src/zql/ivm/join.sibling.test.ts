@@ -52,7 +52,9 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
       ],
       [{id: 'o1'}, {id: 'o2'}],
     ],
-    pushes: [[0, {type: 'add', row: {id: 'i3', ownerId: 'o2'}}]],
+    pushes: [
+      [0, {type: 'add', fanoutSeq: undefined, row: {id: 'i3', ownerId: 'o2'}}],
+    ],
     expectedLog: [
       ['0', 'push', {type: 'add', row: {id: 'i3', ownerId: 'o2'}}],
       ['1', 'fetch', {constraint: {key: 'issueId', value: 'i3'}}],
@@ -75,6 +77,7 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
     expectedOutput: [
       {
         type: 'add',
+        fanoutSeq: undefined,
         node: {
           relationships: {
             comments: [],
@@ -110,7 +113,7 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
       ],
       [{id: 'o1'}],
     ],
-    pushes: [[2, {type: 'add', row: {id: 'o2'}}]],
+    pushes: [[2, {type: 'add', fanoutSeq: undefined, row: {id: 'o2'}}]],
     expectedLog: [
       ['2', 'push', {type: 'add', row: {id: 'o2'}}],
       ['0', 'fetch', {constraint: {key: 'ownerId', value: 'o2'}}],
@@ -130,11 +133,13 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
     expectedOutput: [
       {
         type: 'child',
+        fanoutSeq: undefined,
         row: {id: 'i2', ownerId: 'o2'},
         child: {
           relationshipName: 'owners',
           change: {
             type: 'add',
+            fanoutSeq: undefined,
             node: {
               relationships: {},
               row: {id: 'o2'},
@@ -161,7 +166,9 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
       ],
       [{id: 'o1'}, {id: 'o2'}],
     ],
-    pushes: [[1, {type: 'add', row: {id: 'c5', issueId: 'i1'}}]],
+    pushes: [
+      [1, {type: 'add', fanoutSeq: undefined, row: {id: 'c5', issueId: 'i1'}}],
+    ],
     expectedLog: [
       ['1', 'push', {type: 'add', row: {id: 'c5', issueId: 'i1'}}],
       ['0', 'fetch', {constraint: {key: 'id', value: 'i1'}}],
@@ -180,11 +187,13 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
     expectedOutput: [
       {
         type: 'child',
+        fanoutSeq: undefined,
         row: {id: 'i1', ownerId: 'o1'},
         child: {
           relationshipName: 'comments',
           change: {
             type: 'add',
+            fanoutSeq: undefined,
             node: {row: {id: 'c5', issueId: 'i1'}, relationships: {}},
           },
         },
@@ -208,7 +217,7 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
       ],
       [{id: 'o1'}, {id: 'o2'}],
     ],
-    pushes: [[2, {type: 'remove', row: {id: 'o2'}}]],
+    pushes: [[2, {type: 'remove', fanoutSeq: undefined, row: {id: 'o2'}}]],
     expectedLog: [
       ['2', 'push', {type: 'remove', row: {id: 'o2'}}],
       ['0', 'fetch', {constraint: {key: 'ownerId', value: 'o2'}}],
@@ -228,11 +237,13 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
     expectedOutput: [
       {
         type: 'child',
+        fanoutSeq: undefined,
         row: {id: 'i2', ownerId: 'o2'},
         child: {
           relationshipName: 'owners',
           change: {
             type: 'remove',
+            fanoutSeq: undefined,
             node: {
               relationships: {},
               row: {id: 'o2'},
@@ -259,7 +270,12 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
       ],
       [{id: 'o1'}, {id: 'o2'}],
     ],
-    pushes: [[1, {type: 'remove', row: {id: 'c4', issueId: 'i2'}}]],
+    pushes: [
+      [
+        1,
+        {type: 'remove', fanoutSeq: undefined, row: {id: 'c4', issueId: 'i2'}},
+      ],
+    ],
     expectedLog: [
       ['1', 'push', {type: 'remove', row: {id: 'c4', issueId: 'i2'}}],
       ['0', 'fetch', {constraint: {key: 'id', value: 'i2'}}],
@@ -278,11 +294,13 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
     expectedOutput: [
       {
         type: 'child',
+        fanoutSeq: undefined,
         row: {id: 'i2', ownerId: 'o2'},
         child: {
           relationshipName: 'comments',
           change: {
             type: 'remove',
+            fanoutSeq: undefined,
             node: {row: {id: 'c4', issueId: 'i2'}, relationships: {}},
           },
         },
@@ -334,6 +352,7 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
           0,
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'i1', ownerId: 'o1', text: 'issue 1'},
             row: {id: 'i1', ownerId: 'o1', text: 'issue 1 changed'},
           },
@@ -363,6 +382,7 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
       expectedOutput: [
         {
           type: 'edit',
+          fanoutSeq: undefined,
           oldRow: {
             id: 'i1',
             ownerId: 'o1',
@@ -385,6 +405,7 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
           1,
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c4', issueId: 'i2', text: 'comment 4'},
             row: {id: 'c4', issueId: 'i2', text: 'comment 4 changed'},
           },
@@ -416,6 +437,7 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
       expectedOutput: [
         {
           type: 'child',
+          fanoutSeq: undefined,
           row: {
             id: 'i2',
             ownerId: 'o2',
@@ -424,6 +446,7 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
           child: {
             change: {
               type: 'edit',
+              fanoutSeq: undefined,
               row: {
                 id: 'c4',
                 issueId: 'i2',
@@ -449,6 +472,7 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
           2,
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'o2', text: 'owner 2'},
             row: {id: 'o2', text: 'owner 2 changed'},
           },
@@ -481,6 +505,7 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
       expectedOutput: [
         {
           type: 'child',
+          fanoutSeq: undefined,
           row: {
             id: 'i2',
             ownerId: 'o2',
@@ -489,6 +514,7 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
           child: {
             change: {
               type: 'edit',
+              fanoutSeq: undefined,
               oldRow: {
                 id: 'o2',
                 text: 'owner 2',
@@ -517,7 +543,7 @@ function pushSiblingTest(t: PushTestSibling) {
       const ordering = t.sorts?.[i] ?? [['id', 'asc']];
       const source = new MemorySource('test', t.columns[i], t.primaryKeys[i]);
       for (const row of rows) {
-        source.push({type: 'add', row});
+        source.push({type: 'add', fanoutSeq: undefined, row});
       }
       const snitch = new Snitch(source.connect(ordering), String(i), log, [
         'fetch',

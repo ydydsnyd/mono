@@ -86,6 +86,7 @@ export class ZeroContext implements QueryDelegate {
             assert(typeof diff.oldValue === 'object');
             source.push({
               type: 'remove',
+              fanoutSeq: undefined,
               row: diff.oldValue as Row,
             });
             break;
@@ -93,6 +94,7 @@ export class ZeroContext implements QueryDelegate {
             assert(typeof diff.newValue === 'object');
             source.push({
               type: 'add',
+              fanoutSeq: undefined,
               row: diff.newValue as Row,
             });
             break;
@@ -104,6 +106,7 @@ export class ZeroContext implements QueryDelegate {
             // generate them in tests.
             source.push({
               type: 'edit',
+              fanoutSeq: undefined,
               row: diff.newValue as Row,
               oldRow: diff.oldValue as Row,
             });

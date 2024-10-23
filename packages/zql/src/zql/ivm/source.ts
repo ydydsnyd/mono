@@ -4,16 +4,19 @@ import type {Input} from './operator.js';
 
 export type SourceChangeAdd = {
   type: 'add';
+  fanoutSeq: number | undefined;
   row: Row;
 };
 
 export type SourceChangeRemove = {
   type: 'remove';
+  fanoutSeq: number | undefined;
   row: Row;
 };
 
 export type SourceChangeEdit = {
   type: 'edit';
+  fanoutSeq: number | undefined;
   row: Row;
   oldRow: Row;
 };
@@ -53,10 +56,7 @@ export interface Source {
    * order.
    * @param optionalFilters Optional filters to apply to the source.
    */
-  connect(
-    sort: Ordering,
-    optionalFilters?: readonly Condition[] | undefined,
-  ): SourceInput;
+  connect(sort: Ordering, optionalFilters?: Condition | undefined): SourceInput;
 
   /**
    * Pushes a change into the source and into all connected outputs.

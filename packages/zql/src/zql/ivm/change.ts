@@ -7,13 +7,17 @@ export type ChangeType = Change['type'];
 // TODO: We should change these to classes to achieve monomorphic dispatch.
 // or add some runtime asserts that the order of the keys is always the same.
 
+type ChangeBase = {
+  fanoutSeq: number | undefined;
+};
+
 /**
  * Represents a node (and all its children) getting added to the result.
  */
 export type AddChange = {
   type: 'add';
   node: Node;
-};
+} & ChangeBase;
 
 /**
  * Represents a node (and all its children) getting removed from the result.
@@ -21,7 +25,7 @@ export type AddChange = {
 export type RemoveChange = {
   type: 'remove';
   node: Node;
-};
+} & ChangeBase;
 
 /**
  * The node itself is unchanged, but one of its descendants has changed.
@@ -33,7 +37,7 @@ export type ChildChange = {
     relationshipName: string;
     change: Change;
   };
-};
+} & ChangeBase;
 
 /**
  * The row changed (in a way that the {@linkcode Source} determines). Most
@@ -49,4 +53,4 @@ export type EditChange = {
   type: 'edit';
   row: Row;
   oldRow: Row;
-};
+} & ChangeBase;

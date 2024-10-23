@@ -36,7 +36,9 @@ suite('take with no partition', () => {
         {id: 'i3', created: 300},
       ],
       limit: 0,
-      pushes: [{type: 'add', row: {id: 'i4', created: 50}}],
+      pushes: [
+        {type: 'add', fanoutSeq: undefined, row: {id: 'i4', created: 50}},
+      ],
       expectedMessages: [
         ['takeSnitch', 'push', {type: 'add', row: {id: 'i4', created: 50}}],
       ],
@@ -53,7 +55,9 @@ suite('take with no partition', () => {
         {id: 'i3', created: 300},
       ],
       limit: 5,
-      pushes: [{type: 'add', row: {id: 'i4', created: 50}}],
+      pushes: [
+        {type: 'add', fanoutSeq: undefined, row: {id: 'i4', created: 50}},
+      ],
       expectedMessages: [
         ['takeSnitch', 'push', {type: 'add', row: {id: 'i4', created: 50}}],
       ],
@@ -71,7 +75,11 @@ suite('take with no partition', () => {
         },
       },
       expectedOutput: [
-        {type: 'add', node: {row: {id: 'i4', created: 50}, relationships: {}}},
+        {
+          type: 'add',
+          fanoutSeq: undefined,
+          node: {row: {id: 'i4', created: 50}, relationships: {}},
+        },
       ],
     });
 
@@ -84,7 +92,9 @@ suite('take with no partition', () => {
         {id: 'i3', created: 300},
       ],
       limit: 5,
-      pushes: [{type: 'add', row: {id: 'i4', created: 350}}],
+      pushes: [
+        {type: 'add', fanoutSeq: undefined, row: {id: 'i4', created: 350}},
+      ],
       expectedMessages: [
         ['takeSnitch', 'push', {type: 'add', row: {id: 'i4', created: 350}}],
       ],
@@ -102,7 +112,11 @@ suite('take with no partition', () => {
         },
       },
       expectedOutput: [
-        {type: 'add', node: {row: {id: 'i4', created: 350}, relationships: {}}},
+        {
+          type: 'add',
+          fanoutSeq: undefined,
+          node: {row: {id: 'i4', created: 350}, relationships: {}},
+        },
       ],
     });
 
@@ -116,7 +130,9 @@ suite('take with no partition', () => {
         {id: 'i4', created: 400},
       ],
       limit: 3,
-      pushes: [{type: 'add', row: {id: 'i5', created: 350}}],
+      pushes: [
+        {type: 'add', fanoutSeq: undefined, row: {id: 'i5', created: 350}},
+      ],
       expectedMessages: [
         ['takeSnitch', 'push', {type: 'add', row: {id: 'i5', created: 350}}],
       ],
@@ -146,7 +162,9 @@ suite('take with no partition', () => {
         {id: 'i4', created: 400},
       ],
       limit: 3,
-      pushes: [{type: 'add', row: {id: 'i5', created: 50}}],
+      pushes: [
+        {type: 'add', fanoutSeq: undefined, row: {id: 'i5', created: 50}},
+      ],
       expectedMessages: [
         ['takeSnitch', 'push', {type: 'add', row: {id: 'i5', created: 50}}],
         [
@@ -171,9 +189,14 @@ suite('take with no partition', () => {
       expectedOutput: [
         {
           type: 'remove',
+          fanoutSeq: undefined,
           node: {row: {id: 'i3', created: 300}, relationships: {}},
         },
-        {type: 'add', node: {row: {id: 'i5', created: 50}, relationships: {}}},
+        {
+          type: 'add',
+          fanoutSeq: undefined,
+          node: {row: {id: 'i5', created: 50}, relationships: {}},
+        },
       ],
     });
 
@@ -187,7 +210,9 @@ suite('take with no partition', () => {
         {id: 'i4', created: 400},
       ],
       limit: 3,
-      pushes: [{type: 'add', row: {id: 'i5', created: 250}}],
+      pushes: [
+        {type: 'add', fanoutSeq: undefined, row: {id: 'i5', created: 250}},
+      ],
       expectedMessages: [
         ['takeSnitch', 'push', {type: 'add', row: {id: 'i5', created: 250}}],
         [
@@ -212,9 +237,14 @@ suite('take with no partition', () => {
       expectedOutput: [
         {
           type: 'remove',
+          fanoutSeq: undefined,
           node: {row: {id: 'i3', created: 300}, relationships: {}},
         },
-        {type: 'add', node: {row: {id: 'i5', created: 250}, relationships: {}}},
+        {
+          type: 'add',
+          fanoutSeq: undefined,
+          node: {row: {id: 'i5', created: 250}, relationships: {}},
+        },
       ],
     });
   });
@@ -229,7 +259,9 @@ suite('take with no partition', () => {
         {id: 'i3', created: 300},
       ],
       limit: 0,
-      pushes: [{type: 'remove', row: {id: 'i1', created: 100}}],
+      pushes: [
+        {type: 'remove', fanoutSeq: undefined, row: {id: 'i1', created: 100}},
+      ],
       expectedMessages: [
         ['takeSnitch', 'push', {type: 'remove', row: {id: 'i1', created: 100}}],
       ],
@@ -246,7 +278,9 @@ suite('take with no partition', () => {
         {id: 'i3', created: 300},
       ],
       limit: 5,
-      pushes: [{type: 'remove', row: {id: 'i1', created: 100}}],
+      pushes: [
+        {type: 'remove', fanoutSeq: undefined, row: {id: 'i1', created: 100}},
+      ],
       expectedMessages: [
         ['takeSnitch', 'push', {type: 'remove', row: {id: 'i1', created: 100}}],
         [
@@ -279,6 +313,7 @@ suite('take with no partition', () => {
       expectedOutput: [
         {
           type: 'remove',
+          fanoutSeq: undefined,
           node: {row: {id: 'i1', created: 100}, relationships: {}},
         },
       ],
@@ -293,7 +328,9 @@ suite('take with no partition', () => {
         {id: 'i3', created: 300},
       ],
       limit: 5,
-      pushes: [{type: 'remove', row: {id: 'i3', created: 300}}],
+      pushes: [
+        {type: 'remove', fanoutSeq: undefined, row: {id: 'i3', created: 300}},
+      ],
       expectedMessages: [
         ['takeSnitch', 'push', {type: 'remove', row: {id: 'i3', created: 300}}],
         [
@@ -326,6 +363,7 @@ suite('take with no partition', () => {
       expectedOutput: [
         {
           type: 'remove',
+          fanoutSeq: undefined,
           node: {row: {id: 'i3', created: 300}, relationships: {}},
         },
       ],
@@ -341,7 +379,9 @@ suite('take with no partition', () => {
         {id: 'i4', created: 400},
       ],
       limit: 3,
-      pushes: [{type: 'remove', row: {id: 'i4', created: 400}}],
+      pushes: [
+        {type: 'remove', fanoutSeq: undefined, row: {id: 'i4', created: 400}},
+      ],
       expectedMessages: [
         ['takeSnitch', 'push', {type: 'remove', row: {id: 'i4', created: 400}}],
       ],
@@ -371,7 +411,9 @@ suite('take with no partition', () => {
         {id: 'i4', created: 400},
       ],
       limit: 3,
-      pushes: [{type: 'remove', row: {id: 'i1', created: 100}}],
+      pushes: [
+        {type: 'remove', fanoutSeq: undefined, row: {id: 'i1', created: 100}},
+      ],
       expectedMessages: [
         ['takeSnitch', 'push', {type: 'remove', row: {id: 'i1', created: 100}}],
         [
@@ -396,10 +438,12 @@ suite('take with no partition', () => {
       expectedOutput: [
         {
           type: 'remove',
+          fanoutSeq: undefined,
           node: {row: {id: 'i1', created: 100}, relationships: {}},
         },
         {
           type: 'add',
+          fanoutSeq: undefined,
           node: {row: {id: 'i4', created: 400}, relationships: {}},
         },
       ],
@@ -414,7 +458,9 @@ suite('take with no partition', () => {
         {id: 'i3', created: 300},
       ],
       limit: 3,
-      pushes: [{type: 'remove', row: {id: 'i1', created: 100}}],
+      pushes: [
+        {type: 'remove', fanoutSeq: undefined, row: {id: 'i1', created: 100}},
+      ],
       expectedMessages: [
         ['takeSnitch', 'push', {type: 'remove', row: {id: 'i1', created: 100}}],
         [
@@ -439,6 +485,7 @@ suite('take with no partition', () => {
       expectedOutput: [
         {
           type: 'remove',
+          fanoutSeq: undefined,
           node: {row: {id: 'i1', created: 100}, relationships: {}},
         },
       ],
@@ -454,7 +501,9 @@ suite('take with no partition', () => {
         {id: 'i4', created: 400},
       ],
       limit: 3,
-      pushes: [{type: 'remove', row: {id: 'i3', created: 300}}],
+      pushes: [
+        {type: 'remove', fanoutSeq: undefined, row: {id: 'i3', created: 300}},
+      ],
       expectedMessages: [
         ['takeSnitch', 'push', {type: 'remove', row: {id: 'i3', created: 300}}],
         [
@@ -479,10 +528,12 @@ suite('take with no partition', () => {
       expectedOutput: [
         {
           type: 'remove',
+          fanoutSeq: undefined,
           node: {row: {id: 'i3', created: 300}, relationships: {}},
         },
         {
           type: 'add',
+          fanoutSeq: undefined,
           node: {row: {id: 'i4', created: 400}, relationships: {}},
         },
       ],
@@ -497,7 +548,9 @@ suite('take with no partition', () => {
         {id: 'i3', created: 300},
       ],
       limit: 3,
-      pushes: [{type: 'remove', row: {id: 'i3', created: 300}}],
+      pushes: [
+        {type: 'remove', fanoutSeq: undefined, row: {id: 'i3', created: 300}},
+      ],
       expectedMessages: [
         ['takeSnitch', 'push', {type: 'remove', row: {id: 'i3', created: 300}}],
         [
@@ -522,6 +575,7 @@ suite('take with no partition', () => {
       expectedOutput: [
         {
           type: 'remove',
+          fanoutSeq: undefined,
           node: {row: {id: 'i3', created: 300}, relationships: {}},
         },
       ],
@@ -556,6 +610,7 @@ suite('take with no partition', () => {
       pushes: [
         {
           type: 'edit',
+          fanoutSeq: undefined,
           oldRow: {id: 'i2', created: 200, text: 'b'},
           row: {id: 'i2', created: 200, text: 'c'},
         },
@@ -583,6 +638,7 @@ suite('take with no partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'i1', created: 100, text: 'a'},
             row: {id: 'i1', created: 100, text: 'a2'},
           },
@@ -616,6 +672,7 @@ suite('take with no partition', () => {
         expectedOutput: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'i1', created: 100, text: 'a'},
             row: {id: 'i1', created: 100, text: 'a2'},
           },
@@ -629,6 +686,7 @@ suite('take with no partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'i4', created: 400, text: 'd'},
             row: {id: 'i4', created: 400, text: 'd2'},
           },
@@ -662,6 +720,7 @@ suite('take with no partition', () => {
         expectedOutput: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'i4', created: 400, text: 'd'},
             row: {id: 'i4', created: 400, text: 'd2'},
           },
@@ -677,6 +736,7 @@ suite('take with no partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'i4', created: 400, text: 'd'},
             row: {id: 'i4', created: 400, text: 'd2'},
           },
@@ -717,6 +777,7 @@ suite('take with no partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'i2', created: 200, text: 'b'},
             row: {id: 'i2', created: 200, text: 'b2'},
           },
@@ -750,6 +811,7 @@ suite('take with no partition', () => {
         expectedOutput: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'i2', created: 200, text: 'b'},
             row: {id: 'i2', created: 200, text: 'b2'},
           },
@@ -763,6 +825,7 @@ suite('take with no partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'i3', created: 300, text: 'c'},
             row: {id: 'i3', created: 300, text: 'c2'},
           },
@@ -796,6 +859,7 @@ suite('take with no partition', () => {
         expectedOutput: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'i3', created: 300, text: 'c'},
             row: {id: 'i3', created: 300, text: 'c2'},
           },
@@ -809,6 +873,7 @@ suite('take with no partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'i2', created: 200, text: 'b'},
             row: {id: 'i2', created: 50, text: 'b2'},
           },
@@ -842,6 +907,7 @@ suite('take with no partition', () => {
         expectedOutput: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'i2', created: 200, text: 'b'},
             row: {id: 'i2', created: 50, text: 'b2'},
           },
@@ -855,6 +921,7 @@ suite('take with no partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'i4', created: 400, text: 'd'},
             row: {id: 'i4', created: 250, text: 'd'},
           },
@@ -903,10 +970,12 @@ suite('take with no partition', () => {
         expectedOutput: [
           {
             type: 'remove',
+            fanoutSeq: undefined,
             node: {row: {id: 'i3', created: 300, text: 'c'}, relationships: {}},
           },
           {
             type: 'add',
+            fanoutSeq: undefined,
             node: {
               row: {id: 'i4', created: 250, text: 'd'},
               relationships: {},
@@ -922,6 +991,7 @@ suite('take with no partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'i2', created: 200, text: 'b'},
             row: {id: 'i2', created: 350, text: 'b2'},
           },
@@ -970,6 +1040,7 @@ suite('take with no partition', () => {
         expectedOutput: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'i2', created: 200, text: 'b'},
             row: {id: 'i2', created: 350, text: 'b2'},
           },
@@ -983,6 +1054,7 @@ suite('take with no partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'i2', created: 200, text: 'b'},
             row: {id: 'i2', created: 450, text: 'b2'},
           },
@@ -1031,6 +1103,7 @@ suite('take with no partition', () => {
         expectedOutput: [
           {
             type: 'remove',
+            fanoutSeq: undefined,
             node: {
               row: {id: 'i2', created: 200, text: 'b'},
               relationships: {},
@@ -1038,6 +1111,7 @@ suite('take with no partition', () => {
           },
           {
             type: 'add',
+            fanoutSeq: undefined,
             node: {
               row: {id: 'i4', created: 400, text: 'd'},
               relationships: {},
@@ -1054,6 +1128,7 @@ suite('take with no partition', () => {
       pushes: [
         {
           type: 'edit',
+          fanoutSeq: undefined,
           oldRow: {id: 'i1', created: 100, text: 'a'},
           row: {id: 'i1', created: 50, text: 'a2'},
         },
@@ -1097,6 +1172,7 @@ suite('take with no partition', () => {
             text: 'a2',
           },
           type: 'edit',
+          fanoutSeq: undefined,
         },
       ],
     });
@@ -1131,7 +1207,13 @@ suite('take with partition', () => {
         {id: 'c3', issueID: 'i1', created: 300},
       ],
       limit: 0,
-      pushes: [{type: 'add', row: {id: 'c6', issueID: 'i2', created: 150}}],
+      pushes: [
+        {
+          type: 'add',
+          fanoutSeq: undefined,
+          row: {id: 'c6', issueID: 'i2', created: 150},
+        },
+      ],
       expectedMessages: [
         [
           'takeSnitch',
@@ -1158,7 +1240,13 @@ suite('take with partition', () => {
         {id: 'c5', issueID: 'i2', created: 500},
       ],
       limit: 5,
-      pushes: [{type: 'add', row: {id: 'c6', issueID: 'i2', created: 150}}],
+      pushes: [
+        {
+          type: 'add',
+          fanoutSeq: undefined,
+          row: {id: 'c6', issueID: 'i2', created: 150},
+        },
+      ],
       expectedMessages: [
         [
           'takeSnitch',
@@ -1180,6 +1268,7 @@ suite('take with partition', () => {
       expectedOutput: [
         {
           type: 'add',
+          fanoutSeq: undefined,
           node: {
             row: {id: 'c6', issueID: 'i2', created: 150},
             relationships: {},
@@ -1207,7 +1296,13 @@ suite('take with partition', () => {
         {id: 'c7', issueID: 'i2', created: 700},
       ],
       limit: 3,
-      pushes: [{type: 'add', row: {id: 'c8', issueID: 'i2', created: 550}}],
+      pushes: [
+        {
+          type: 'add',
+          fanoutSeq: undefined,
+          row: {id: 'c8', issueID: 'i2', created: 550},
+        },
+      ],
       expectedMessages: [
         [
           'takeSnitch',
@@ -1243,6 +1338,7 @@ suite('take with partition', () => {
       expectedOutput: [
         {
           type: 'remove',
+          fanoutSeq: undefined,
           node: {
             row: {id: 'c6', issueID: 'i2', created: 600},
             relationships: {},
@@ -1250,6 +1346,7 @@ suite('take with partition', () => {
         },
         {
           type: 'add',
+          fanoutSeq: undefined,
           node: {
             row: {id: 'c8', issueID: 'i2', created: 550},
             relationships: {},
@@ -1273,7 +1370,13 @@ suite('take with partition', () => {
         {id: 'c5', issueID: 'i2', created: 500},
       ],
       limit: 3,
-      pushes: [{type: 'add', row: {id: 'c6', issueID: '3', created: 550}}],
+      pushes: [
+        {
+          type: 'add',
+          fanoutSeq: undefined,
+          row: {id: 'c6', issueID: '3', created: 550},
+        },
+      ],
       expectedMessages: [
         [
           'takeSnitch',
@@ -1310,7 +1413,13 @@ suite('take with partition', () => {
         {id: 'c3', issueID: 'i1', created: 300},
       ],
       limit: 0,
-      pushes: [{type: 'remove', row: {id: 'c1', issueID: 'i1', created: 100}}],
+      pushes: [
+        {
+          type: 'remove',
+          fanoutSeq: undefined,
+          row: {id: 'c1', issueID: 'i1', created: 100},
+        },
+      ],
       expectedMessages: [
         [
           'takeSnitch',
@@ -1337,7 +1446,13 @@ suite('take with partition', () => {
         {id: 'c5', issueID: 'i2', created: 500},
       ],
       limit: 5,
-      pushes: [{type: 'remove', row: {id: 'c1', issueID: 'i1', created: 100}}],
+      pushes: [
+        {
+          type: 'remove',
+          fanoutSeq: undefined,
+          row: {id: 'c1', issueID: 'i1', created: 100},
+        },
+      ],
       expectedMessages: [
         [
           'takeSnitch',
@@ -1373,6 +1488,7 @@ suite('take with partition', () => {
       expectedOutput: [
         {
           type: 'remove',
+          fanoutSeq: undefined,
           node: {
             row: {id: 'c1', issueID: 'i1', created: 100},
             relationships: {},
@@ -1397,7 +1513,13 @@ suite('take with partition', () => {
         {id: 'c6', issueID: 'i3', created: 600},
       ],
       limit: 5,
-      pushes: [{type: 'remove', row: {id: 'c6', issueID: 'i3', created: 600}}],
+      pushes: [
+        {
+          type: 'remove',
+          fanoutSeq: undefined,
+          row: {id: 'c6', issueID: 'i3', created: 600},
+        },
+      ],
       expectedMessages: [
         [
           'takeSnitch',
@@ -1456,6 +1578,7 @@ suite('take with partition', () => {
       pushes: [
         {
           type: 'edit',
+          fanoutSeq: undefined,
           oldRow: {id: 'c2', issueID: 'i1', created: 200, text: 'b'},
           row: {id: 'c2', issueID: 'i1', created: 200, text: 'b2'},
         },
@@ -1483,6 +1606,7 @@ suite('take with partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c1', issueID: 'i1', created: 100, text: 'a'},
             row: {id: 'c1', issueID: 'i1', created: 100, text: 'a2'},
           },
@@ -1527,6 +1651,7 @@ suite('take with partition', () => {
         expectedOutput: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c1', issueID: 'i1', created: 100, text: 'a'},
             row: {id: 'c1', issueID: 'i1', created: 100, text: 'a2'},
           },
@@ -1540,6 +1665,7 @@ suite('take with partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c5', issueID: 'i2', created: 500, text: 'e'},
             row: {id: 'c5', issueID: 'i2', created: 500, text: 'e2'},
           },
@@ -1584,6 +1710,7 @@ suite('take with partition', () => {
         expectedOutput: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c5', issueID: 'i2', created: 500, text: 'e'},
             row: {id: 'c5', issueID: 'i2', created: 500, text: 'e2'},
           },
@@ -1599,6 +1726,7 @@ suite('take with partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c3', issueID: 'i1', created: 300, text: 'c'},
             row: {id: 'c3', issueID: 'i1', created: 300, text: 'c2'},
           },
@@ -1650,6 +1778,7 @@ suite('take with partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c2', issueID: 'i1', created: 200, text: 'b'},
             row: {id: 'c2', issueID: 'i1', created: 200, text: 'b2'},
           },
@@ -1694,6 +1823,7 @@ suite('take with partition', () => {
         expectedOutput: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c2', issueID: 'i1', created: 200, text: 'b'},
             row: {id: 'c2', issueID: 'i1', created: 200, text: 'b2'},
           },
@@ -1707,6 +1837,7 @@ suite('take with partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c3', issueID: 'i1', created: 300, text: 'c'},
             row: {id: 'c3', issueID: 'i1', created: 300, text: 'c2'},
           },
@@ -1751,6 +1882,7 @@ suite('take with partition', () => {
         expectedOutput: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c3', issueID: 'i1', created: 300, text: 'c'},
             row: {id: 'c3', issueID: 'i1', created: 300, text: 'c2'},
           },
@@ -1764,6 +1896,7 @@ suite('take with partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c3', issueID: 'i1', created: 300, text: 'c'},
             row: {id: 'c3', issueID: 'i1', created: 150, text: 'c2'},
           },
@@ -1822,6 +1955,7 @@ suite('take with partition', () => {
         expectedOutput: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c3', issueID: 'i1', created: 300, text: 'c'},
             row: {id: 'c3', issueID: 'i1', created: 150, text: 'c2'},
           },
@@ -1835,6 +1969,7 @@ suite('take with partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c2', issueID: 'i1', created: 200, text: 'b'},
             row: {id: 'c2', issueID: 'i1', created: 350, text: 'b2'},
           },
@@ -1893,6 +2028,7 @@ suite('take with partition', () => {
         expectedOutput: [
           {
             type: 'remove',
+            fanoutSeq: undefined,
             node: {
               row: {id: 'c2', issueID: 'i1', created: 200, text: 'b'},
               relationships: {},
@@ -1900,6 +2036,7 @@ suite('take with partition', () => {
           },
           {
             type: 'add',
+            fanoutSeq: undefined,
             node: {
               row: {id: 'c3', issueID: 'i1', created: 300, text: 'c'},
               relationships: {},
@@ -1915,6 +2052,7 @@ suite('take with partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c2', issueID: 'i1', created: 200, text: 'b'},
             row: {id: 'c2', issueID: 'i1', created: 50, text: 'b2'},
           },
@@ -1959,6 +2097,7 @@ suite('take with partition', () => {
         expectedOutput: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c2', issueID: 'i1', created: 200, text: 'b'},
             row: {id: 'c2', issueID: 'i1', created: 50, text: 'b2'},
           },
@@ -1972,6 +2111,7 @@ suite('take with partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c3', issueID: 'i1', created: 300, text: 'c'},
             row: {id: 'c3', issueID: 'i1', created: 150, text: 'c2'},
           },
@@ -2030,6 +2170,7 @@ suite('take with partition', () => {
         expectedOutput: [
           {
             type: 'remove',
+            fanoutSeq: undefined,
             node: {
               row: {id: 'c2', issueID: 'i1', created: 200, text: 'b'},
               relationships: {},
@@ -2037,6 +2178,7 @@ suite('take with partition', () => {
           },
           {
             type: 'add',
+            fanoutSeq: undefined,
             node: {
               row: {id: 'c3', issueID: 'i1', created: 150, text: 'c2'},
               relationships: {},
@@ -2052,6 +2194,7 @@ suite('take with partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c1', issueID: 'i1', created: 100, text: 'a'},
             row: {id: 'c1', issueID: 'i1', created: 250, text: 'a2'},
           },
@@ -2110,6 +2253,7 @@ suite('take with partition', () => {
         expectedOutput: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c1', issueID: 'i1', created: 100, text: 'a'},
             row: {id: 'c1', issueID: 'i1', created: 250, text: 'a2'},
           },
@@ -2123,6 +2267,7 @@ suite('take with partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c1', issueID: 'i1', created: 100, text: 'a'},
             row: {id: 'c1', issueID: 'i1', created: 350, text: 'a2'},
           },
@@ -2181,6 +2326,7 @@ suite('take with partition', () => {
         expectedOutput: [
           {
             type: 'remove',
+            fanoutSeq: undefined,
             node: {
               row: {id: 'c1', issueID: 'i1', created: 100, text: 'a'},
               relationships: {},
@@ -2188,6 +2334,7 @@ suite('take with partition', () => {
           },
           {
             type: 'add',
+            fanoutSeq: undefined,
             node: {
               row: {id: 'c3', issueID: 'i1', created: 300, text: 'c'},
               relationships: {},
@@ -2205,6 +2352,7 @@ suite('take with partition', () => {
         pushes: [
           {
             type: 'edit',
+            fanoutSeq: undefined,
             oldRow: {id: 'c1', issueID: 'i1', created: 100, text: 'a'},
             row: {id: 'c1', issueID: 'i2', created: 100, text: 'a2'},
           },
@@ -2277,6 +2425,7 @@ suite('take with partition', () => {
         expectedOutput: [
           {
             type: 'remove',
+            fanoutSeq: undefined,
             node: {
               row: {
                 created: 100,
@@ -2289,6 +2438,7 @@ suite('take with partition', () => {
           },
           {
             type: 'add',
+            fanoutSeq: undefined,
             node: {
               row: {
                 created: 300,
@@ -2301,6 +2451,7 @@ suite('take with partition', () => {
           },
           {
             type: 'remove',
+            fanoutSeq: undefined,
             node: {
               row: {
                 created: 500,
@@ -2313,6 +2464,7 @@ suite('take with partition', () => {
           },
           {
             type: 'add',
+            fanoutSeq: undefined,
             node: {
               row: {
                 created: 100,
@@ -2334,7 +2486,7 @@ function takeTest(t: TakeTest) {
     const log: SnitchMessage[] = [];
     const source = new MemorySource('table', t.columns, t.primaryKey);
     for (const row of t.sourceRows) {
-      source.push({type: 'add', row});
+      source.push({type: 'add', fanoutSeq: undefined, row});
     }
     const snitch = new Snitch(
       source.connect(t.sort || [['id', 'asc']]),

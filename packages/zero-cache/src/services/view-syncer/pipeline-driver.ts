@@ -283,14 +283,23 @@ export class PipelineDriver {
         if (nextValue) {
           yield* this.#push(table, {
             type: 'edit',
+            fanoutSeq: undefined,
             row: nextValue as Row,
             oldRow: prevValue as Row,
           });
         } else {
-          yield* this.#push(table, {type: 'remove', row: prevValue as Row});
+          yield* this.#push(table, {
+            type: 'remove',
+            fanoutSeq: undefined,
+            row: prevValue as Row,
+          });
         }
       } else if (nextValue) {
-        yield* this.#push(table, {type: 'add', row: nextValue as Row});
+        yield* this.#push(table, {
+          type: 'add',
+          fanoutSeq: undefined,
+          row: nextValue as Row,
+        });
       }
     }
 
@@ -450,6 +459,6 @@ class Streamer {
 
 function* toAdds(nodes: Iterable<Node>): Iterable<Change> {
   for (const node of nodes) {
-    yield {type: 'add', node};
+    yield {type: 'add', fanoutSeq: undefined, node};
   }
 }

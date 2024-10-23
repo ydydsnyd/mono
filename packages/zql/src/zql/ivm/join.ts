@@ -115,6 +115,7 @@ export class Join implements Input {
       case 'add':
         this.#output.push({
           type: 'add',
+          fanoutSeq: undefined,
           node: this.#processParentNode(
             change.node.row,
             change.node.relationships,
@@ -125,6 +126,7 @@ export class Join implements Input {
       case 'remove':
         this.#output.push({
           type: 'remove',
+          fanoutSeq: undefined,
           node: this.#processParentNode(
             change.node.row,
             change.node.relationships,
@@ -141,6 +143,7 @@ export class Join implements Input {
         // - If the value of the join key changed we need to remove the old relation rows and add the new ones.
 
         this.#output.push({
+          fanoutSeq: undefined,
           type: 'edit',
           row: change.row,
           oldRow: change.oldRow,
@@ -159,12 +162,14 @@ export class Join implements Input {
           for (const childNode of childrenToRemoveStream) {
             this.#output.push({
               type: 'child',
+              fanoutSeq: undefined,
               // This is the new row since we already changed it in the edit above.
               row: change.row,
               child: {
                 relationshipName: this.#relationshipName,
                 change: {
                   type: 'remove',
+                  fanoutSeq: undefined,
                   node: childNode,
                 },
               },
@@ -180,11 +185,13 @@ export class Join implements Input {
           for (const childNode of childrenToAddStream) {
             this.#output.push({
               type: 'child',
+              fanoutSeq: undefined,
               row: change.row,
               child: {
                 relationshipName: this.#relationshipName,
                 change: {
                   type: 'add',
+                  fanoutSeq: undefined,
                   node: childNode,
                 },
               },
@@ -232,6 +239,7 @@ export class Join implements Input {
       for (const parentNode of parentNodes) {
         const childChange: ChildChange = {
           type: 'child',
+          fanoutSeq: undefined,
           row: parentNode.row,
           child: {
             relationshipName: this.#relationshipName,
@@ -278,6 +286,7 @@ export class Join implements Input {
 
           pushChildChange(oldChildRow, {
             type: 'remove',
+            fanoutSeq: undefined,
             node: {
               row: oldChildRow,
               relationships,
@@ -285,6 +294,7 @@ export class Join implements Input {
           });
           pushChildChange(childRow, {
             type: 'add',
+            fanoutSeq: undefined,
             node: {
               row: childRow,
               relationships,

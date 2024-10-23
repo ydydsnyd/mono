@@ -299,6 +299,7 @@ export class Take implements Operator {
       }
       const removeChange: RemoveChange = {
         type: 'remove',
+        fanoutSeq: undefined,
         node: boundNode,
       };
       this.#setTakeState(
@@ -367,6 +368,7 @@ export class Take implements Operator {
         this.#output.push(change);
         this.#output.push({
           type: 'add',
+          fanoutSeq: undefined,
           node: afterBoundNode,
         });
         return;
@@ -401,6 +403,7 @@ export class Take implements Operator {
       // We do not need the relationships because Take comes before Join
       this.push({
         type: 'remove',
+        fanoutSeq: undefined,
         node: {
           row: change.oldRow,
           relationships: {},
@@ -408,6 +411,7 @@ export class Take implements Operator {
       });
       this.push({
         type: 'add',
+        fanoutSeq: undefined,
         node: {
           row: change.row,
           relationships: {},
@@ -504,6 +508,7 @@ export class Take implements Operator {
       );
       this.#output.push({
         type: 'remove',
+        fanoutSeq: undefined,
         node: {
           row: change.oldRow,
           relationships: {},
@@ -511,6 +516,7 @@ export class Take implements Operator {
       });
       this.#output.push({
         type: 'add',
+        fanoutSeq: undefined,
         node: newBoundNode,
       });
       return;
@@ -547,12 +553,14 @@ export class Take implements Operator {
 
       this.#output.push({
         type: 'remove',
+        fanoutSeq: undefined,
         node: oldBoundNode,
       });
 
       // We do not need the relationships because Take comes before Join
       this.#output.push({
         type: 'add',
+        fanoutSeq: undefined,
         node: {
           row: change.row,
           relationships: {},
@@ -605,6 +613,7 @@ export class Take implements Operator {
       // We do not need the relationships because Take comes before Join
       this.#output.push({
         type: 'remove',
+        fanoutSeq: undefined,
         node: {
           row: change.oldRow,
           relationships: {},
@@ -612,6 +621,7 @@ export class Take implements Operator {
       });
       this.#output.push({
         type: 'add',
+        fanoutSeq: undefined,
         node: afterBoundNode,
       });
       return;

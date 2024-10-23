@@ -1,7 +1,11 @@
 import type {SQLQuery} from '@databases/sql';
 import {assert, unreachable} from '../../shared/src/asserts.js';
 import {must} from '../../shared/src/must.js';
-import type {Ordering, SimpleCondition} from '../../zero-protocol/src/ast.js';
+import type {
+  Condition,
+  Ordering,
+  SimpleCondition,
+} from '../../zero-protocol/src/ast.js';
 import type {Row, Value} from '../../zero-protocol/src/data.js';
 import type {PrimaryKey} from '../../zero-protocol/src/primary-key.js';
 import {assertOrderingIncludesPK} from '../../zql/src/zql/builder/builder.js';
@@ -189,7 +193,7 @@ export class TableSource implements Source {
     };
   }
 
-  connect(sort: Ordering, optionalFilters?: SimpleCondition[] | undefined) {
+  connect(sort: Ordering, optionalFilters?: Condition | undefined) {
     const input: SourceInput = {
       getSchema: () => this.#getSchema(connection),
       fetch: req => this.#fetch(req, connection),
@@ -209,7 +213,12 @@ export class TableSource implements Source {
       input,
       output: undefined,
       sort,
-      filters: optionalFilters ?? [],
+      filters:
+        // TODO: normalize filters to DNF and don't do this in connect but on fetch.
+        // If it is DNF and done on fetch then it'll only be a string of ANDs
+        optionalFilters && optionalFilters.type === 'and'
+          ? optionalFilters.conditions.filter(c => c.type === 'simple')
+          : [],
       compareRows: makeComparator(sort),
     };
     assertOrderingIncludesPK(sort, this.#primaryKey);
@@ -353,6 +362,7 @@ export class TableSource implements Source {
         ? change
         : {
             type: change.type,
+            fanoutSeq: change.fanoutSeq,
             node: {
               row: change.row,
               relationships: {},
