@@ -29,7 +29,7 @@ export class FanIn implements Operator {
   #watermark: number;
   #schema: TableSchema | undefined;
 
-  constructor(inputs: Input[]) {
+  constructor(inputs: [Input, ...Input[]]) {
     this.#watermark = 0;
     this.#inputs = inputs;
     this.#schema = inputs[0].getSchema();

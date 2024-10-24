@@ -3,6 +3,7 @@ import {describe, expectTypeOf, test} from 'vitest';
 import {staticParam} from './query-impl.js';
 import type {Query} from './query.js';
 import type {Supertype, TableSchema} from './schema.js';
+import {cmp, or} from './expression.js';
 
 const mockQuery = {
   select() {
@@ -556,6 +557,16 @@ test('supertype query', () => {
   checkCreator(draftQuery);
   checkCreatorExpectError(commentQuery);
   checkCreatorExpectError(issueQuery);
+});
+
+test('complex expressions', () => {
+  const query = mockQuery as unknown as Query<TestSchema>;
+
+  query.where(or(cmp('b', '!=', true), cmp('s', 'IN', ['foo', 'bar'])));
+
+  // TODO: test invalid fields throws
+  // TODO: test parameters
+  // TODO: test value types hold. e.g. `cmp('b', '!=', 'foo')` throws
 });
 
 function takeSchema(x: TableSchema) {

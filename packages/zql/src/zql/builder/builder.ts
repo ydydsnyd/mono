@@ -230,7 +230,8 @@ function applyOr(
   for (const subCondition of condition.conditions) {
     branches.push(applyWhere(fanOut, subCondition, appliedFilters));
   }
-  return new FanIn(branches);
+  assert(branches.length > 0, 'Or condition must have at least one branch');
+  return new FanIn(branches as [Input, ...Input[]]);
 }
 
 function applySimpleCondition(
