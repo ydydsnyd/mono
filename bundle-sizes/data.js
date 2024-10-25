@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729246136715,
+  "lastUpdate": 1729893235331,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49801,6 +49801,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/b6b4044c5718aeef2999c06ed4693d93f4cb00e3"
         },
         "date": 1729246120273,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 312270,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54492,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 114763,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31874,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c7aebaea547d3de9be3284054111cea1df7459be",
+          "message": "fix(zero): Change strategy for version consts (#2837)\n\nWe used to rely on the build replacing these consts. This does not work\r\nwhen we use `tsx` to run typescript directly. Instead, we will use\r\n`process.env` to set the version consts.\r\n\r\nWe still replace `process.env.REPLICACHE_VERSION` and\r\n`process.env.ZERO_VERSION` in the build step.",
+          "timestamp": "2024-10-25T21:52:30Z",
+          "tree_id": "eae1ca5c1b5963a41c683ac86154701303739f12",
+          "url": "https://github.com/rocicorp/mono/commit/c7aebaea547d3de9be3284054111cea1df7459be"
+        },
+        "date": 1729893217698,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
