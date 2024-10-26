@@ -709,50 +709,6 @@ describe('view-syncer/service', () => {
                 "op": "put",
                 "tableName": "issues",
                 "value": {
-                  "big": 9007199254740991,
-                  "id": "1",
-                  "owner": "100",
-                  "parent": null,
-                  "title": "parent issue foo",
-                },
-              },
-              {
-                "op": "put",
-                "tableName": "issues",
-                "value": {
-                  "big": -9007199254740991,
-                  "id": "2",
-                  "owner": "101",
-                  "parent": null,
-                  "title": "parent issue bar",
-                },
-              },
-              {
-                "op": "put",
-                "tableName": "issues",
-                "value": {
-                  "big": 123,
-                  "id": "3",
-                  "owner": "102",
-                  "parent": "1",
-                  "title": "foo",
-                },
-              },
-              {
-                "op": "put",
-                "tableName": "issues",
-                "value": {
-                  "big": 100,
-                  "id": "4",
-                  "owner": "101",
-                  "parent": "2",
-                  "title": "bar",
-                },
-              },
-              {
-                "op": "put",
-                "tableName": "issues",
-                "value": {
                   "big": 100,
                   "id": "5",
                   "owner": "101",
