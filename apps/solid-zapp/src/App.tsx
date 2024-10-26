@@ -4,9 +4,8 @@ import {escapeLike, Zero} from '@rocicorp/zero';
 import {Schema} from './schema';
 import {randomMessage} from './test-data';
 import {randInt} from './rand';
-import {useInterval} from './use-interval';
 import {formatDate} from './date';
-import {createSignal, For} from 'solid-js';
+import {createEffect, createSignal, For, onCleanup, Show} from 'solid-js';
 
 function App({z}: {z: Zero<Schema>}) {
   const users = useQuery(() => z.query.user);
@@ -23,15 +22,15 @@ function App({z}: {z: Zero<Schema>}) {
       .related('medium', medium => medium.one())
       .related('sender', sender => sender.one());
 
-    if (filterUser) {
+    if (filterUser()) {
       filtered = filtered.where('senderID', filterUser());
     }
 
-    if (filterMedium) {
+    if (filterMedium()) {
       filtered = filtered.where('mediumID', filterMedium());
     }
 
-    if (filterText) {
+    if (filterText()) {
       filtered = filtered.where(
         'body',
         'LIKE',
@@ -39,7 +38,7 @@ function App({z}: {z: Zero<Schema>}) {
       );
     }
 
-    if (filterDate) {
+    if (filterDate()) {
       filtered = filtered.where(
         'timestamp',
         '>=',
@@ -49,33 +48,37 @@ function App({z}: {z: Zero<Schema>}) {
     return filtered;
   });
 
-  const hasFilters = filterUser || filterMedium || filterText || filterDate;
+  const hasFilters = () =>
+    filterUser || filterMedium || filterText || filterDate;
   const [action, setAction] = createSignal<'add' | 'remove' | undefined>(
     undefined,
   );
 
-  useInterval(
-    () => {
-      if (!handleAction()) {
-        setAction(undefined);
-      }
-    },
-    action !== undefined ? 1000 / 60 : null,
-  );
+  createEffect(() => {
+    if (action() !== undefined) {
+      const interval = setInterval(() => {
+        if (!handleAction()) {
+          clearInterval(interval);
+          setAction(undefined);
+        }
+      }, 1000 / 60);
+    }
+  });
 
   const handleAction = () => {
-    if (action === undefined) {
+    if (action() === undefined) {
       return false;
     }
     if (action() === 'add') {
       z.mutate.message.create(randomMessage(users(), mediums()));
       return true;
     } else {
-      if (allMessages.length === 0) {
+      const messages = allMessages();
+      if (messages.length === 0) {
         return false;
       }
-      const index = randInt(allMessages.length);
-      z.mutate.message.delete({id: allMessages()[index].id});
+      const index = randInt(messages.length);
+      z.mutate.message.delete({id: messages[index].id});
       return true;
     }
   };
@@ -123,14 +126,12 @@ function App({z}: {z: Zero<Schema>}) {
   };
 
   // If initial sync hasn't completed, these can be empty.
-  if (!users.length || !mediums.length) {
-    return null;
-  }
+  const initialSyncComplete = () => users().length && mediums().length;
 
-  const user = users().find(user => user.id === z.userID)?.name ?? 'anon';
+  const user = () => users().find(user => user.id === z.userID)?.name ?? 'anon';
 
   return (
-    <>
+    <Show when={initialSyncComplete()}>
       <div class="controls">
         <div>
           <button onMouseDown={addMessages} onMouseUp={stopAction}>
@@ -146,9 +147,9 @@ function App({z}: {z: Zero<Schema>}) {
             'justify-content': 'end',
           }}
         >
-          {user === 'anon' ? '' : `Logged in as ${user}`}
+          {user() === 'anon' ? '' : `Logged in as ${user()}`}
           <button onMouseDown={() => toggleLogin()}>
-            {user === 'anon' ? 'Login' : 'Logout'}
+            {user() === 'anon' ? 'Login' : 'Logout'}
           </button>
         </div>
       </div>
@@ -198,11 +199,11 @@ function App({z}: {z: Zero<Schema>}) {
       </div>
       <div class="controls">
         <em>
-          {!hasFilters ? (
-            <>Showing all {filteredMessages.length} messages</>
+          {!hasFilters() ? (
+            <>Showing all {filteredMessages().length} messages</>
           ) : (
             <>
-              Showing {filteredMessages.length} of {allMessages.length}{' '}
+              Showing {filteredMessages().length} of {allMessages().length}{' '}
               messages. Try opening{' '}
               <a href="/" target="_blank">
                 another tab
@@ -212,18 +213,12 @@ function App({z}: {z: Zero<Schema>}) {
           )}
         </em>
       </div>
-      {filteredMessages.length === 0 ? (
+      {filteredMessages().length === 0 ? (
         <h3>
           <em>No posts found 😢</em>
         </h3>
       ) : (
-        <table
-          style={{
-            'border': '1px',
-            'border-collapse': 'collapse',
-            'width': '100%',
-          }}
-        >
+        <table class="messages">
           <thead>
             <tr>
               <th>Sender</th>
@@ -254,7 +249,7 @@ function App({z}: {z: Zero<Schema>}) {
           </tbody>
         </table>
       )}
-    </>
+    </Show>
   );
 }
 
