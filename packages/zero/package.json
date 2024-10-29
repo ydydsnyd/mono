@@ -84,6 +84,7 @@
   "engines": {
     "node": ">=20"
   },
+  "engineStrict": true,
   "files": [
     "out",
     "!*.tsbuildinfo"
