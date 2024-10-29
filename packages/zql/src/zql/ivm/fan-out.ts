@@ -10,12 +10,14 @@ export class FanOut implements Operator {
   readonly #input: Input;
   readonly #outputs: Output[];
   #fanInReceivedPush: boolean;
+  #destroyed: boolean;
 
   constructor(input: Input) {
     this.#input = input;
     this.#input.setOutput(this);
     this.#outputs = [];
     this.#fanInReceivedPush = false;
+    this.#destroyed = false;
   }
 
   setOutput(output: Output): void {
@@ -23,7 +25,10 @@ export class FanOut implements Operator {
   }
 
   destroy(): void {
-    this.#input.destroy();
+    if (!this.#destroyed) {
+      this.#input.destroy();
+      this.#destroyed = true;
+    }
   }
 
   getSchema() {
