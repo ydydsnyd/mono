@@ -1,15 +1,9 @@
 import {BTree} from '../../../../btree/src/mod.js';
 import {assert, unreachable} from '../../../../shared/src/asserts.js';
-import type {
-  Condition,
-  Ordering,
-  OrderPart,
-  SimpleCondition,
-} from '../../../../zero-protocol/src/ast.js';
+import type {Ordering, OrderPart} from '../../../../zero-protocol/src/ast.js';
 import type {Row, Value} from '../../../../zero-protocol/src/data.js';
 import type {PrimaryKey} from '../../../../zero-protocol/src/primary-key.js';
 import {assertOrderingIncludesPK} from '../builder/builder.js';
-import {createPredicate} from '../builder/filter.js';
 import type {Change} from './change.js';
 import {
   type Comparator,
@@ -21,12 +15,7 @@ import {
 import {LookaheadIterator} from './lookahead-iterator.js';
 import type {Constraint, FetchRequest, Input, Output} from './operator.js';
 import type {SchemaValue, TableSchema} from './schema.js';
-import type {
-  Source,
-  SourceChange,
-  SourceChangeEdit,
-  SourceInput,
-} from './source.js';
+import type {Source, SourceChange, SourceChangeEdit} from './source.js';
 import type {Stream} from './stream.js';
 
 export type Overlay = {
@@ -45,7 +34,6 @@ type Connection = {
   output: Output | undefined;
   sort: Ordering;
   compareRows: Comparator;
-  optionalFilters: ((row: Row) => boolean)[];
 };
 
 /**
@@ -104,11 +92,8 @@ export class MemorySource implements Source {
     };
   }
 
-  connect(
-    sort: Ordering,
-    optionalFilters?: Condition | undefined,
-  ): SourceInput {
-    const input: SourceInput = {
+  connect(sort: Ordering): Input {
+    const input: Input = {
       getSchema: () => this.#getSchema(connection),
       fetch: req => this.#fetch(req, connection),
       cleanup: req => this.#cleanup(req, connection),
@@ -118,19 +103,13 @@ export class MemorySource implements Source {
       destroy: () => {
         this.#disconnect(input);
       },
-      appliedFilters: false,
     };
-
-    const predicates: ((row: Row) => boolean)[] = filteredOptionalFilters(
-      optionalFilters,
-    ).filters.map(c => createPredicate(c));
 
     const connection: Connection = {
       input,
       output: undefined,
       sort,
       compareRows: makeComparator(sort),
-      optionalFilters: predicates,
     };
     assertOrderingIncludesPK(sort, this.#primaryKey);
     this.#connections.push(connection);
@@ -243,8 +222,9 @@ export class MemorySource implements Source {
       return valuesEqual(row[key], value);
     };
 
-    const matchesFilters = (row: Row) =>
-      conn.optionalFilters.every(f => f(row));
+    // const matchesFilters = (row: Row) =>
+    //   conn.optionalFilters.every(f => f(row));
+    const matchesFilters = (_row: Row) => true;
 
     const matchesConstraintAndFilters = (row: Row) =>
       matchesConstraint(row) && matchesFilters(row);
@@ -326,9 +306,10 @@ export class MemorySource implements Source {
       comparator,
     );
 
-    const withFilters = conn.optionalFilters.length
-      ? generateWithFilter(withOverlay, matchesFilters)
-      : withOverlay;
+    // const withFilters = conn.optionalFilters.length
+    //   ? generateWithFilter(withOverlay, matchesFilters)
+    //   : withOverlay;
+    const withFilters = withOverlay;
 
     yield* generateWithConstraint(
       generateWithStart(withFilters, req, comparator),
@@ -429,13 +410,13 @@ function* generateWithConstraint(
   }
 }
 
-function* generateWithFilter(it: Stream<Node>, filter: (row: Row) => boolean) {
-  for (const node of it) {
-    if (filter(node.row)) {
-      yield node;
-    }
-  }
-}
+// function* generateWithFilter(it: Stream<Node>, filter: (row: Row) => boolean) {
+//   for (const node of it) {
+//     if (filter(node.row)) {
+//       yield node;
+//     }
+//   }
+// }
 
 /**
  * If the request basis was `before` then the overlay might be the starting point of the stream.
@@ -673,59 +654,4 @@ function compareBounds(a: Bound, b: Bound): number {
     return -1;
   }
   return compareValues(a, b);
-}
-
-/**
- * Only returns optional filters if:
- * 1. It's a simple condition
- * 2. It's an `and` condition with only simple conditions inside of it
- * 3. It's an `or` that is a no-op.
- *
- * Otherwise the filters are dropped.
- *
- * This is a short term solution until we update `fetch` to pass
- * the constraints rather than making them static in `connect`.
- *
- * The below way of doing things over-fetches as the optional filters
- * are widened to cover all branches of the pipeline.
- */
-export function filteredOptionalFilters(
-  optionalFilters: Condition | undefined,
-): {filters: SimpleCondition[]; allApplied: boolean} {
-  let ret: {
-    filters: SimpleCondition[];
-    allApplied: boolean;
-  } = {
-    filters: [],
-    allApplied: false,
-  };
-
-  if (optionalFilters) {
-    if (
-      optionalFilters.type === 'or' &&
-      optionalFilters.conditions.length === 1
-    ) {
-      optionalFilters = optionalFilters.conditions[0];
-    }
-    if (optionalFilters.type === 'and') {
-      const filters = optionalFilters.conditions.filter(
-        c => c.type === 'simple',
-      );
-      ret = {
-        filters,
-        allApplied: filters.length === optionalFilters.conditions.length,
-      };
-    } else if (optionalFilters.type === 'simple') {
-      ret = {
-        filters: [optionalFilters],
-        allApplied: true,
-      };
-    } else {
-      return {filters: [], allApplied: false};
-    }
-  } else {
-    ret.allApplied = true;
-  }
-
-  return ret;
 }

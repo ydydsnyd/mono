@@ -1,11 +1,7 @@
 import type {SQLQuery} from '@databases/sql';
 import {assert, unreachable} from '../../shared/src/asserts.js';
 import {must} from '../../shared/src/must.js';
-import type {
-  Condition,
-  Ordering,
-  SimpleCondition,
-} from '../../zero-protocol/src/ast.js';
+import type {Ordering, SimpleCondition} from '../../zero-protocol/src/ast.js';
 import type {Row, Value} from '../../zero-protocol/src/data.js';
 import type {PrimaryKey} from '../../zero-protocol/src/primary-key.js';
 import {assertOrderingIncludesPK} from '../../zql/src/zql/builder/builder.js';
@@ -16,7 +12,6 @@ import {
   type Node,
 } from '../../zql/src/zql/ivm/data.js';
 import {
-  filteredOptionalFilters,
   generateWithOverlay,
   generateWithStart,
   type Overlay,
@@ -32,11 +27,7 @@ import type {
   TableSchema,
   ValueType,
 } from '../../zql/src/zql/ivm/schema.js';
-import type {
-  Source,
-  SourceChange,
-  SourceInput,
-} from '../../zql/src/zql/ivm/source.js';
+import type {Source, SourceChange} from '../../zql/src/zql/ivm/source.js';
 import type {Stream} from '../../zql/src/zql/ivm/stream.js';
 import {Database, Statement} from './db.js';
 import {compile, format, sql} from './internal/sql.js';
@@ -46,7 +37,6 @@ type Connection = {
   input: Input;
   output: Output | undefined;
   sort: Ordering;
-  filters: SimpleCondition[];
   compareRows: Comparator;
 };
 
@@ -194,9 +184,8 @@ export class TableSource implements Source {
     };
   }
 
-  connect(sort: Ordering, optionalFilters?: Condition | undefined) {
-    const filters = filteredOptionalFilters(optionalFilters);
-    const input: SourceInput = {
+  connect(sort: Ordering) {
+    const input: Input = {
       getSchema: () => this.#getSchema(connection),
       fetch: req => this.#fetch(req, connection),
       cleanup: req => this.#cleanup(req, connection),
@@ -208,14 +197,12 @@ export class TableSource implements Source {
         assert(idx !== -1, 'Connection not found');
         this.#connections.splice(idx, 1);
       },
-      appliedFilters: filters.allApplied,
     };
 
     const connection: Connection = {
       input,
       output: undefined,
       sort,
-      filters: filters.filters,
       compareRows: makeComparator(sort),
     };
     assertOrderingIncludesPK(sort, this.#primaryKey);
@@ -261,7 +248,8 @@ export class TableSource implements Source {
               inclusive: req.start.basis === 'at',
             }
           : undefined,
-        connection.filters,
+        // connection.filters,
+        [],
         sort,
       );
       const sqlAndBindings = format(preSql);
@@ -287,7 +275,8 @@ export class TableSource implements Source {
               inclusive: req.start.basis === 'at',
             }
           : undefined,
-        connection.filters,
+        // connection.filters,
+        [],
         sort,
       );
       const sqlAndBindings = format(query);

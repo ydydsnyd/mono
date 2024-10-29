@@ -149,16 +149,15 @@ function buildPipelineInternal(
   if (!source) {
     throw new Error(`Source not found: ${ast.table}`);
   }
-  const conn = source.connect(must(ast.orderBy), ast.where);
+  const conn = source.connect(must(ast.orderBy));
   let end: Input = conn;
-  const {appliedFilters} = conn;
 
   if (ast.start) {
     end = new Skip(end, ast.start);
   }
 
   if (ast.where) {
-    end = applyWhere(end, ast.where, appliedFilters);
+    end = applyWhere(end, ast.where);
   }
 
   if (ast.limit) {
@@ -189,60 +188,38 @@ function buildPipelineInternal(
   return end;
 }
 
-function applyWhere(
-  input: Input,
-  condition: Condition,
-  // Remove `appliedFilter`
-  // Each branch can `fetch` with different filters from the same source.
-  // Or we do the union of queries approach and retain this `appliedFilters` and `sourceConnect` behavior.
-  // Downside of that being unbounded memory usage.
-  appliedFilters: boolean,
-): Input {
+function applyWhere(input: Input, condition: Condition): Input {
   switch (condition.type) {
     case 'and':
-      return applyAnd(input, condition, appliedFilters);
+      return applyAnd(input, condition);
     case 'or':
-      return applyOr(input, condition, appliedFilters);
+      return applyOr(input, condition);
     default:
-      return applySimpleCondition(input, condition, appliedFilters);
+      return applySimpleCondition(input, condition);
   }
 }
 
-function applyAnd(
-  input: Input,
-  condition: Conjunction,
-  appliedFilters: boolean,
-) {
+function applyAnd(input: Input, condition: Conjunction) {
   for (const subCondition of condition.conditions) {
-    input = applyWhere(input, subCondition, appliedFilters);
+    input = applyWhere(input, subCondition);
   }
   return input;
 }
 
-function applyOr(
-  input: Input,
-  condition: Disjunction,
-  appliedFilters: boolean,
-): Input {
+function applyOr(input: Input, condition: Disjunction): Input {
   const fanOut = new FanOut(input);
   const branches: Input[] = [];
   for (const subCondition of condition.conditions) {
-    branches.push(applyWhere(fanOut, subCondition, appliedFilters));
+    branches.push(applyWhere(fanOut, subCondition));
   }
   assert(branches.length > 0, 'Or condition must have at least one branch');
   return new FanIn(fanOut, branches as [Input, ...Input[]]);
 }
 
-function applySimpleCondition(
-  input: Input,
-  condition: SimpleCondition,
-  appliedFilters: boolean,
-): Input {
-  return new Filter(
-    input,
-    appliedFilters ? 'push-only' : 'all',
-    createPredicate(condition),
-  );
+function applySimpleCondition(input: Input, condition: SimpleCondition): Input {
+  // TODO: should we remove mode?
+  // Should we flip mode for the current fetch? Is mode really an optimization we should be doing right now?
+  return new Filter(input, 'all', createPredicate(condition));
 }
 
 export function assertOrderingIncludesPK(

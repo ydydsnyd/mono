@@ -1,4 +1,4 @@
-import type {Condition, Ordering} from '../../../../zero-protocol/src/ast.js';
+import type {Ordering} from '../../../../zero-protocol/src/ast.js';
 import type {Row} from '../../../../zero-protocol/src/data.js';
 import type {Input} from './operator.js';
 
@@ -53,14 +53,10 @@ export interface Source {
    * order.
    * @param optionalFilters Optional filters to apply to the source.
    */
-  connect(sort: Ordering, optionalFilters?: Condition | undefined): SourceInput;
+  connect(sort: Ordering): Input;
 
   /**
    * Pushes a change into the source and into all connected outputs.
    */
   push(change: SourceChange): void;
-}
-
-export interface SourceInput extends Input {
-  readonly appliedFilters: boolean;
 }
