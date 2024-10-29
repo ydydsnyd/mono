@@ -22,7 +22,7 @@ import {useClickOutside} from '../../hooks/use-click-outside.js';
 import {useKeypress} from '../../hooks/use-keypress.js';
 import {Button} from '../../components/button.js';
 import {useLogin} from '../../hooks/use-login.js';
-import {escapeLike} from '@rocicorp/zero';
+import {cmp, escapeLike, or} from '@rocicorp/zero';
 
 let firstRowRendered = false;
 const itemSize = 56;
@@ -77,7 +77,12 @@ export default function ListPage() {
   }
 
   if (textFilter) {
-    q = q.where('title', 'ILIKE', `%${escapeLike(textFilter)}%`);
+    q = q.where(
+      or(
+        cmp('title', 'LIKE', `%${escapeLike(textFilter)}%`),
+        cmp('description', 'LIKE', `%${escapeLike(textFilter)}%`),
+      ),
+    );
   }
 
   for (const labelID of labelIDs) {
