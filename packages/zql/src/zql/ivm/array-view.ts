@@ -72,7 +72,7 @@ export class ArrayView<V extends View> implements Output, TypedView<V> {
 
   #hydrate() {
     this.#dirty = true;
-    for (const node of this.#input.fetch({})) {
+    for (const node of this.#input.fetch({}, undefined)) {
       applyChange(
         this.#root,
         {type: 'add', node},

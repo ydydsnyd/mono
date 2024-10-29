@@ -1,4 +1,5 @@
 import {assert} from '../../../../shared/src/asserts.js';
+import type {SimpleCondition} from '../../../../zero-protocol/src/ast.js';
 import type {Row} from '../../../../zero-protocol/src/data.js';
 import type {AddChange, Change, ChildChange, RemoveChange} from './change.js';
 import type {Comparator, Node} from './data.js';
@@ -34,12 +35,24 @@ export class Skip implements Operator {
     return this.#input.getSchema();
   }
 
-  fetch(req: FetchRequest): Stream<Node> {
-    return this.#input.fetch({...req, start: this.#getStart(req)});
+  fetch(
+    req: FetchRequest,
+    optionalFilters: SimpleCondition[] | undefined,
+  ): Stream<Node> {
+    return this.#input.fetch(
+      {...req, start: this.#getStart(req, optionalFilters)},
+      optionalFilters,
+    );
   }
 
-  cleanup(req: FetchRequest): Stream<Node> {
-    return this.#input.cleanup({...req, start: this.#getStart(req)});
+  cleanup(
+    req: FetchRequest,
+    optionalFilters: SimpleCondition[] | undefined,
+  ): Stream<Node> {
+    return this.#input.cleanup(
+      {...req, start: this.#getStart(req, optionalFilters)},
+      optionalFilters,
+    );
   }
 
   setOutput(output: Output): void {
@@ -71,7 +84,10 @@ export class Skip implements Operator {
     }
   }
 
-  #getStart(req: FetchRequest): Start | undefined {
+  #getStart(
+    req: FetchRequest,
+    optionalFilters: SimpleCondition[] | undefined,
+  ): Start | undefined {
     const boundStart = {
       row: this.#bound.row,
       basis: this.#bound.exclusive ? 'after' : 'at',
@@ -120,7 +136,9 @@ export class Skip implements Operator {
     // fetch to find out.
     req.start.basis satisfies 'before';
 
-    const [node] = this.#input.fetch(req) as Array<Node | undefined>;
+    const [node] = this.#input.fetch(req, optionalFilters) as Array<
+      Node | undefined
+    >;
 
     // There's no element at all before the requested bound, not even the skip
     // bound. In this case we may as well return the requested bound with 'at'

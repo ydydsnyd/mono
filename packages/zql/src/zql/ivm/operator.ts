@@ -1,4 +1,5 @@
 import type {JSONValue} from '../../../../shared/src/json.js';
+import type {SimpleCondition} from '../../../../zero-protocol/src/ast.js';
 import type {Row, Value} from '../../../../zero-protocol/src/data.js';
 import type {Change} from './change.js';
 import type {Node} from './data.js';
@@ -16,7 +17,10 @@ export interface Input {
    * Fetch data. May modify the data in place.
    * Returns nodes sorted in order of {@linkcode TableSchema.compareRows}.
    */
-  fetch(req: FetchRequest): Stream<Node>;
+  fetch(
+    req: FetchRequest,
+    optionalFilters: SimpleCondition[] | undefined,
+  ): Stream<Node>;
 
   /**
    * Cleanup maintained state. This is called when `output` will no longer need
@@ -29,7 +33,10 @@ export interface Input {
    * Returns the same thing as {@linkcode fetch}. This allows callers to properly
    * propagate the cleanup message through the graph.
    */
-  cleanup(req: FetchRequest): Stream<Node>;
+  cleanup(
+    req: FetchRequest,
+    optionalFilters: SimpleCondition[] | undefined,
+  ): Stream<Node>;
 
   /** Tell the input where to send its output. */
   setOutput(output: Output): void;

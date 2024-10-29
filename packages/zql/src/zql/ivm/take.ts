@@ -1,5 +1,6 @@
 import {assert, unreachable} from '../../../../shared/src/asserts.js';
 import {must} from '../../../../shared/src/must.js';
+import type {SimpleCondition} from '../../../../zero-protocol/src/ast.js';
 import type {Row, Value} from '../../../../zero-protocol/src/data.js';
 import {assertOrderingIncludesPK} from '../builder/builder.js';
 import type {Change, EditChange, RemoveChange} from './change.js';
@@ -71,7 +72,10 @@ export class Take implements Operator {
     return this.#input.getSchema();
   }
 
-  *fetch(req: FetchRequest): Stream<Node> {
+  *fetch(
+    req: FetchRequest,
+    optionalFilters: SimpleCondition[] | undefined,
+  ): Stream<Node> {
     if (
       this.#partitionKey === undefined ||
       req.constraint?.key === this.#partitionKey
@@ -81,13 +85,13 @@ export class Take implements Operator {
       const takeStateKey = getTakeStateKey(partitionValue);
       const takeState = this.#storage.get(takeStateKey);
       if (!takeState) {
-        yield* this.#initialFetch(req);
+        yield* this.#initialFetch(req, optionalFilters);
         return;
       }
       if (takeState.bound === undefined) {
         return;
       }
-      for (const inputNode of this.#input.fetch(req)) {
+      for (const inputNode of this.#input.fetch(req, optionalFilters)) {
         if (this.getSchema().compareRows(takeState.bound, inputNode.row) < 0) {
           return;
         }
@@ -105,7 +109,7 @@ export class Take implements Operator {
     if (maxBound === undefined) {
       return;
     }
-    for (const inputNode of this.#input.fetch(req)) {
+    for (const inputNode of this.#input.fetch(req, optionalFilters)) {
       if (this.getSchema().compareRows(inputNode.row, maxBound) > 0) {
         return;
       }
@@ -121,7 +125,10 @@ export class Take implements Operator {
     }
   }
 
-  *#initialFetch(req: FetchRequest): Stream<Node> {
+  *#initialFetch(
+    req: FetchRequest,
+    optionalFilters: SimpleCondition[] | undefined,
+  ): Stream<Node> {
     assert(req.start === undefined);
     assert(
       this.#partitionKey === undefined ||
@@ -142,7 +149,7 @@ export class Take implements Operator {
     let bound: Row | undefined;
     let downstreamEarlyReturn = true;
     try {
-      for (const inputNode of this.#input.fetch(req)) {
+      for (const inputNode of this.#input.fetch(req, optionalFilters)) {
         yield inputNode;
         bound = inputNode.row;
         size++;
@@ -169,7 +176,10 @@ export class Take implements Operator {
     }
   }
 
-  *cleanup(req: FetchRequest): Stream<Node> {
+  *cleanup(
+    req: FetchRequest,
+    optionalFilters: SimpleCondition[] | undefined,
+  ): Stream<Node> {
     assert(req.start === undefined);
     assert(
       this.#partitionKey === undefined ||
@@ -186,7 +196,7 @@ export class Take implements Operator {
       assert(takeState !== undefined);
       this.#storage.del(takeStateKey);
     }
-    for (const inputNode of this.#input.cleanup(req)) {
+    for (const inputNode of this.#input.cleanup(req, optionalFilters)) {
       if (
         takeState?.bound === undefined ||
         this.getSchema().compareRows(takeState.bound, inputNode.row) < 0
@@ -276,24 +286,30 @@ export class Take implements Operator {
       if (this.#limit === 1) {
         boundNode = must(
           first(
-            this.#input.fetch({
-              start: {
-                row: takeState.bound,
-                basis: 'at',
+            this.#input.fetch(
+              {
+                start: {
+                  row: takeState.bound,
+                  basis: 'at',
+                },
+                constraint,
               },
-              constraint,
-            }),
+              undefined,
+            ),
           ),
         );
       } else {
         [beforeBoundNode, boundNode] = take(
-          this.#input.fetch({
-            start: {
-              row: takeState.bound,
-              basis: 'before',
+          this.#input.fetch(
+            {
+              start: {
+                row: takeState.bound,
+                basis: 'before',
+              },
+              constraint,
             },
-            constraint,
-          }),
+            undefined,
+          ),
           2,
         );
       }
@@ -335,24 +351,30 @@ export class Take implements Operator {
       let afterBoundNode: Node | undefined;
       if (compToBound === 0) {
         [beforeBoundNode, afterBoundNode] = take(
-          this.#input.fetch({
-            start: {
-              row: takeState.bound,
-              basis: 'before',
+          this.#input.fetch(
+            {
+              start: {
+                row: takeState.bound,
+                basis: 'before',
+              },
+              constraint,
             },
-            constraint,
-          }),
+            undefined,
+          ),
           2,
         );
       } else {
         [beforeBoundNode, , afterBoundNode] = take(
-          this.#input.fetch({
-            start: {
-              row: takeState.bound,
-              basis: 'before',
+          this.#input.fetch(
+            {
+              start: {
+                row: takeState.bound,
+                basis: 'before',
+              },
+              constraint,
             },
-            constraint,
-          }),
+            undefined,
+          ),
           3,
         );
       }
@@ -453,13 +475,16 @@ export class Take implements Operator {
 
         const beforeBoundNode = must(
           first(
-            this.#input.fetch({
-              start: {
-                row: takeState.bound,
-                basis: 'before',
+            this.#input.fetch(
+              {
+                start: {
+                  row: takeState.bound,
+                  basis: 'before',
+                },
+                constraint,
               },
-              constraint,
-            }),
+              undefined,
+            ),
           ),
         );
 
@@ -477,13 +502,16 @@ export class Take implements Operator {
       // Find the first item at the old bounds. This will be the new bounds.
       const newBoundNode = must(
         first(
-          this.#input.fetch({
-            start: {
-              row: takeState.bound,
-              basis: 'at',
+          this.#input.fetch(
+            {
+              start: {
+                row: takeState.bound,
+                basis: 'at',
+              },
+              constraint,
             },
-            constraint,
-          }),
+            undefined,
+          ),
         ),
       );
 
@@ -528,13 +556,16 @@ export class Take implements Operator {
       assert(newCmp < 0);
 
       const [newBoundNode, oldBoundNode] = take(
-        this.#input.fetch({
-          start: {
-            row: takeState.bound,
-            basis: 'before',
+        this.#input.fetch(
+          {
+            start: {
+              row: takeState.bound,
+              basis: 'before',
+            },
+            constraint,
           },
-          constraint,
-        }),
+          undefined,
+        ),
         2,
       );
 
@@ -579,13 +610,16 @@ export class Take implements Operator {
       // the newRow as the new bound.
       const afterBoundNode = must(
         first(
-          this.#input.fetch({
-            start: {
-              row: takeState.bound,
-              basis: 'after',
+          this.#input.fetch(
+            {
+              start: {
+                row: takeState.bound,
+                basis: 'after',
+              },
+              constraint,
             },
-            constraint,
-          }),
+            undefined,
+          ),
         ),
       );
 

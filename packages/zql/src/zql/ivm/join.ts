@@ -1,5 +1,6 @@
 import {assert, unreachable} from '../../../../shared/src/asserts.js';
 import {must} from '../../../../shared/src/must.js';
+import type {SimpleCondition} from '../../../../zero-protocol/src/ast.js';
 import type {Row} from '../../../../zero-protocol/src/data.js';
 import type {PrimaryKey} from '../../../../zero-protocol/src/primary-key.js';
 import type {Change, ChildChange} from './change.js';
@@ -88,8 +89,11 @@ export class Join implements Input {
     return this.#schema;
   }
 
-  *fetch(req: FetchRequest): Stream<Node> {
-    for (const parentNode of this.#parent.fetch(req)) {
+  *fetch(
+    req: FetchRequest,
+    optionalFilters: SimpleCondition[] | undefined,
+  ): Stream<Node> {
+    for (const parentNode of this.#parent.fetch(req, optionalFilters)) {
       yield this.#processParentNode(
         parentNode.row,
         parentNode.relationships,
@@ -98,8 +102,11 @@ export class Join implements Input {
     }
   }
 
-  *cleanup(req: FetchRequest): Stream<Node> {
-    for (const parentNode of this.#parent.cleanup(req)) {
+  *cleanup(
+    req: FetchRequest,
+    optionalFilters: SimpleCondition[] | undefined,
+  ): Stream<Node> {
+    for (const parentNode of this.#parent.cleanup(req, optionalFilters)) {
       yield this.#processParentNode(
         parentNode.row,
         parentNode.relationships,
@@ -150,12 +157,18 @@ export class Join implements Input {
         const newKeyValue = normalizeUndefined(change.row[this.#parentKey]);
 
         if (newKeyValue !== oldKeyValue) {
-          const childrenToRemoveStream = this.#child.cleanup({
-            constraint: {
-              key: this.#childKey,
-              value: oldKeyValue,
+          const childrenToRemoveStream = this.#child.cleanup(
+            {
+              constraint: {
+                key: this.#childKey,
+                value: oldKeyValue,
+              },
             },
-          });
+            // optional filters will be accumulated as we go up the chain.
+            // it is important for single-table-filters to be hoisted above the join
+            // for this reason.
+            undefined,
+          );
           for (const childNode of childrenToRemoveStream) {
             this.#output.push({
               type: 'child',
@@ -171,12 +184,15 @@ export class Join implements Input {
             });
           }
 
-          const childrenToAddStream = this.#child.fetch({
-            constraint: {
-              key: this.#childKey,
-              value: newKeyValue,
+          const childrenToAddStream = this.#child.fetch(
+            {
+              constraint: {
+                key: this.#childKey,
+                value: newKeyValue,
+              },
             },
-          });
+            undefined,
+          );
           for (const childNode of childrenToAddStream) {
             this.#output.push({
               type: 'child',
@@ -222,12 +238,15 @@ export class Join implements Input {
     const pushChildChange = (childRow: Row, change: Change) => {
       assert(this.#output, 'Output not set');
 
-      const parentNodes = this.#parent.fetch({
-        constraint: {
-          key: this.#parentKey,
-          value: childRow[this.#childKey],
+      const parentNodes = this.#parent.fetch(
+        {
+          constraint: {
+            key: this.#parentKey,
+            value: childRow[this.#childKey],
+          },
         },
-      });
+        undefined,
+      );
 
       for (const parentNode of parentNodes) {
         const childChange: ChildChange = {
@@ -267,12 +286,15 @@ export class Join implements Input {
 
           const {relationships} = must(
             first(
-              this.#child.fetch({
-                constraint: {
-                  key: this.#childKey,
-                  value: oldChildRow[this.#childKey],
+              this.#child.fetch(
+                {
+                  constraint: {
+                    key: this.#childKey,
+                    value: oldChildRow[this.#childKey],
+                  },
                 },
-              }),
+                undefined,
+              ),
             ),
           );
 
@@ -325,12 +347,15 @@ export class Join implements Input {
       method = second ? 'fetch' : 'cleanup';
     }
 
-    const childStream = this.#child[method]({
-      constraint: {
-        key: this.#childKey,
-        value: parentKeyValue,
+    const childStream = this.#child[method](
+      {
+        constraint: {
+          key: this.#childKey,
+          value: parentKeyValue,
+        },
       },
-    });
+      undefined,
+    );
 
     if (mode === 'fetch') {
       this.#storage.set(storageKey, true);

@@ -1,3 +1,4 @@
+import type {SimpleCondition} from '../../../../zero-protocol/src/ast.js';
 import type {Change} from './change.js';
 import type {FetchRequest, Input, Operator, Output} from './operator.js';
 
@@ -39,12 +40,12 @@ export class FanOut implements Operator {
     return this.#input.getSchema();
   }
 
-  fetch(req: FetchRequest) {
-    return this.#input.fetch(req);
+  fetch(req: FetchRequest, optionalFilters: SimpleCondition[] | undefined) {
+    return this.#input.fetch(req, optionalFilters);
   }
 
-  cleanup(req: FetchRequest) {
-    return this.#input.cleanup(req);
+  cleanup(req: FetchRequest, optionalFilters: SimpleCondition[] | undefined) {
+    return this.#input.cleanup(req, optionalFilters);
   }
 
   onFanInReceivedPush() {

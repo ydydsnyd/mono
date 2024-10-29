@@ -5,6 +5,7 @@ import {
   type ReadonlyJSONValue,
 } from '../../../../shared/src/json.js';
 import {must} from '../../../../shared/src/must.js';
+import type {SimpleCondition} from '../../../../zero-protocol/src/ast.js';
 import type {Change} from './change.js';
 import type {Node} from './data.js';
 import type {FanOut} from './fan-out.js';
@@ -62,12 +63,18 @@ export class FanIn implements Operator {
     return this.#inputs[0].getSchema();
   }
 
-  fetch(req: FetchRequest): Stream<Node> {
-    return this.#fetchOrCleanup(input => input.fetch(req));
+  fetch(
+    req: FetchRequest,
+    optionalFilters: SimpleCondition[] | undefined,
+  ): Stream<Node> {
+    return this.#fetchOrCleanup(input => input.fetch(req, optionalFilters));
   }
 
-  cleanup(req: FetchRequest): Stream<Node> {
-    return this.#fetchOrCleanup(input => input.cleanup(req));
+  cleanup(
+    req: FetchRequest,
+    optionalFilters: SimpleCondition[] | undefined,
+  ): Stream<Node> {
+    return this.#fetchOrCleanup(input => input.cleanup(req, optionalFilters));
   }
 
   *#fetchOrCleanup(streamProvider: (input: Input) => Stream<Node>) {

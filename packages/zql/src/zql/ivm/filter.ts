@@ -1,4 +1,5 @@
 import {assert, unreachable} from '../../../../shared/src/asserts.js';
+import type {SimpleCondition} from '../../../../zero-protocol/src/ast.js';
 import type {Row} from '../../../../zero-protocol/src/data.js';
 import type {Change} from './change.js';
 import type {Node} from './data.js';
@@ -29,6 +30,7 @@ export class Filter implements Operator {
   constructor(input: Input, mode: Mode, predicate: (row: Row) => boolean) {
     this.#input = input;
     this.#mode = mode;
+    // TODO: we need a simple condition passed in not just a predicate!
     this.#predicate = predicate;
     this.#input.setOutput(this);
   }
@@ -45,12 +47,13 @@ export class Filter implements Operator {
     return this.#input.getSchema();
   }
 
-  fetch(req: FetchRequest) {
-    return this.#filter(this.#input.fetch(req));
+  // TODO: add the filter's condition!
+  fetch(req: FetchRequest, optionalFilters: SimpleCondition[] | undefined) {
+    return this.#filter(this.#input.fetch(req, optionalFilters));
   }
 
-  cleanup(req: FetchRequest) {
-    return this.#filter(this.#input.cleanup(req));
+  cleanup(req: FetchRequest, optionalFilters: SimpleCondition[] | undefined) {
+    return this.#filter(this.#input.cleanup(req, optionalFilters));
   }
 
   *#filter(stream: Stream<Node>) {
