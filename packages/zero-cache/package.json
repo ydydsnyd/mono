@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@drdgvhbh/postgres-error-codes": "^0.0.6",
-    "@fastify/cors": "^10.0.0",
+    "@fastify/cors": "^10.0.1",
     "@fastify/websocket": "^11.0.0",
     "@google-cloud/precise-date": "^4.0.0",
     "@postgresql-typed/oids": "^0.2.0",

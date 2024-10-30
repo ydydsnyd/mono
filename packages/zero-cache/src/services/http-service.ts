@@ -1,5 +1,6 @@
 import {LogContext} from '@rocicorp/logger';
 import Fastify, {type FastifyInstance} from 'fastify';
+import cors from '@fastify/cors'
 import {RunningState} from './running-state.js';
 import type {Service} from './service.js';
 
@@ -10,7 +11,7 @@ export type Options = {
 export class HttpService implements Service {
   readonly id: string;
   protected readonly _lc: LogContext;
-  readonly #fastify: FastifyInstance;
+  #fastify: FastifyInstance | null = null;
   readonly #port: number;
   readonly #state: RunningState;
   readonly #init: (fastify: FastifyInstance) => void | Promise<void>;
@@ -23,7 +24,6 @@ export class HttpService implements Service {
   ) {
     this.id = id;
     this._lc = lc.withContext('component', this.id);
-    this.#fastify = Fastify();
     this.#port = opts.port;
     this.#init = init;
     this.#state = new RunningState(id);
@@ -32,6 +32,10 @@ export class HttpService implements Service {
   // start() is used in unit tests.
   // run() is the lifecycle method called by the ServiceRunner.
   async start(): Promise<void> {
+    this.#fastify = Fastify();
+    await this.#fastify.register(cors, {
+      origin: '*',
+    });
     await this.#init(this.#fastify);
     const address = await this.#fastify.listen({
       host: '::',
@@ -47,7 +51,7 @@ export class HttpService implements Service {
 
   async stop(): Promise<void> {
     this._lc.info?.(`${this.id}: no longer accepting connections`);
-    await this.#fastify.close();
+    await this.#fastify?.close();
     this.#state.stop(this._lc);
   }
 }
