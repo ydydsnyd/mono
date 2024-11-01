@@ -34,7 +34,7 @@ const issueSchema = createTableSchema({
     description: {type: 'string'},
     labelIDs: {type: 'string'},
   },
-  primaryKey: ['id'],
+  primaryKey: ['ids'],
   relationships: {
     labels: {
       source: 'id',

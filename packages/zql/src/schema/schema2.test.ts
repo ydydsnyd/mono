@@ -1,7 +1,14 @@
 import {test} from 'vitest';
-import {string, table} from './schema2.js';
+import {boolean, number, string, table} from './schema2.js';
 
 test('basics', () => {
-  const x = table('issue').columns(string('id'));
-  const issue = table('issue').columns(string('id')).primaryKey('id');
+  const issue = table('issue')
+    .columns(
+      string('id'),
+      string('title'),
+      boolean('open'),
+      number('created'),
+      number('modified'),
+    )
+    .primaryKey('id');
 });
