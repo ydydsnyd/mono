@@ -6,6 +6,18 @@ export function string<TName extends string>(name: TName) {
   return new ColumnConfig({name, storageType: 'string'});
 }
 
+export function number<TName extends string>(name: TName) {
+  return new ColumnConfig({name, storageType: 'number'});
+}
+
+export function boolean<TName extends string>(name: TName) {
+  return new ColumnConfig({name, storageType: 'boolean'});
+}
+
+export function json<TName extends string>(name: TName) {
+  return new ColumnConfig({name, storageType: 'json'});
+}
+
 type TableSchema = {
   name: string;
   columns: ColumnSchema[];
@@ -18,13 +30,6 @@ type ColumnSchema = {
   name: string;
   storageType: StorageType;
 };
-
-class ColumnConfig<TShape extends ColumnSchema> {
-  readonly #schema: TShape;
-  constructor(schema: TShape) {
-    this.#schema = schema;
-  }
-}
 
 class TableSchemaConfig<TShape extends TableSchema> {
   readonly #schema: TShape;
@@ -60,4 +65,15 @@ class TableSchemaConfigWithColumns<TShape extends TableSchema> {
   }
 
   relationships() {}
+}
+
+class ColumnConfig<TShape extends ColumnSchema> {
+  readonly #schema: TShape;
+  constructor(schema: TShape) {
+    this.#schema = schema;
+  }
+
+  done() {
+    return this.#schema;
+  }
 }
