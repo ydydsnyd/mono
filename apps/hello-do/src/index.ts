@@ -49,18 +49,23 @@ export class MyDurableObject extends DurableObject {
 			relationships: {},
 		});
 		const z = new Zero({
-			server: 'http://localhost:4848',
+			server: 'http://127.0.0.1:4848',
 			userID: 'anon',
 			schema: {
 				version: 4,
 				tables: { user: userTable },
 			},
 			kvStore: 'mem',
+			logLevel: 'debug',
 		});
 		const { promise, resolve } = resolver<string>();
 		const view = z.query.user.materialize();
 		view.addListener((data) => {
+			if (data.length === 0) {
+				return;
+			}
 			resolve(JSON.stringify(data));
+			view.destroy();
 		});
 		return promise;
 	}

@@ -279,6 +279,7 @@ async function callPuller(
   let pullerResult: PullerResult;
   try {
     pullerResult = await puller(pullReq, requestID);
+    lc.debug?.('puller result', pullerResult);
     lc.debug?.(
       `...Pull ${pullerResult.response ? 'complete' : 'failed'} in `,
       Date.now() - pullStart,
