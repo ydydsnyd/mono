@@ -32,6 +32,7 @@ import {navigator} from '../../../shared/src/navigator.js';
 import {sleep, sleepWithAbort} from '../../../shared/src/sleep.js';
 import type {MaybePromise} from '../../../shared/src/types.js';
 import * as valita from '../../../shared/src/valita.js';
+import {xxHashReady} from '../../../shared/src/xxhash.js';
 import type {ChangeDesiredQueriesMessage} from '../../../zero-protocol/src/change-desired-queries.js';
 import {
   type CRUDMutation,
@@ -84,7 +85,7 @@ import {
   getLastConnectErrorValue,
 } from './metrics.js';
 import {type NormalizedSchema, normalizeSchema} from './normalized-schema.js';
-import type {ZeroOptions, ZeroAdvancedOptions} from './options.js';
+import type {ZeroAdvancedOptions, ZeroOptions} from './options.js';
 import {QueryManager} from './query-manager.js';
 import {reloadWithReason, reportReloadReason} from './reload-error-handler.js';
 import {ServerError, isAuthError, isServerError} from './server-error.js';
@@ -1236,6 +1237,7 @@ export class Zero<const S extends Schema> {
     };
 
     await this.#updateAuthToken(bareLogContext);
+    await xxHashReady();
 
     let needsReauth = false;
     let gotError = false;
