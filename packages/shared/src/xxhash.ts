@@ -2,12 +2,10 @@ import xxhash, {type XXHashAPI} from 'xxhash-wasm';
 
 let api = undefined as XXHashAPI | undefined;
 
-console.log('Loading XXHash API', performance.now());
 const apiPromise: Promise<XXHashAPI> = xxhash();
 apiPromise
   .then(apiInstance => {
     api = apiInstance;
-    console.log('XXHash API loaded', performance.now());
   })
   .catch(err => {
     console.error('Failed to load XXHash API:', err);
@@ -18,7 +16,6 @@ export async function xxHashReady(): Promise<void> {
 }
 
 function assertLoaded(api: XXHashAPI | undefined): asserts api is XXHashAPI {
-  console.log('assertLoaded', !!api, performance.now());
   if (api === undefined) {
     throw new Error('XXHash API not loaded');
   }
