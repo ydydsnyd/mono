@@ -1,5 +1,5 @@
-import xxhash from 'xxhash-wasm';
+import {xxHash32} from 'js-xxhash';
 
-const {create64, h32, h64} = await xxhash();
+const h32 = xxHash32;
 
-export {create64, h32, h64};
+export {h32};
