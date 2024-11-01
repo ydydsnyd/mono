@@ -158,7 +158,7 @@ export const DEFAULT_DISCONNECT_HIDDEN_DELAY_MS = 5_000;
  * The amount of time we wait for a connection to be established before we
  * consider it timed out.
  */
-export const CONNECT_TIMEOUT_MS = 10_000;
+export const CONNECT_TIMEOUT_MS = 30_000;
 
 const CHECK_CONNECTIVITY_ON_ERROR_FREQUENCY = 6;
 
@@ -1677,7 +1677,8 @@ export async function createSocket(
     new WS(
       // toString() required for RN URL polyfill.
       url.toString(),
-      secProtocol,
+      'foobar',
+      //secProtocol,
     ),
     queriesPatch,
   ];

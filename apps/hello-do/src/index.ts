@@ -1,6 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
 import { createTableSchema, Zero } from '@rocicorp/zero';
-import { resolver } from '@rocicorp/resolver';
+import { resolver, resolver } from '@rocicorp/resolver';
 
 /**
  * Welcome to Cloudflare Workers! This is your first Durable Objects application.
@@ -49,7 +49,7 @@ export class MyDurableObject extends DurableObject {
 			relationships: {},
 		});
 		const z = new Zero({
-			server: 'http://127.0.0.1:4848',
+			server: 'http://localhost:4848',
 			userID: 'anon',
 			schema: {
 				version: 4,
@@ -68,6 +68,31 @@ export class MyDurableObject extends DurableObject {
 			view.destroy();
 		});
 		return promise;
+
+		/*
+
+		const clientID = Math.random().toString(36).substring(2);
+		const clientGroupID = Math.random().toString(36).substring(2);
+		const wsid = Math.random().toString(36).substring(2);
+		const url = `ws://localhost:4848/api/sync/v1/connect?clientID=${clientID}&clientGroupID=${clientGroupID}&schemaVersion=4&userID=anon&baseCookie=&ts=${Date.now()}&lmid=0&wsid=${wsid}&debugPerf=true`;
+		console.log('url', url);
+		const { promise, resolve } = resolver<string>();
+		const ws = new WebSocket(url);
+		ws.addEventListener('open', (e) => {
+			console.log('open', e);
+		});
+		ws.addEventListener('message', (e) => {
+			console.log('message', e);
+			resolve(JSON.stringify(e.data));
+		});
+		ws.addEventListener('close', (e) => {
+			console.log('close', e);
+		});
+		ws.addEventListener('error', (e) => {
+			console.log('error', e);
+		});
+		return promise;
+		*/
 	}
 }
 
