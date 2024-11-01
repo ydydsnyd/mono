@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export function table<TName extends string>(name: TName) {
   return new TableSchemaConfig({name, columns: [], primaryKey: []});
 }
@@ -37,14 +38,14 @@ class TableSchemaConfig<TShape extends TableSchema> {
     this.#schema = schema;
   }
 
-  columns<TColumns extends ColumnSchema[]>(
+  columns<TColumns extends ColumnConfig<ColumnSchema>[]>(
     ...columns: TColumns
   ): TableSchemaConfigWithColumns<
     Omit<TShape, 'columns'> & {
-      columns: TColumns;
+      columns: TColumns[number]['schema'][];
     }
   > {
-    return new TableSchemaConfigWithColumns({...this.#schema, columns});
+    return new TableSchemaConfigWithColumns({...this.#schema, columns}) as any;
   }
 }
 
@@ -73,7 +74,7 @@ class ColumnConfig<TShape extends ColumnSchema> {
     this.#schema = schema;
   }
 
-  done() {
+  get schema() {
     return this.#schema;
   }
 }
