@@ -1,47 +1,56 @@
-import * as v from '../../../shared/src/valita.js';
-
-export function table(name: string) {
+export function table<TName extends string>(name: TName) {
   return new TableSchemaConfig({name, columns: [], primaryKey: []});
 }
 
-type TableSchema<
-  TName extends string,
-  TColumns extends ColumnSchema<string>[] = ColumnSchema<string>[],
-> = {
-  name: TName;
-  columns: TColumns;
-  primaryKey: TColumns[number]['name'][];
+export function string<TName extends string>(name: TName) {
+  return new ColumnConfig({name, storageType: 'string'});
+}
+
+type TableSchema = {
+  name: string;
+  columns: ColumnSchema[];
+  primaryKey: ColumnSchema[][number]['name'][];
 };
 
-type ColumnSchema<TName extends string> = {
-  name: TName;
-  type: v.Type;
+type StorageType = 'string' | 'number' | 'boolean' | 'null' | 'json';
+
+type ColumnSchema = {
+  name: string;
+  storageType: StorageType;
 };
 
-class TableSchemaConfig<TName extends string> {
-  readonly #schema: TableSchema<TName>;
-  constructor(schema: TableSchema<TName>) {
+class ColumnConfig<TShape extends ColumnSchema> {
+  readonly #schema: TShape;
+  constructor(schema: TShape) {
+    this.#schema = schema;
+  }
+}
+
+class TableSchemaConfig<TShape extends TableSchema> {
+  readonly #schema: TShape;
+  constructor(schema: TShape) {
     this.#schema = schema;
   }
 
-  columns<TColumns extends ColumnSchema<string>[]>(
+  columns<TColumns extends ColumnSchema[]>(
     ...columns: TColumns
-  ): TableSchemaConfigWithColumns<TName, TColumns> {
+  ): TableSchemaConfigWithColumns<
+    Omit<TShape, 'columns'> & {
+      columns: TColumns;
+    }
+  > {
     return new TableSchemaConfigWithColumns({...this.#schema, columns});
   }
 }
 
-class TableSchemaConfigWithColumns<
-  TName extends string,
-  TColumns extends ColumnSchema<string>[],
-> {
-  readonly #schema: TableSchema<TName, TColumns>;
+class TableSchemaConfigWithColumns<TShape extends TableSchema> {
+  readonly #schema: TShape;
 
-  constructor(schema: TableSchema<TName, TColumns>) {
+  constructor(schema: TShape) {
     this.#schema = schema;
   }
 
-  primaryKey<TPKColNames extends TColumns[number]['name'][]>(
+  primaryKey<TPKColNames extends TShape['columns'][number]['name'][]>(
     ...pkColumnNames: TPKColNames
   ) {
     return new TableSchemaConfigWithColumns({

@@ -4,7 +4,11 @@ import {test} from 'vitest';
 import {table} from './schema2.js';
 
 test('basics', () => {
+  const x = table('issue').columns({
+    name: 'id',
+    storageType: 'string',
+  } as const);
   const issue = table('issue')
-    .columns({name: 'id', type: v.string()} as const)
+    .columns({name: 'id', storageType: 'string'} as const)
     .primaryKey('id');
 });
