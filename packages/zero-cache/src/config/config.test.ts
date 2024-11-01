@@ -5,14 +5,23 @@ import * as v from '../../../shared/src/valita.js';
 import {ExitAfterUsage, parseOptions, type Options} from './config.js';
 
 const options = {
-  port: {type: v.number().default(4848), desc: ['blah blah blah']},
+  port: {
+    type: v.number().default(4848),
+    desc: ['blah blah blah'],
+    allCaps: true, // verify that ungrouped flags are not capitalized
+    alias: 'p',
+  },
   replicaDBFile: v.string(),
   litestream: v.boolean().optional(),
   log: {
     format: v.union(v.literal('text'), v.literal('json')).default('text'),
   },
   shard: {
-    id: {type: v.string().default('0'), desc: ['blah blah blah']},
+    id: {
+      type: v.string().default('0'),
+      desc: ['blah blah blah'],
+      allCaps: true, // grouped flags are capitalized
+    },
     publications: {type: v.array(v.string()).optional(() => [])},
   },
   tuple: v.tuple([v.string(), v.string()]).optional(() => ['a', 'b']),
@@ -74,6 +83,18 @@ test.each([
     },
   ],
   [
+    'argv values, short alias',
+    ['-p', '6000', '--replicaDBFile=/tmp/replica.db'],
+    {},
+    {
+      port: 6000,
+      replicaDBFile: '/tmp/replica.db',
+      log: {format: 'text'},
+      shard: {id: '0', publications: []},
+      tuple: ['a', 'b'],
+    },
+  ],
+  [
     'argv values, eager multiples',
     [
       '--port',
@@ -82,7 +103,7 @@ test.each([
       '--litestream',
       'true',
       '--logFormat=json',
-      '--shardId',
+      '--shardID',
       'abc',
       '--shardPublications',
       'zero_foo',
@@ -111,7 +132,7 @@ test.each([
       '--litestream',
       'true',
       '--logFormat=json',
-      '--shardId',
+      '--shardID',
       'abc',
       '--shardPublications',
       'zero_foo',
@@ -138,7 +159,7 @@ test.each([
       '--port',
       '8888',
       '--logFormat=json',
-      '--shardId',
+      '--shardID',
       'abc',
       '--shardPublications',
       'zero_foo',
@@ -293,7 +314,7 @@ test('--help', () => {
   expect(logger.error).toHaveBeenCalledOnce();
   expect(stripAnsi(logger.error.mock.calls[0][0])).toMatchInlineSnapshot(`
     "
-     --port number                      blah blah blah                                                       
+     -p, --port number                  blah blah blah                                                       
                                         default: 4848                                                        
                                         env: PORT                                                            
                                                                                                              
@@ -304,7 +325,7 @@ test('--help', () => {
      --logFormat text,json              default: "text"                                                      
                                         env: LOG_FORMAT                                                      
                                                                                                              
-     --shardId string                   blah blah blah                                                       
+     --shardID string                   blah blah blah                                                       
                                         default: "0"                                                         
                                         env: SHARD_ID                                                        
                                                                                                              
@@ -326,7 +347,7 @@ test('-h', () => {
   expect(logger.error).toHaveBeenCalledOnce();
   expect(stripAnsi(logger.error.mock.calls[0][0])).toMatchInlineSnapshot(`
     "
-     --port number                      blah blah blah                                                       
+     -p, --port number                  blah blah blah                                                       
                                         default: 4848                                                        
                                         env: PORT                                                            
                                                                                                              
@@ -337,7 +358,7 @@ test('-h', () => {
      --logFormat text,json              default: "text"                                                      
                                         env: LOG_FORMAT                                                      
                                                                                                              
-     --shardId string                   blah blah blah                                                       
+     --shardID string                   blah blah blah                                                       
                                         default: "0"                                                         
                                         env: SHARD_ID                                                        
                                                                                                              
