@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1729893235331,
+  "lastUpdate": 1730497481024,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49865,6 +49865,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31874,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "132324914+darkgnotic@users.noreply.github.com",
+            "name": "Darick Tong",
+            "username": "darkgnotic"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "27272504777f0b388d8e87f68c7b850e0b18ec94",
+          "message": "feat(zero-cache): valitas-based flag/env configuration library (#2894)",
+          "timestamp": "2024-11-01T21:43:36Z",
+          "tree_id": "45eba370d75f7632db151a0a338faa6289f19200",
+          "url": "https://github.com/rocicorp/mono/commit/27272504777f0b388d8e87f68c7b850e0b18ec94"
+        },
+        "date": 1730497464494,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 312373,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54498,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 114843,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31866,
             "unit": "bytes"
           }
         ]
