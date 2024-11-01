@@ -1,201 +1,132 @@
 import {
   createSchema,
-  createTableSchema,
   definePermissions,
+  table,
+  column,
   type ExpressionBuilder,
   type TableSchema,
   type TableSchemaToRow,
 } from '@rocicorp/zero';
 
-const userSchema = createTableSchema({
-  tableName: 'user',
-  columns: {
-    id: {type: 'string'},
-    login: {type: 'string'},
-    name: {type: 'string'},
-    avatar: {type: 'string'},
-    role: {type: 'string'},
-  },
-  primaryKey: ['id'],
-  relationships: {},
-});
+const {string, number, boolean} = column;
 
-const issueSchema = createTableSchema({
-  tableName: 'issue',
-  columns: {
-    id: {type: 'string'},
-    shortID: {type: 'number', optional: true},
-    title: {type: 'string'},
-    open: {type: 'boolean'},
-    modified: {type: 'number'},
-    created: {type: 'number'},
-    creatorID: {type: 'string'},
-    assigneeID: {type: 'string', optional: true},
-    description: {type: 'string'},
-    labelIDs: {type: 'string'},
-  },
-  primaryKey: ['id'],
-  relationships: {
-    labels: {
-      source: 'id',
-      junction: {
-        source: 'issueID',
-        dest: {
-          field: 'labelID',
-          schema: () => issueLabelSchema,
-        },
-      },
-      dest: {
-        field: 'id',
-        schema: () => labelSchema,
-      },
-    },
-    comments: {
-      source: 'id',
-      dest: {
-        field: 'issueID',
-        schema: () => commentSchema,
-      },
-    },
-    creator: {
-      source: 'creatorID',
-      dest: {
-        field: 'id',
-        schema: () => userSchema,
-      },
-    },
-    assignee: {
-      source: 'assigneeID',
-      dest: {
-        field: 'id',
-        schema: () => userSchema,
-      },
-    },
-    viewState: {
-      source: 'id',
-      dest: {
-        field: 'issueID',
-        schema: () => viewStateSchema,
-      },
-    },
-    emoji: {
-      source: 'id',
-      dest: {
-        field: 'subjectID',
-        schema: () => emojiSchema,
-      },
-    },
-  },
-});
+const user = table('user')
+  .columns({
+    id: string(),
+    login: string(),
+    name: string(),
+    avatar: string(),
+    role: string(),
+  })
+  .primaryKey('id')
+  .build();
 
-const viewStateSchema = createTableSchema({
-  tableName: 'viewState',
-  columns: {
-    issueID: {type: 'string'},
-    userID: {type: 'string'},
-    viewed: {type: 'number'},
-  },
-  primaryKey: ['userID', 'issueID'],
-  relationships: {},
-});
+const issue = table('issue')
+  .columns({
+    id: string(),
+    shortID: number().optional(),
+    title: string(),
+    open: boolean(),
+    modified: number(),
+    created: number(),
+    creatorID: string(),
+    assigneeID: string().optional(),
+    description: string(),
+    labelIDs: string(),
+  })
+  .primaryKey('id')
+  .relationships(source => ({
+    labels: source('id')
+      .junction(() => issueLabel, 'issueID', 'labelID')
+      .dest(() => label, 'id'),
+    comments: source('id').dest(() => comment, 'issueID'),
+    creator: source('creatorID').dest(user, 'id'),
+    assignee: source('assigneeID').dest(user, 'id'),
+    viewState: source('id').dest(() => viewState, 'issueID'),
+    emoji: source('id').dest(() => emoji, 'subjectID'),
+  }))
+  .build();
 
-const commentSchema = createTableSchema({
-  tableName: 'comment',
-  columns: {
-    id: {type: 'string'},
-    issueID: {type: 'string'},
-    created: {type: 'number'},
-    body: {type: 'string'},
-    creatorID: {type: 'string'},
-  },
-  primaryKey: ['id'],
-  relationships: {
-    creator: {
-      source: 'creatorID',
-      dest: {
-        field: 'id',
-        schema: () => userSchema,
-      },
-    },
-    emoji: {
-      source: 'id',
-      dest: {
-        field: 'subjectID',
-        schema: () => emojiSchema,
-      },
-    },
-  },
-});
+const viewState = table('viewState')
+  .columns({
+    issueID: string(),
+    userID: string(),
+    viewed: number(),
+  })
+  .primaryKey('issueID', 'userID')
+  .build();
 
-const labelSchema = createTableSchema({
-  tableName: 'label',
-  columns: {
-    id: {type: 'string'},
-    name: {type: 'string'},
-  },
-  primaryKey: ['id'],
-  relationships: {},
-});
+const comment = table('comment')
+  .columns({
+    id: string(),
+    issueID: string(),
+    created: number(),
+    body: string(),
+    creatorID: string(),
+  })
+  .primaryKey('id')
+  .relationships(source => ({
+    creator: source('creatorID').dest(user, 'id'),
+    emoji: source('id').dest(() => emoji, 'subjectID'),
+  }))
+  .build();
 
-const issueLabelSchema = createTableSchema({
-  tableName: 'issueLabel',
-  columns: {
-    issueID: {type: 'string'},
-    labelID: {type: 'string'},
-  },
-  primaryKey: ['issueID', 'labelID'],
-  relationships: {},
-});
+const label = table('label')
+  .columns({
+    id: string(),
+    name: string(),
+  })
+  .primaryKey('id')
+  .build();
 
-const emojiSchema = createTableSchema({
-  tableName: 'emoji',
-  columns: {
-    id: {type: 'string'},
-    value: {type: 'string'},
-    annotation: {type: 'string'},
-    subjectID: {type: 'string'},
-    creatorID: {type: 'string'},
-    created: {type: 'number'},
-  },
-  primaryKey: ['id'],
-  relationships: {
-    creator: {
-      source: 'creatorID',
-      dest: {
-        field: 'id',
-        schema: () => userSchema,
-      },
-    },
-  },
-});
+const issueLabel = table('issueLabel')
+  .columns({
+    issueID: string(),
+    labelID: string(),
+  })
+  .primaryKey('issueID', 'labelID')
+  .build();
 
-const userPrefSchema = createTableSchema({
-  tableName: 'userPref',
-  columns: {
-    key: {type: 'string'},
-    userID: {type: 'string'},
-    value: {type: 'string'},
-  },
-  primaryKey: ['key', 'userID'],
-  relationships: {},
-});
+const emoji = table('emoji')
+  .columns({
+    id: string(),
+    value: string(),
+    annotation: string(),
+    subjectID: string(),
+    creatorID: string(),
+    created: number(),
+  })
+  .primaryKey('id')
+  .relationships(source => ({
+    creator: source('creatorID').dest(user, 'id'),
+  }))
+  .build();
+
+const userPref = table('userPref')
+  .columns({
+    userID: string(),
+    key: string(),
+    value: string(),
+  })
+  .primaryKey('key', 'userID') // TODO: this order should be reversed, right?
+  .build();
 
 export const schema = createSchema({
   version: 4,
   tables: {
-    user: userSchema,
-    issue: issueSchema,
-    comment: commentSchema,
-    label: labelSchema,
-    issueLabel: issueLabelSchema,
-    viewState: viewStateSchema,
-    emoji: emojiSchema,
-    userPref: userPrefSchema,
+    user,
+    issue,
+    comment,
+    label,
+    issueLabel,
+    viewState,
+    emoji,
+    userPref,
   },
 });
 
-export type IssueRow = TableSchemaToRow<typeof issueSchema>;
-export type CommentRow = TableSchemaToRow<typeof commentSchema>;
+export type IssueRow = TableSchemaToRow<typeof issue>;
+export type CommentRow = TableSchemaToRow<typeof comment>;
 export type Schema = typeof schema;
 
 /** The contents of the zbugs JWT */
@@ -214,12 +145,12 @@ export const permissions: ReturnType<typeof definePermissions> =
 
     const allowIfIssueCreator = (
       authData: AuthData,
-      {cmp}: ExpressionBuilder<typeof issueSchema>,
+      {cmp}: ExpressionBuilder<typeof issue>,
     ) => cmp('creatorID', '=', authData.sub);
 
     const allowIfCommentCreator = (
       authData: AuthData,
-      {cmp}: ExpressionBuilder<typeof commentSchema>,
+      {cmp}: ExpressionBuilder<typeof comment>,
     ) => cmp('creatorID', '=', authData.sub);
 
     const allowIfAdmin = (
@@ -229,7 +160,7 @@ export const permissions: ReturnType<typeof definePermissions> =
 
     const allowIfUserIDMatchesLoggedInUser = (
       authData: AuthData,
-      {cmp}: ExpressionBuilder<typeof viewStateSchema>,
+      {cmp}: ExpressionBuilder<typeof viewState>,
     ) => cmp('userID', '=', authData.sub);
 
     return {

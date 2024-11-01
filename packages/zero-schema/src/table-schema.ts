@@ -21,10 +21,6 @@ export type TableSchema = SourceOrTableSchema & {
   readonly relationships: {readonly [name: string]: Relationship};
 };
 
-export function createTableSchema<const T extends TableSchema>(schema: T) {
-  return schema as T;
-}
-
 export type TableSchemaToRow<T extends TableSchema> = {
   [K in keyof T['columns']]: SchemaValueToTSType<T['columns'][K]>;
 };
@@ -83,17 +79,15 @@ export type Supertype<TSchemas extends TableSchema[]> = {
  */
 type Lazy<T> = T | (() => T);
 
-export type Relationship =
-  | FieldRelationship<TableSchema, TableSchema>
-  | JunctionRelationship<TableSchema, TableSchema, TableSchema>;
+export type Relationship = FieldRelationship | JunctionRelationship;
 
 /**
  * A relationship between two entities where
  * that relationship is defined via fields on both entities.
  */
 export type FieldRelationship<
-  TSourceSchema extends TableSchema,
-  TDestSchema extends TableSchema,
+  TSourceSchema extends TableSchema = TableSchema,
+  TDestSchema extends TableSchema = TableSchema,
 > = {
   source: keyof TSourceSchema['columns'];
   dest: {
@@ -107,9 +101,9 @@ export type FieldRelationship<
  * that relationship is defined via a junction table.
  */
 export type JunctionRelationship<
-  TSourceSchema extends TableSchema,
-  TJunctionSchema extends TableSchema,
-  TDestSchema extends TableSchema,
+  TSourceSchema extends TableSchema = TableSchema,
+  TJunctionSchema extends TableSchema = TableSchema,
+  TDestSchema extends TableSchema = TableSchema,
 > = FieldRelationship<TSourceSchema, TDestSchema> & {
   junction: FieldRelationship<TJunctionSchema, TJunctionSchema>;
 };

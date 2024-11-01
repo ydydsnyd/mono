@@ -9,10 +9,8 @@ import {
 } from '../../../zql/src/query/query-impl.js';
 import {transformQuery} from './read-authorizer.js';
 import type {Query, QueryType} from '../../../zql/src/query/query.js';
-import {
-  createTableSchema,
-  type TableSchema,
-} from '../../../zero-schema/src/table-schema.js';
+import {type TableSchema} from '../../../zero-schema/src/table-schema.js';
+import {table, column} from '../../../zero-schema/src/table-builder.js';
 import {must} from '../../../shared/src/must.js';
 import type {ExpressionBuilder} from '../../../zql/src/query/expression.js';
 
@@ -22,57 +20,64 @@ function ast(q: Query<TableSchema, QueryType>) {
   return (q as QueryImpl<TableSchema, QueryType>)[astForTestingSymbol];
 }
 
-const unreadable = createTableSchema({
-  tableName: 'unreadable',
-  columns: {
-    id: {type: 'string'},
-  },
-  primaryKey: ['id'],
-  relationships: {},
-});
+const {string} = column;
+
+const unreadable = table('unreadable')
+  .columns({
+    id: string(),
+  })
+  .primaryKey('id')
+  .build();
+
+// Recursive relationships have to be encoded directly
+// in TypeScript due to TS limitations.
+// To use the builder at least partially, we define
+// the non-recursive part of the schema first.
+const readablePartial = table('readable')
+  .columns({
+    id: string(),
+    unreadableId: string(),
+    readableId: string(),
+  })
+  .primaryKey('id')
+  .relationships(source => ({
+    unreadable: source('unreadableId').dest(unreadable, 'id'),
+  }))
+  .build();
+
 const readable = {
-  tableName: 'readable',
-  columns: {
-    id: {type: 'string'},
-    unreadableId: {type: 'string'},
-    readableId: {type: 'string'},
-  },
-  primaryKey: ['id'],
+  ...readablePartial,
   relationships: {
+    ...readablePartial.relationships,
     readable: {
+      source: 'readableId',
       dest: {
         field: 'id',
         schema: () => readable,
       },
-      source: 'readableId',
-    },
-    unreadable: {
-      dest: {
-        field: 'id',
-        schema: unreadable,
-      },
-      source: 'unreadableId',
     },
   },
 } as const;
+
 const adminReadable = {
-  tableName: 'adminReadable',
-  columns: {
-    id: {type: 'string'},
-  },
-  primaryKey: ['id'],
+  ...table('adminReadable')
+    .columns({
+      id: string(),
+    })
+    .primaryKey('id')
+    .build(),
   relationships: {
     self1: {
       dest: {
-        field: 'id',
         schema: () => adminReadable,
+        field: 'id',
       },
       source: 'id',
     },
     self2: {
       dest: {
-        field: 'id',
         schema: () => adminReadable,
+        field: 'id',
       },
       source: 'id',
     },

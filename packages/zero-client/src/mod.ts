@@ -60,10 +60,10 @@ export type {
 export {definePermissions} from '../../zero-schema/src/permissions.js';
 export {createSchema} from '../../zero-schema/src/schema.js';
 export {
-  createTableSchema,
   type TableSchemaToRow,
   type TableSchema,
 } from '../../zero-schema/src/table-schema.js';
+export {table, column} from '../../zero-schema/src/table-builder.js';
 export {escapeLike} from '../../zql/src/query/escape-like.js';
 export type {
   ExpressionBuilder,
