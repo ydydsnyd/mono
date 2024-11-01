@@ -55,6 +55,10 @@ type TypeNameToTypeMap = {
   json: any;
 };
 
+export type TableSchemaToRow<T extends TableSchema> = {
+  [K in keyof T['columns']]: SchemaValueToTSType<T['columns'][K]>;
+};
+
 export type ColumnTypeName<T extends SchemaValue | ValueType> =
   T extends SchemaValue ? T['type'] : T;
 
@@ -100,6 +104,7 @@ export type Supertype<TSchemas extends TableSchema[]> = {
 type Lazy<T> = T | (() => T);
 
 export type Relationship = FieldRelationship | JunctionRelationship;
+<<<<<<< HEAD
 
 export type AtLeastOne<T> = readonly [T, ...T[]];
 
@@ -113,6 +118,8 @@ export function atLeastOne<T>(arr: readonly T[]): AtLeastOne<T> {
 type FieldName<TSchema extends TableSchema> =
   | (keyof TSchema['columns'] & string)
   | AtLeastOne<keyof TSchema['columns'] & string>;
+=======
+>>>>>>> 01e6ffdaa (feat(zql)!: table builder for defining table schemas)
 
 /**
  * A relationship between two entities where
@@ -135,10 +142,16 @@ export type JunctionRelationship<
   TSourceSchema extends TableSchema = TableSchema,
   TJunctionSchema extends TableSchema = TableSchema,
   TDestSchema extends TableSchema = TableSchema,
+<<<<<<< HEAD
 > = readonly [
   FieldRelationship<TSourceSchema, TJunctionSchema>,
   FieldRelationship<TJunctionSchema, TDestSchema>,
 ];
+=======
+> = FieldRelationship<TSourceSchema, TDestSchema> & {
+  junction: FieldRelationship<TJunctionSchema, TJunctionSchema>;
+};
+>>>>>>> 01e6ffdaa (feat(zql)!: table builder for defining table schemas)
 
 export function isFieldRelationship(
   relationship: Relationship,
