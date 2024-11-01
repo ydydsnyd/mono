@@ -26,6 +26,9 @@ export class MyDurableObject extends DurableObject {
 	 */
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
+		addEventListener('unhandledrejection', (e) => {
+			console.log('unhandledrejection', e);
+		});
 	}
 
 	/**

@@ -745,7 +745,7 @@ export class Zero<const S extends Schema> {
   #onOpen = (e: Event) => {
     console.log('onopen', e);
     const l = addWebSocketIDFromSocketToLogContext(
-      e.target as WebSocket,
+      (e.target ?? e.currentTarget) as WebSocket,
       this.#lc,
     );
     if (this.#connectStart === undefined) {
@@ -764,7 +764,7 @@ export class Zero<const S extends Schema> {
 
   #onClose = (e: CloseEvent) => {
     const l = addWebSocketIDFromSocketToLogContext(
-      e.target as WebSocket,
+      (e.target ?? e.currentTarget) as WebSocket,
       this.#lc,
     );
     const {code, reason, wasClean} = e;
@@ -1677,8 +1677,7 @@ export async function createSocket(
     new WS(
       // toString() required for RN URL polyfill.
       url.toString(),
-      'foobar',
-      //secProtocol,
+      secProtocol,
     ),
     queriesPatch,
   ];

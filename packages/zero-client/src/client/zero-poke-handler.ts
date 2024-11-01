@@ -20,6 +20,7 @@ import {
   toPrimaryKeyString,
 } from './keys.js';
 import {type NormalizedSchema} from './normalized-schema.js';
+import {getBrowserGlobal} from '../../../shared/src/browser-env.js';
 
 type PokeAccumulator = {
   readonly pokeStart: PokeStartBody;
@@ -48,6 +49,7 @@ export class PokeHandler {
   // order poke errors.
   readonly #pokeLock = new Lock();
   readonly #schema: NormalizedSchema;
+  #raf: (callback: () => unknown) => unknown;
 
   constructor(
     replicachePoke: (poke: PokeInternal) => Promise<void>,
@@ -61,6 +63,7 @@ export class PokeHandler {
     this.#clientID = clientID;
     this.#schema = schema;
     this.#lc = lc.withContext('PokeHandler');
+    this.#raf = getBrowserGlobal('requestAnimationFrame') ?? rafFallback;
   }
 
   handlePokeStart(pokeStart: PokeStartBody) {
@@ -119,7 +122,7 @@ export class PokeHandler {
   #startPlaybackLoop() {
     this.#lc.debug?.('starting playback loop');
     this.#pokePlaybackLoopRunning = true;
-    requestAnimationFrame(this.#rafCallback);
+    this.#raf(this.#rafCallback);
   }
 
   #rafCallback = async () => {
@@ -129,7 +132,7 @@ export class PokeHandler {
       this.#pokePlaybackLoopRunning = false;
       return;
     }
-    requestAnimationFrame(this.#rafCallback);
+    this.#raf(this.#rafCallback);
     const start = performance.now();
     rafLC.debug?.(
       'raf fired, processing pokes.  Since last raf',
@@ -340,4 +343,8 @@ function rowsPatchOpToReplicachePatchOp(
     default:
       throw new Error('to be implemented');
   }
+}
+
+function rafFallback(callback: () => unknown) {
+  setTimeout(callback, 0);
 }
