@@ -345,6 +345,10 @@ function rowsPatchOpToReplicachePatchOp(
   }
 }
 
+/**
+ * Some environments we run in don't have `requestAnimationFrame` (such as
+ * Node, Cloudflare Workers).
+ */
 function rafFallback(callback: () => unknown) {
   setTimeout(callback, 0);
 }

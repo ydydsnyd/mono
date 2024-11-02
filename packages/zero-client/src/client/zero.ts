@@ -158,7 +158,7 @@ export const DEFAULT_DISCONNECT_HIDDEN_DELAY_MS = 5_000;
  * The amount of time we wait for a connection to be established before we
  * consider it timed out.
  */
-export const CONNECT_TIMEOUT_MS = 30_000;
+export const CONNECT_TIMEOUT_MS = 10_000;
 
 const CHECK_CONNECTIVITY_ON_ERROR_FREQUENCY = 6;
 
@@ -743,9 +743,8 @@ export class Zero<const S extends Schema> {
   };
 
   #onOpen = (e: Event) => {
-    console.log('onopen', e);
     const l = addWebSocketIDFromSocketToLogContext(
-      (e.target ?? e.currentTarget) as WebSocket,
+      e.currentTarget as WebSocket,
       this.#lc,
     );
     if (this.#connectStart === undefined) {
@@ -764,7 +763,7 @@ export class Zero<const S extends Schema> {
 
   #onClose = (e: CloseEvent) => {
     const l = addWebSocketIDFromSocketToLogContext(
-      (e.target ?? e.currentTarget) as WebSocket,
+      e.currentTarget as WebSocket,
       this.#lc,
     );
     const {code, reason, wasClean} = e;
@@ -980,14 +979,9 @@ export class Zero<const S extends Schema> {
       this.#options.maxHeaderLength,
     );
 
-    console.log('ws', ws);
-
     if (this.closed) {
-      console.log('closed');
       return;
     }
-
-    console.log('not closed');
 
     this.#initConnectionQueries = initConnectionQueries;
     ws.addEventListener('message', this.#onMessage);
@@ -999,9 +993,6 @@ export class Zero<const S extends Schema> {
     try {
       l.debug?.('Waiting for connection to be acknowledged');
       await this.#connectResolver.promise;
-    } catch (e) {
-      l.error?.('connectResolver promise rejected', e);
-      throw e;
     } finally {
       clearTimeout(timeoutID);
       this.#closeAbortController.signal.removeEventListener(
@@ -1434,7 +1425,6 @@ export class Zero<const S extends Schema> {
     // returned as pulls for this client group are handled via poke over the
     // socket.
     if (req.clientGroupID === (await this.clientGroupID)) {
-      lc.debug?.('normal pull');
       return {
         httpRequestInfo: {
           errorMessage: '',
@@ -1443,7 +1433,6 @@ export class Zero<const S extends Schema> {
       };
     }
 
-    lc.debug?.('recovery pull');
     // If we are connecting we wait until we are connected.
     await this.#connectResolver.promise;
     const socket = this.#socket;
@@ -1661,7 +1650,6 @@ export async function createSocket(
   // instead.  encodeURIComponent to ensure it only contains chars allowed
   // for a `protocol`.
   const WS = mustGetBrowserGlobal('WebSocket');
-  console.log('WS', WS);
   let queriesPatch: Map<string, QueriesPatchOp> | undefined = await rep.query(
     tx => queryManager.getQueriesPatch(tx),
   );

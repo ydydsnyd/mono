@@ -71,31 +71,6 @@ export class MyDurableObject extends DurableObject {
 			view.destroy();
 		});
 		return promise;
-
-		/*
-
-		const clientID = Math.random().toString(36).substring(2);
-		const clientGroupID = Math.random().toString(36).substring(2);
-		const wsid = Math.random().toString(36).substring(2);
-		const url = `ws://localhost:4848/api/sync/v1/connect?clientID=${clientID}&clientGroupID=${clientGroupID}&schemaVersion=4&userID=anon&baseCookie=&ts=${Date.now()}&lmid=0&wsid=${wsid}&debugPerf=true`;
-		console.log('url', url);
-		const { promise, resolve } = resolver<string>();
-		const ws = new WebSocket(url);
-		ws.addEventListener('open', (e) => {
-			console.log('open', e);
-		});
-		ws.addEventListener('message', (e) => {
-			console.log('message', e);
-			resolve(JSON.stringify(e.data));
-		});
-		ws.addEventListener('close', (e) => {
-			console.log('close', e);
-		});
-		ws.addEventListener('error', (e) => {
-			console.log('error', e);
-		});
-		return promise;
-		*/
 	}
 }
 
