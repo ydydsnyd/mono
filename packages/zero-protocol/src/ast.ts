@@ -7,9 +7,9 @@
  */
 
 import {compareUTF8} from 'compare-utf8';
+import {defined} from '../../shared/src/arrays.js';
 import {must} from '../../shared/src/must.js';
 import * as v from '../../shared/src/valita.js';
-import {defined} from '../../shared/src/arrays.js';
 import {rowSchema, type Row} from './data.js';
 
 export const selectorSchema = v.string();
@@ -260,6 +260,7 @@ type StaticParameter = {
 };
 
 const normalizeCache = new WeakMap<AST, Required<AST>>();
+
 export function normalizeAST(ast: AST): Required<AST> {
   const cached = normalizeCache.get(ast);
   if (cached) {

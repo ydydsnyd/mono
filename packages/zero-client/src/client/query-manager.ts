@@ -1,6 +1,7 @@
 import type {ClientID} from '../../../replicache/src/mod.js';
 import type {ReplicacheImpl} from '../../../replicache/src/replicache-impl.js';
 import {must} from '../../../shared/src/must.js';
+import {xxHashAPI, xxHashReady} from '../../../shared/src/xxhash.js';
 import {hashOfAST} from '../../../zero-protocol/src/ast-hash.js';
 import {normalizeAST, type AST} from '../../../zero-protocol/src/ast.js';
 import type {
@@ -12,6 +13,8 @@ import type {ReadTransaction} from '../mod.js';
 import {desiredQueriesPrefixForClient, GOT_QUERIES_KEY_PREFIX} from './keys.js';
 
 type QueryHash = string;
+
+void xxHashReady();
 
 /**
  * Tracks what queries the client is currently subscribed to on the server.
@@ -26,6 +29,8 @@ export class QueryManager {
     {normalized: AST; count: number; gotCallbacks: GotCallback[]}
   > = new Map();
   readonly #gotQueries: Set<string> = new Set();
+  readonly #pendingAdds: Set<readonly [AST, GotCallback | undefined]> =
+    new Set();
 
   constructor(
     clientID: ClientID,
@@ -122,7 +127,39 @@ export class QueryManager {
 
   add(ast: AST, gotCallback?: GotCallback | undefined): () => void {
     const normalized = normalizeAST(ast);
-    const astHash = hashOfAST(normalized);
+    console.log({xxHashAPI: typeof xxHashAPI});
+    if (xxHashAPI) {
+      const astHash = hashOfAST(normalized);
+      return this.#add(normalized, astHash, gotCallback);
+    }
+
+    const entry = [normalized, gotCallback] as const;
+    this.#pendingAdds.add(entry);
+    let astHash: string | undefined;
+    xxHashReady()
+      .then(() => {
+        this.#pendingAdds.delete(entry);
+        astHash = hashOfAST(normalized);
+        this.#add(normalized, astHash, gotCallback);
+      })
+      .catch(err => {
+        console.error('Failed to load XXHash API:', err);
+      });
+
+    return () => {
+      if (this.#pendingAdds.has(entry)) {
+        this.#pendingAdds.delete(entry);
+      } else {
+        this.#remove(must(astHash));
+      }
+    };
+  }
+
+  #add(
+    normalized: Required<AST>,
+    astHash: string,
+    gotCallback?: GotCallback | undefined,
+  ): () => void {
     let entry = this.#queries.get(astHash);
     if (!entry) {
       entry = {
