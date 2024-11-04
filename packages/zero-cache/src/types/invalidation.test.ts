@@ -1,5 +1,6 @@
 import {compareUTF8} from 'compare-utf8';
 import {describe, expect, test} from 'vitest';
+import {xxHashAPI} from '../../../shared/src/xxhash.js';
 import {parse, stringify} from './bigint-json.js';
 import {
   type InvalidationFilterSpec,
@@ -85,8 +86,9 @@ describe('types/invalidation', () => {
   ];
 
   for (const c of hashCases) {
-    test(`invalidationHash: ${c.name}`, () => {
-      expect(invalidationHash(c.tag)).toBe(c.hash);
+    test(`invalidationHash: ${c.name}`, async () => {
+      const {create64} = await xxHashAPI;
+      expect(invalidationHash(c.tag, create64)).toBe(c.hash);
       // Verify back/forth serialization (requires whole-byte padding of hex string).
       expect(Buffer.from(c.hash, 'hex').toString('hex')).toBe(c.hash);
     });
@@ -182,13 +184,14 @@ describe('types/invalidation', () => {
   ];
 
   for (const c of specCases) {
-    test(`filter spec normalization: ${c.name}`, () => {
+    test(`filter spec normalization: ${c.name}`, async () => {
+      const {create64} = await xxHashAPI;
       for (const spec of c.specs) {
-        const normalized = stringify(normalizeFilterSpec(spec));
+        const normalized = stringify(normalizeFilterSpec(spec, create64));
 
         expect(normalized).toBe(c.json);
 
-        const reparsed = parseFilterSpec(parse(normalized));
+        const reparsed = await parseFilterSpec(parse(normalized));
         const filteredCols = Object.keys(reparsed.filteredColumns);
         expect(filteredCols).toEqual(
           Object.keys(spec.filteredColumns).sort(compareUTF8),

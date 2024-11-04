@@ -2,17 +2,29 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {resolver} from '@rocicorp/resolver';
 import {assert} from '../../../shared/src/asserts.js';
-import {hashOfAST} from '../../../zero-protocol/src/ast-hash.js';
-import type {AST, Condition, Ordering} from '../../../zero-protocol/src/ast.js';
+import {
+  normalizeAST,
+  type AST,
+  type Condition,
+  type Ordering,
+} from '../../../zero-protocol/src/ast.js';
 import type {Row} from '../../../zero-protocol/src/data.js';
-import {buildPipeline, type BuilderDelegate} from '../builder/builder.js';
-import {ArrayView} from '../ivm/array-view.js';
-import type {Input} from '../ivm/operator.js';
-import type {Format, ViewFactory} from '../ivm/view.js';
 import {
   normalizeTableSchema,
   type NormalizedTableSchema,
 } from '../../../zero-schema/src/normalize-table-schema.js';
+import {
+  isFieldRelationship,
+  isJunctionRelationship,
+  type PullSchemaForRelationship,
+  type TableSchema,
+  type TableSchemaToRow,
+} from '../../../zero-schema/src/table-schema.js';
+import {buildPipeline, type BuilderDelegate} from '../builder/builder.js';
+import {ArrayView} from '../ivm/array-view.js';
+import type {Input} from '../ivm/operator.js';
+import type {Format, ViewFactory} from '../ivm/view.js';
+import {and, cmp, type GenericCondition} from './expression.js';
 import type {AdvancedQuery} from './query-internal.js';
 import type {
   AddSubselect,
@@ -25,15 +37,7 @@ import type {
   QueryType,
   Smash,
 } from './query.js';
-import {
-  isFieldRelationship,
-  isJunctionRelationship,
-  type PullSchemaForRelationship,
-  type TableSchemaToRow,
-  type TableSchema,
-} from '../../../zero-schema/src/table-schema.js';
 import type {TypedView} from './typed-view.js';
-import {and, cmp, type GenericCondition} from './expression.js';
 
 export function newQuery<
   TSchema extends TableSchema,
@@ -86,10 +90,10 @@ export abstract class AbstractQuery<
   constructor(
     schema: NormalizedTableSchema,
     ast: AST,
-    format?: Format | undefined,
+    format: Format = {singular: false, relationships: {}},
   ) {
     this.#ast = ast;
-    this.#format = format ?? {singular: false, relationships: {}};
+    this.#format = format;
     this.#schema = schema;
   }
 
@@ -100,7 +104,7 @@ export abstract class AbstractQuery<
   hash(): string {
     if (!this.#hash) {
       const ast = this._completeAst();
-      const hash = hashOfAST(ast);
+      const hash = JSON.stringify(ast);
       this.#hash = hash;
     }
     return this.#hash;
@@ -342,13 +346,14 @@ export abstract class AbstractQuery<
   protected _completeAst(): AST {
     if (!this.#completedAST) {
       const finalOrderBy = addPrimaryKeys(this.#schema, this.#ast.orderBy);
+      let ast: AST;
       if (this.#ast.start) {
         const {row} = this.#ast.start;
         const narrowedRow: Row = {};
         for (const [field] of finalOrderBy) {
           narrowedRow[field] = row[field];
         }
-        this.#completedAST = {
+        ast = {
           ...this.#ast,
           start: {
             ...this.#ast.start,
@@ -357,11 +362,13 @@ export abstract class AbstractQuery<
           orderBy: finalOrderBy,
         };
       } else {
-        this.#completedAST = {
+        ast = {
           ...this.#ast,
           orderBy: addPrimaryKeys(this.#schema, this.#ast.orderBy),
         };
       }
+
+      this.#completedAST = normalizeAST(ast);
     }
     return this.#completedAST;
   }

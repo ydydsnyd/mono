@@ -6,6 +6,7 @@ import {assert, unreachable} from '../../../../shared/src/asserts.js';
 import {CustomKeyMap} from '../../../../shared/src/custom-key-map.js';
 import {must} from '../../../../shared/src/must.js';
 import {difference} from '../../../../shared/src/set-utils.js';
+import {xxHashAPI} from '../../../../shared/src/xxhash.js';
 import type {AST} from '../../../../zero-protocol/src/ast.js';
 import {
   ErrorKind,
@@ -673,7 +674,9 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
     pokers: PokeHandler[],
   ) {
     const start = Date.now();
-    const rows = new CustomKeyMap<RowID, RowUpdate>(rowIDHash);
+    const {h64} = await xxHashAPI;
+    const toKey = (id: RowID) => rowIDHash(id, h64);
+    const rows = new CustomKeyMap<RowID, RowUpdate>(toKey);
     let total = 0;
 
     const processBatch = async () => {

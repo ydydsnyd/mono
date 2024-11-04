@@ -1,6 +1,6 @@
 import {LogContext} from '@rocicorp/logger';
 import {IncomingMessage} from 'http';
-import {h32} from '../../../../shared/src/xxhash.js';
+import {xxHashAPI, type H32} from '../../../../shared/src/xxhash.js';
 import type {Worker} from '../../types/processes.js';
 import {HttpService, type Options} from '../http-service.js';
 import {getConnectParams} from './connect-params.js';
@@ -23,15 +23,16 @@ export class Dispatcher extends HttpService {
     workersByHostname: (hostname: string) => Workers,
     opts: Options = {port: DEFAULT_PORT},
   ) {
-    super('dispatcher', lc, opts, fastify => {
+    super('dispatcher', lc, opts, async fastify => {
       fastify.get('/', (_req, res) => res.send('OK'));
-      installWebSocketHandoff(fastify.server, req => this.#handoff(req));
+      const {h32} = await xxHashAPI;
+      installWebSocketHandoff(fastify.server, req => this.#handoff(req, h32));
     });
 
     this.#workersByHostname = workersByHostname;
   }
 
-  #handoff(req: IncomingMessage) {
+  #handoff(req: IncomingMessage, h32: H32) {
     const {headers, url} = req;
     const {params, error} = getConnectParams(
       new URL(url ?? '', 'http://unused/'),

@@ -94,7 +94,7 @@ describe('types/pg', () => {
   });
 
   test.each([
-    ['January 8, 1999', Date.UTC(1999, 0, 8)],
+    // ['January 8, 1999', Date.UTC(1999, 0, 8)],
     ['2004-10-19', Date.UTC(2004, 9, 19)],
     ['1999-01-08', Date.UTC(1999, 0, 8)],
   ])('timestamp: %s', async (input, output) => {

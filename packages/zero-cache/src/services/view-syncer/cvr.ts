@@ -7,6 +7,7 @@ import {
   intersection,
   union,
 } from '../../../../shared/src/set-utils.js';
+import {xxHashAPI} from '../../../../shared/src/xxhash.js';
 import type {AST} from '../../../../zero-protocol/src/ast.js';
 import type {JSONObject} from '../../types/bigint-json.js';
 import type {LexiVersion} from '../../types/lexi-version.js';
@@ -280,7 +281,7 @@ export type RefCounts = Record<Hash, number>;
  */
 export class CVRQueryDrivenUpdater extends CVRUpdater {
   readonly #removedOrExecutedQueryIDs = new Set<string>();
-  readonly #receivedRows = new CustomKeyMap<RowID, RefCounts | null>(rowIDHash);
+  #receivedRows: CustomKeyMap<RowID, RefCounts | null> | undefined;
   #existingRows: Promise<RowRecord[]> | undefined = undefined;
 
   /**
@@ -304,6 +305,15 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
     if (stateVersion > cvr.version.stateVersion) {
       this._setVersion({stateVersion});
     }
+  }
+
+  async #getReceivedRows(): Promise<CustomKeyMap<RowID, RefCounts | null>> {
+    if (!this.#receivedRows) {
+      const {h64} = await xxHashAPI;
+      const toKey = (id: RowID) => rowIDHash(id, h64);
+      this.#receivedRows = new CustomKeyMap<RowID, RefCounts | null>(toKey);
+    }
+    return this.#receivedRows;
   }
 
   /**
@@ -340,7 +350,9 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
   async #lookupRowsForExecutedAndRemovedQueries(
     lc: LogContext,
   ): Promise<RowRecord[]> {
-    const results = new CustomKeyMap<RowID, RowRecord>(rowIDHash);
+    const {h64} = await xxHashAPI;
+    const toKey = (id: RowID) => rowIDHash(id, h64);
+    const results = new CustomKeyMap<RowID, RowRecord>(toKey);
 
     if (this.#removedOrExecutedQueryIDs.size === 0) {
       // Query-less update. This can happen for config only changes.
@@ -464,8 +476,9 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
 
       const existing = existingRows.get(id);
 
+      const receivedRows = await this.#getReceivedRows();
       // Accumulate all received refCounts to determine which rows to prune.
-      const previouslyReceived = this.#receivedRows.get(id);
+      const previouslyReceived = receivedRows.get(id);
 
       const merged =
         previouslyReceived !== undefined
@@ -476,7 +489,7 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
               this.#removedOrExecutedQueryIDs,
             );
 
-      this.#receivedRows.set(id, merged);
+      receivedRows.set(id, merged);
 
       const patchVersion =
         existing && existing?.rowVersion === version
@@ -535,7 +548,8 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
   async deleteUnreferencedRows(): Promise<PatchToVersion[]> {
     if (this.#removedOrExecutedQueryIDs.size === 0) {
       // Query-less update. This can happen for config-only changes.
-      assert(this.#receivedRows.size === 0);
+      const receivedRows = await this.#getReceivedRows();
+      assert(receivedRows.size === 0);
       return [];
     }
 
@@ -544,7 +558,7 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
 
     assert(this.#existingRows, `trackQueries() was not called`);
     for (const existing of await this.#existingRows) {
-      const deletedID = this.#deleteUnreferencedRow(existing);
+      const deletedID = await this.#deleteUnreferencedRow(existing);
       if (deletedID === null) {
         continue;
       }
@@ -557,8 +571,9 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
     return patches;
   }
 
-  #deleteUnreferencedRow(existing: RowRecord): RowID | null {
-    const received = this.#receivedRows.get(existing.id);
+  async #deleteUnreferencedRow(existing: RowRecord): Promise<RowID | null> {
+    const receivedRows = await this.#getReceivedRows();
+    const received = receivedRows.get(existing.id);
     if (received !== undefined) {
       return null;
     }

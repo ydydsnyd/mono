@@ -1,9 +1,9 @@
-import {h64} from '../../shared/src/xxhash.js';
+import type {H64} from '../../shared/src/xxhash.js';
 import {normalizeAST, type AST} from './ast.js';
 
 const hashCache = new WeakMap<AST, string>();
 
-export function hashOfAST(ast: AST): string {
+export function hashOfAST(ast: AST, h64: H64): string {
   const normalized = normalizeAST(ast);
   const cached = hashCache.get(normalized);
   if (cached) {

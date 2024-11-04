@@ -32,7 +32,6 @@ import {navigator} from '../../../shared/src/navigator.js';
 import {sleep, sleepWithAbort} from '../../../shared/src/sleep.js';
 import type {MaybePromise} from '../../../shared/src/types.js';
 import * as valita from '../../../shared/src/valita.js';
-import {xxHashReady} from '../../../shared/src/xxhash.js';
 import type {ChangeDesiredQueriesMessage} from '../../../zero-protocol/src/change-desired-queries.js';
 import {
   type CRUDMutation,
@@ -60,9 +59,10 @@ import type {
   PullResponseBody,
   PullResponseMessage,
 } from '../../../zero-protocol/src/pull.js';
+import type {Schema} from '../../../zero-schema/src/mod.js';
+import type {TableSchema} from '../../../zero-schema/src/table-schema.js';
 import {newQuery} from '../../../zql/src/query/query-impl.js';
 import type {Query} from '../../../zql/src/query/query.js';
-import type {TableSchema} from '../../../zero-schema/src/table-schema.js';
 import {nanoid} from '../util/nanoid.js';
 import {send} from '../util/socket.js';
 import {ZeroContext} from './context.js';
@@ -92,7 +92,6 @@ import {ServerError, isAuthError, isServerError} from './server-error.js';
 import {getServer} from './server-option.js';
 import {version} from './version.js';
 import {PokeHandler} from './zero-poke-handler.js';
-import type {Schema} from '../../../zero-schema/src/mod.js';
 
 export type NoRelations = Record<string, never>;
 
@@ -1237,7 +1236,6 @@ export class Zero<const S extends Schema> {
     };
 
     await this.#updateAuthToken(bareLogContext);
-    await xxHashReady();
 
     let needsReauth = false;
     let gotError = false;

@@ -8,6 +8,7 @@ import {
   type ReadonlyJSONValue,
 } from '../../../../shared/src/json.js';
 import {must} from '../../../../shared/src/must.js';
+import {xxHashAPI} from '../../../../shared/src/xxhash.js';
 import {astSchema} from '../../../../zero-protocol/src/ast.js';
 import type {JSONValue} from '../../types/bigint-json.js';
 import {versionToLexi} from '../../types/lexi-version.js';
@@ -65,7 +66,9 @@ class RowRecordCache {
       return this.#cache;
     }
     const r = resolver<CustomKeyMap<RowID, RowRecord>>();
-    const cache: CustomKeyMap<RowID, RowRecord> = new CustomKeyMap(rowIDHash);
+    const {h64} = await xxHashAPI;
+    const toKey = (id: RowID) => rowIDHash(id, h64);
+    const cache: CustomKeyMap<RowID, RowRecord> = new CustomKeyMap(toKey);
     for await (const rows of this.#db<
       RowsRow[]
     >`SELECT * FROM cvr.rows WHERE "clientGroupID" = ${
@@ -143,9 +146,10 @@ export class CVRStore {
     stats: Partial<CVRFlushStats>;
     write: (tx: PostgresTransaction) => PendingQuery<MaybeRow[]>;
   }> = new Set();
-  readonly #pendingRowRecordPuts = new CustomKeyMap<RowID, RowRecord>(
-    rowIDHash,
-  );
+  // readonly #pendingRowRecordPuts = new CustomKeyMap<RowID, RowRecord>(
+  //   rowIDHash,
+  // );
+  #pendingRowRecordPuts: CustomKeyMap<RowID, RowRecord> | undefined;
   readonly #rowCache: RowRecordCache;
 
   constructor(lc: LogContext, db: PostgresDB, cvrID: string) {
@@ -239,12 +243,12 @@ export class CVRStore {
     return this.#rowCache.getRowRecords();
   }
 
-  getPendingRowRecord(id: RowID): RowRecord | undefined {
-    return this.#pendingRowRecordPuts.get(id);
+  async getPendingRowRecord(id: RowID): Promise<RowRecord | undefined> {
+    return (await this.#getPendingRowRecordPuts()).get(id);
   }
 
-  putRowRecord(row: RowRecord): void {
-    this.#pendingRowRecordPuts.set(row.id, row);
+  async putRowRecord(row: RowRecord): Promise<void> {
+    (await this.#getPendingRowRecordPuts()).set(row.id, row);
   }
 
   putInstance({
@@ -532,18 +536,17 @@ export class CVRStore {
       statements: 0,
     };
     const existingRowRecords = await this.getRowRecords();
-    const rowRecordsToFlush = [...this.#pendingRowRecordPuts.values()].filter(
-      row => {
-        const existing = existingRowRecords.get(row.id);
-        return (
-          (existing !== undefined || row.refCounts !== null) &&
-          !deepEqual(
-            row as ReadonlyJSONValue,
-            existing as ReadonlyJSONValue | undefined,
-          )
-        );
-      },
-    );
+    const pendingRowRecordPuts = await this.#getPendingRowRecordPuts();
+    const rowRecordsToFlush = [...pendingRowRecordPuts.values()].filter(row => {
+      const existing = existingRowRecords.get(row.id);
+      return (
+        (existing !== undefined || row.refCounts !== null) &&
+        !deepEqual(
+          row as ReadonlyJSONValue,
+          existing as ReadonlyJSONValue | undefined,
+        )
+      );
+    });
     stats.rows = rowRecordsToFlush.length;
     await this.#db.begin(tx => {
       const pipelined: Promise<unknown>[] = [
@@ -552,7 +555,7 @@ export class CVRStore {
         this.#abortIfNotVersion(tx, expectedCurrentVersion),
       ];
 
-      if (this.#pendingRowRecordPuts.size > 0) {
+      if (pendingRowRecordPuts.size > 0) {
         const rowRecordRows = rowRecordsToFlush.map(r =>
           rowRecordToRowsRow(this.#id, r),
         );
@@ -589,6 +592,15 @@ export class CVRStore {
     return stats;
   }
 
+  async #getPendingRowRecordPuts(): Promise<CustomKeyMap<RowID, RowRecord>> {
+    if (!this.#pendingRowRecordPuts) {
+      const {h64} = await xxHashAPI;
+      const toKey = (id: RowID) => rowIDHash(id, h64);
+      this.#pendingRowRecordPuts = new CustomKeyMap<RowID, RowRecord>(toKey);
+    }
+    return this.#pendingRowRecordPuts;
+  }
+
   async flush(expectedCurrentVersion: CVRVersion): Promise<CVRFlushStats> {
     try {
       return await this.#flush(expectedCurrentVersion);
@@ -598,7 +610,7 @@ export class CVRStore {
       throw e;
     } finally {
       this.#writes.clear();
-      this.#pendingRowRecordPuts.clear();
+      (await this.#getPendingRowRecordPuts()).clear();
     }
   }
 }

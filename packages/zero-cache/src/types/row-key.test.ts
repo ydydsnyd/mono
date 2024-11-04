@@ -1,4 +1,5 @@
 import {describe, expect, test} from 'vitest';
+import {xxHashAPI} from '../../../shared/src/xxhash.js';
 import {
   type RowKey,
   normalizedKeyOrder,
@@ -85,10 +86,11 @@ describe('types/row-key', () => {
 
   for (const c of cases) {
     const {schema = 'public', table = 'issue'} = c;
-    test(`RowKey: ${schema}.${table}: ${JSON.stringify(c.keys)}`, () => {
+    test(`RowKey: ${schema}.${table}: ${JSON.stringify(c.keys)}`, async () => {
+      const {h64} = await xxHashAPI;
       for (const keys of c.keys) {
         expect(rowKeyString(keys)).toBe(c.rowKeyString);
-        expect(rowIDHash({schema, table, rowKey: keys})).toBe(c.rowIDHash);
+        expect(rowIDHash({schema, table, rowKey: keys}, h64)).toBe(c.rowIDHash);
       }
     });
   }

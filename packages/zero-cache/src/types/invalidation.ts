@@ -1,6 +1,6 @@
 import {compareUTF8} from 'compare-utf8';
 import * as v from '../../../shared/src/valita.js';
-import {create64} from '../../../shared/src/xxhash.js';
+import {xxHashAPI, type Create64} from '../../../shared/src/xxhash.js';
 
 /**
  * Encodes the operations over filtered columns for which invalidation
@@ -65,15 +65,20 @@ export type InvalidationFilterSpec = v.Infer<typeof rawFilterSpecSchema>;
  * stringified representation. An additional `id` hash is added to uniquely
  * identify the spec.
  */
-export const normalizedFilterSpecSchema = rawFilterSpecSchema
+const normalizedFilterSpecNoIDSchema = rawFilterSpecSchema
   .extend({id: v.string()})
-  .map(normalizeFilterSpec);
+  .map(normalizeFilterSpecNoID);
 
 export type NormalizedInvalidationFilterSpec = v.Infer<
-  typeof normalizedFilterSpecSchema
->;
+  typeof rawFilterSpecSchema
+> & {id: string};
 
-export function normalizeFilterSpec(val: InvalidationFilterSpec) {
+// const {create64} = await xxHashAPI;
+
+function normalizeFilterSpecNoID(
+  val: InvalidationFilterSpec,
+  // create64: Create64,
+) {
   // Normalized field ordering.
   const normalized: InvalidationFilterSpec = {
     schema: val.schema,
@@ -85,16 +90,33 @@ export function normalizeFilterSpec(val: InvalidationFilterSpec) {
   if (val.selectedColumns) {
     normalized.selectedColumns = [...val.selectedColumns].sort(compareUTF8);
   }
+  return normalized;
+}
+
+export function normalizeFilterSpec(
+  val: InvalidationFilterSpec,
+  create64: Create64,
+): NormalizedInvalidationFilterSpec {
+  const spec = normalizeFilterSpecNoID(val);
+  return {
+    id: create64(SEED).update(JSON.stringify(spec)).digest().toString(36),
+    ...spec,
+  };
+}
+
+export async function parseFilterSpec(
+  spec: unknown,
+): Promise<NormalizedInvalidationFilterSpec> {
+  const {create64} = await xxHashAPI;
+  const normalized = v.parse(
+    spec,
+    normalizedFilterSpecNoIDSchema,
+    'passthrough',
+  );
   return {
     id: create64(SEED).update(JSON.stringify(normalized)).digest().toString(36),
     ...normalized,
   };
-}
-
-export function parseFilterSpec(
-  spec: unknown,
-): NormalizedInvalidationFilterSpec {
-  return v.parse(spec, normalizedFilterSpecSchema, 'passthrough');
 }
 
 /**
@@ -153,7 +175,10 @@ const SEED = 0x34567890n;
 /**
  * @returns The hex-encoded invalidation hash for the given `tag`.
  */
-export function invalidationHash(tag: InvalidationTag): string {
+export function invalidationHash(
+  tag: InvalidationTag,
+  create64: Create64,
+): string {
   const hasher = create64(SEED).update(tag.schema).update(tag.table);
 
   if ('allRows' in tag) {

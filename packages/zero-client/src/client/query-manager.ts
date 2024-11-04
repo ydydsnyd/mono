@@ -1,7 +1,7 @@
 import type {ClientID} from '../../../replicache/src/mod.js';
 import type {ReplicacheImpl} from '../../../replicache/src/replicache-impl.js';
 import {must} from '../../../shared/src/must.js';
-import {xxHashAPI, xxHashReady} from '../../../shared/src/xxhash.js';
+import {maybeXXHashAPI, xxHashAPI} from '../../../shared/src/xxhash.js';
 import {hashOfAST} from '../../../zero-protocol/src/ast-hash.js';
 import {normalizeAST, type AST} from '../../../zero-protocol/src/ast.js';
 import type {
@@ -13,8 +13,6 @@ import type {ReadTransaction} from '../mod.js';
 import {desiredQueriesPrefixForClient, GOT_QUERIES_KEY_PREFIX} from './keys.js';
 
 type QueryHash = string;
-
-void xxHashReady();
 
 /**
  * Tracks what queries the client is currently subscribed to on the server.
@@ -127,24 +125,19 @@ export class QueryManager {
 
   add(ast: AST, gotCallback?: GotCallback | undefined): () => void {
     const normalized = normalizeAST(ast);
-    console.log({xxHashAPI: typeof xxHashAPI});
-    if (xxHashAPI) {
-      const astHash = hashOfAST(normalized);
+    if (maybeXXHashAPI) {
+      const astHash = hashOfAST(normalized, maybeXXHashAPI.h64);
       return this.#add(normalized, astHash, gotCallback);
     }
 
     const entry = [normalized, gotCallback] as const;
     this.#pendingAdds.add(entry);
     let astHash: string | undefined;
-    xxHashReady()
-      .then(() => {
-        this.#pendingAdds.delete(entry);
-        astHash = hashOfAST(normalized);
-        this.#add(normalized, astHash, gotCallback);
-      })
-      .catch(err => {
-        console.error('Failed to load XXHash API:', err);
-      });
+    void xxHashAPI.then(({h64}) => {
+      this.#pendingAdds.delete(entry);
+      astHash = hashOfAST(normalized, h64);
+      this.#add(normalized, astHash, gotCallback);
+    });
 
     return () => {
       if (this.#pendingAdds.has(entry)) {

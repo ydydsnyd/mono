@@ -5,6 +5,7 @@ import type {
   PokeInternal,
 } from '../../../replicache/src/impl.js';
 import type {ClientID, PatchOperation} from '../../../replicache/src/mod.js';
+import {xxHashAPI, type H64} from '../../../shared/src/xxhash.js';
 import type {
   ClientsPatchOp,
   PokeEndBody,
@@ -146,7 +147,8 @@ export class PokeHandler {
       lc.debug?.('got poke lock at', now);
       lc.debug?.('merging', this.#pokeBuffer.length);
       try {
-        const merged = mergePokes(this.#pokeBuffer, this.#schema);
+        const {h64} = await xxHashAPI;
+        const merged = mergePokes(this.#pokeBuffer, this.#schema, h64);
         this.#pokeBuffer.length = 0;
         if (merged === undefined) {
           lc.debug?.('frame is empty');
@@ -184,6 +186,7 @@ export class PokeHandler {
 export function mergePokes(
   pokeBuffer: PokeAccumulator[],
   schema: NormalizedSchema,
+  h64: H64,
 ): PokeInternal | undefined {
   if (pokeBuffer.length === 0) {
     return undefined;
@@ -243,7 +246,7 @@ export function mergePokes(
       if (pokePart.rowsPatch) {
         mergedPatch.push(
           ...pokePart.rowsPatch.map(p =>
-            rowsPatchOpToReplicachePatchOp(p, schema),
+            rowsPatchOpToReplicachePatchOp(p, schema, h64),
           ),
         );
       }
@@ -303,6 +306,7 @@ function queryPatchOpToReplicachePatchOp(
 function rowsPatchOpToReplicachePatchOp(
   op: RowPatchOp,
   schema: NormalizedSchema,
+  h64: H64,
 ): PatchOperationInternal {
   switch (op.op) {
     case 'clear':
@@ -314,6 +318,7 @@ function rowsPatchOpToReplicachePatchOp(
           op.tableName,
           schema.tables[op.tableName].primaryKey,
           op.id,
+          h64,
         ),
       };
     case 'put':
@@ -323,6 +328,7 @@ function rowsPatchOpToReplicachePatchOp(
           op.tableName,
           schema.tables[op.tableName].primaryKey,
           op.value,
+          h64,
         ),
         value: op.value,
       };
@@ -333,6 +339,7 @@ function rowsPatchOpToReplicachePatchOp(
           op.tableName,
           schema.tables[op.tableName].primaryKey,
           op.id,
+          h64,
         ),
         merge: op.merge,
         constrain: op.constrain,

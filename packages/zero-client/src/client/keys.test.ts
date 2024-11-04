@@ -1,5 +1,6 @@
 import fc from 'fast-check';
 import {expect, test} from 'vitest';
+import {xxHashAPI} from '../../../shared/src/xxhash.js';
 import type {
   PrimaryKey,
   PrimaryKeyValueRecord,
@@ -7,7 +8,8 @@ import type {
 import {normalizePrimaryKey} from '../../../zero-schema/src/normalize-table-schema.js';
 import {toPrimaryKeyString as toPrimaryKeyStringImpl} from './keys.js';
 
-test('toPrimaryKeyString', () => {
+test('toPrimaryKeyString', async () => {
+  const {h64} = await xxHashAPI;
   function toPrimaryKeyString(
     tableName: string,
     primaryKey: PrimaryKey,
@@ -17,6 +19,7 @@ test('toPrimaryKeyString', () => {
       tableName,
       normalizePrimaryKey(primaryKey),
       id,
+      h64,
     );
   }
 
@@ -97,7 +100,8 @@ test('toPrimaryKeyString', () => {
   ).toMatchInlineSnapshot(`"e/issue_label/true"`);
 });
 
-test('no clashes - single pk', () => {
+test('no clashes - single pk', async () => {
+  const {h64} = await xxHashAPI;
   fc.assert(
     fc.property(
       fc.oneof(
@@ -110,11 +114,13 @@ test('no clashes - single pk', () => {
           'issue',
           normalizePrimaryKey(['id']),
           {id: a},
+          h64,
         );
         const keyB = toPrimaryKeyStringImpl(
           'issue',
           normalizePrimaryKey(['id']),
           {id: b},
+          h64,
         );
         if (a === b) {
           expect(keyA).toBe(keyB);
@@ -126,7 +132,8 @@ test('no clashes - single pk', () => {
   );
 });
 
-test('no clashes - multiple pk', () => {
+test('no clashes - multiple pk', async () => {
+  const {h64} = await xxHashAPI;
   const primaryKey = normalizePrimaryKey(['id', 'name']);
   fc.assert(
     fc.property(
@@ -137,14 +144,24 @@ test('no clashes - multiple pk', () => {
         fc.oneof(fc.string(), fc.double(), fc.boolean()),
       ),
       ([a1, a2, b1, b2]) => {
-        const keyA = toPrimaryKeyStringImpl('issue', primaryKey, {
-          id: a1,
-          name: a2,
-        });
-        const keyB = toPrimaryKeyStringImpl('issue', primaryKey, {
-          id: b1,
-          name: b2,
-        });
+        const keyA = toPrimaryKeyStringImpl(
+          'issue',
+          primaryKey,
+          {
+            id: a1,
+            name: a2,
+          },
+          h64,
+        );
+        const keyB = toPrimaryKeyStringImpl(
+          'issue',
+          primaryKey,
+          {
+            id: b1,
+            name: b2,
+          },
+          h64,
+        );
         if (a1 === b1 && a2 === b2) {
           expect(keyA).toBe(keyB);
         } else {

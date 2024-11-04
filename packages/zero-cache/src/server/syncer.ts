@@ -3,7 +3,6 @@ import path from 'node:path';
 import {pid} from 'node:process';
 import {must} from '../../../shared/src/must.js';
 import {randInt} from '../../../shared/src/rand.js';
-import {xxHashReady} from '../../../shared/src/xxhash.js';
 import {getZeroConfig} from '../config/zero-config.js';
 import {MutagenService} from '../services/mutagen/mutagen.js';
 import type {ReplicaState} from '../services/replicator/replicator.js';
@@ -25,7 +24,6 @@ import {createLogContext} from './logging.js';
 
 export default async function runWorker(parent: Worker): Promise<void> {
   const config = await getZeroConfig();
-  await xxHashReady();
 
   // Consider parameterizing these (in main) based on total number of workers.
   const MAX_CVR_CONNECTIONS = 5;

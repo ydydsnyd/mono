@@ -1,6 +1,7 @@
+import type {Expand} from '../../../shared/src/expand.js';
 import {promiseVoid} from '../../../shared/src/resolved-promises.js';
 import type {MaybePromise} from '../../../shared/src/types.js';
-import type {Expand} from '../../../shared/src/expand.js';
+import {xxHashAPI, type H64} from '../../../shared/src/xxhash.js';
 import type {Row} from '../../../zero-protocol/src/data.js';
 import {
   type PrimaryKey,
@@ -16,12 +17,12 @@ import {
   type SetOp,
   type UpdateOp,
 } from '../../../zero-protocol/src/push.js';
+import type {Schema} from '../../../zero-schema/src/mod.js';
 import type {NormalizedPrimaryKey} from '../../../zero-schema/src/normalize-table-schema.js';
 import type {TableSchemaToRow} from '../../../zero-schema/src/table-schema.js';
 import {toPrimaryKeyString} from './keys.js';
 import type {NormalizedSchema} from './normalized-schema.js';
 import type {MutatorDefs, WriteTransaction} from './replicache-types.js';
-import type {Schema} from '../../../zero-schema/src/mod.js';
 
 /**
  * If a field is |undefined, add the ? marker to also make the field optional.
@@ -259,19 +260,20 @@ export function makeCRUDMutator(schema: NormalizedSchema): CRUDMutator {
     tx: WriteTransaction,
     crudArg: CRUDMutationArg,
   ): Promise<void> {
+    const {h64} = await xxHashAPI;
     for (const op of crudArg.ops) {
       switch (op.op) {
         case 'create':
-          await createImpl(tx, op, schema);
+          await createImpl(tx, op, schema, h64);
           break;
         case 'set':
-          await setImpl(tx, op, schema);
+          await setImpl(tx, op, schema, h64);
           break;
         case 'update':
-          await updateImpl(tx, op, schema);
+          await updateImpl(tx, op, schema, h64);
           break;
         case 'delete':
-          await deleteImpl(tx, op, schema);
+          await deleteImpl(tx, op, schema, h64);
           break;
       }
     }
@@ -282,11 +284,13 @@ async function createImpl(
   tx: WriteTransaction,
   arg: CreateOp,
   schema: NormalizedSchema,
+  h64: H64,
 ): Promise<void> {
   const key = toPrimaryKeyString(
     arg.tableName,
     schema.tables[arg.tableName].primaryKey,
     arg.value,
+    h64,
   );
   if (!(await tx.has(key))) {
     await tx.set(key, arg.value);
@@ -297,11 +301,13 @@ async function setImpl(
   tx: WriteTransaction,
   arg: CreateOp | SetOp,
   schema: NormalizedSchema,
+  h64: H64,
 ): Promise<void> {
   const key = toPrimaryKeyString(
     arg.tableName,
     schema.tables[arg.tableName].primaryKey,
     arg.value,
+    h64,
   );
   await tx.set(key, arg.value);
 }
@@ -310,11 +316,13 @@ async function updateImpl(
   tx: WriteTransaction,
   arg: UpdateOp,
   schema: NormalizedSchema,
+  h64: H64,
 ): Promise<void> {
   const key = toPrimaryKeyString(
     arg.tableName,
     schema.tables[arg.tableName].primaryKey,
     arg.value,
+    h64,
   );
   const prev = await tx.get(key);
   if (prev === undefined) {
@@ -329,11 +337,13 @@ async function deleteImpl(
   tx: WriteTransaction,
   arg: DeleteOp,
   schema: NormalizedSchema,
+  h64: H64,
 ): Promise<void> {
   const key = toPrimaryKeyString(
     arg.tableName,
     schema.tables[arg.tableName].primaryKey,
     arg.value,
+    h64,
   );
   await tx.del(key);
 }

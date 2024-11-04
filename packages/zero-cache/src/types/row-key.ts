@@ -1,4 +1,5 @@
 import {h64WithReverse} from '../../../shared/src/h64-with-reverse.js';
+import type {H64} from '../../../shared/src/xxhash.js';
 import {stringify, type JSONValue} from './bigint-json.js';
 
 export type ColumnType = {readonly typeOid: number};
@@ -62,14 +63,14 @@ const rowIDHashes = new WeakMap<RowID, string>();
  *
  * The hash is encoded in `base36`, with the maximum 128-bit value being 25 characters long.
  */
-export function rowIDHash(id: RowID): string {
+export function rowIDHash(id: RowID, h64: H64): string {
   let hash = rowIDHashes.get(id);
   if (hash) {
     return hash;
   }
 
   const str = stringify([id.schema, id.table, ...tuples(id.rowKey)]);
-  hash = h64WithReverse(str);
+  hash = h64WithReverse(str, h64);
   rowIDHashes.set(id, hash);
   return hash;
 }

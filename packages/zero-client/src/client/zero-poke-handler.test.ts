@@ -9,6 +9,7 @@ import {
   test,
   vi,
 } from 'vitest';
+import {xxHashAPI} from '../../../shared/src/xxhash.js';
 import type {AST} from '../../../zero-protocol/src/ast.js';
 import {normalizeSchema} from './normalized-schema.js';
 import {PokeHandler, mergePokes} from './zero-poke-handler.js';
@@ -1206,12 +1207,14 @@ test('handlePoke returns the last mutation id change for this client from pokePa
   expect(lastMutationIDChangeForSelf2).to.be.undefined;
 });
 
-test('mergePokes with empty array returns undefined', () => {
-  const merged = mergePokes([], schema);
+test('mergePokes with empty array returns undefined', async () => {
+  const {h64} = await xxHashAPI;
+  const merged = mergePokes([], schema, h64);
   expect(merged).to.be.undefined;
 });
 
-test('mergePokes with all optionals defined', () => {
+test('mergePokes with all optionals defined', async () => {
+  const {h64} = await xxHashAPI;
   const result = mergePokes(
     [
       {
@@ -1336,6 +1339,7 @@ test('mergePokes with all optionals defined', () => {
       },
     ],
     schema,
+    h64,
   );
 
   expect(result).toEqual({
@@ -1433,7 +1437,8 @@ test('mergePokes with all optionals defined', () => {
   });
 });
 
-test('mergePokes sparse', () => {
+test('mergePokes sparse', async () => {
+  const {h64} = await xxHashAPI;
   const result = mergePokes(
     [
       {
@@ -1520,6 +1525,7 @@ test('mergePokes sparse', () => {
       },
     ],
     schema,
+    h64,
   );
   expect(result).toEqual({
     baseCookie: '3',
@@ -1584,7 +1590,8 @@ test('mergePokes sparse', () => {
   });
 });
 
-test('mergePokes throws error on cookie gaps', () => {
+test('mergePokes throws error on cookie gaps', async () => {
+  const {h64} = await xxHashAPI;
   expect(() => {
     mergePokes(
       [
@@ -1618,6 +1625,7 @@ test('mergePokes throws error on cookie gaps', () => {
         },
       ],
       schema,
+      h64,
     );
   }).to.throw();
 });
