@@ -1,4 +1,4 @@
-import { createSchema, createTableSchema, SchemaToRow } from '@rocicorp/zero';
+import { createSchema, createTableSchema, TableSchemaToRow } from '@rocicorp/zero/schema';
 
 const issueSchema = createTableSchema({
 	tableName: 'issue',
@@ -40,4 +40,4 @@ export const schema = createSchema({
 });
 
 export type Schema = typeof schema;
-export type Comment = SchemaToRow<typeof commentSchema>;
+export type Comment = TableSchemaToRow<typeof commentSchema>;
