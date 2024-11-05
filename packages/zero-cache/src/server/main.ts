@@ -25,7 +25,7 @@ import {createLogContext} from './logging.js';
 
 const startMs = Date.now();
 const config = await getZeroConfig();
-const lc = createLogContext({...config.log}, {worker: 'dispatcher'});
+const lc = createLogContext(config.log, {worker: 'dispatcher'});
 
 const terminator = new Terminator(lc);
 const ready: Promise<void>[] = [];
