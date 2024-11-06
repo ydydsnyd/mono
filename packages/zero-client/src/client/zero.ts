@@ -59,15 +59,16 @@ import type {
   PullResponseBody,
   PullResponseMessage,
 } from '../../../zero-protocol/src/pull.js';
+import type {Schema} from '../../../zero-schema/src/mod.js';
+import type {TableSchema} from '../../../zero-schema/src/table-schema.js';
 import {newQuery} from '../../../zql/src/query/query-impl.js';
 import type {Query} from '../../../zql/src/query/query.js';
-import type {TableSchema} from '../../../zero-schema/src/table-schema.js';
 import {nanoid} from '../util/nanoid.js';
 import {send} from '../util/socket.js';
 import {ZeroContext} from './context.js';
 import {
-  type DBMutator,
   type BatchMutator,
+  type DBMutator,
   type WithCRUD,
   makeCRUDMutate,
   makeCRUDMutator,
@@ -85,14 +86,13 @@ import {
   getLastConnectErrorValue,
 } from './metrics.js';
 import {type NormalizedSchema, normalizeSchema} from './normalized-schema.js';
-import type {ZeroOptions, ZeroAdvancedOptions} from './options.js';
+import type {ZeroAdvancedOptions, ZeroOptions} from './options.js';
 import {QueryManager} from './query-manager.js';
 import {reloadWithReason, reportReloadReason} from './reload-error-handler.js';
 import {ServerError, isAuthError, isServerError} from './server-error.js';
 import {getServer} from './server-option.js';
 import {version} from './version.js';
 import {PokeHandler} from './zero-poke-handler.js';
-import type {Schema} from '../../../zero-schema/src/mod.js';
 
 export type NoRelations = Record<string, never>;
 
@@ -1644,7 +1644,7 @@ export async function createSocket(
 ): Promise<[WebSocket, Map<string, QueriesPatchOp> | undefined]> {
   const url = new URL(socketOrigin);
   // Keep this in sync with the server.
-  url.pathname = `/api/sync/v${REFLECT_VERSION}/connect`;
+  url.pathname = `/zero/sync/v${REFLECT_VERSION}/connect`;
   const {searchParams} = url;
   searchParams.set('clientID', clientID);
   searchParams.set('clientGroupID', clientGroupID);

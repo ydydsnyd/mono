@@ -25,6 +25,7 @@ import {
   pushMessageSchema,
 } from '../../../zero-protocol/src/push.js';
 import type {NullableVersion} from '../../../zero-protocol/src/version.js';
+import type {Schema} from '../../../zero-schema/src/mod.js';
 import type {WSString} from './http-string.js';
 import type {ZeroOptions} from './options.js';
 import type {QueryManager} from './query-manager.js';
@@ -48,7 +49,6 @@ import {
   RUN_LOOP_INTERVAL_MS,
   type UpdateNeededReason,
 } from './zero.js';
-import type {Schema} from '../../../zero-schema/src/mod.js';
 
 let realSetTimeout: typeof setTimeout;
 let clock: sinon.SinonFakeTimers;
@@ -364,7 +364,7 @@ suite('createSocket', () => {
     0,
     false,
     0,
-    'ws://example.com/api/sync/v1/connect?clientID=clientID&clientGroupID=testClientGroupID&schemaVersion=3&userID=userID&baseCookie=&ts=0&lmid=0&wsid=wsidx',
+    'ws://example.com/zero/sync/v1/connect?clientID=clientID&clientGroupID=testClientGroupID&schemaVersion=3&userID=userID&baseCookie=&ts=0&lmid=0&wsid=wsidx',
   );
 
   t(
@@ -377,7 +377,7 @@ suite('createSocket', () => {
     0,
     false,
     0,
-    'ws://example.com/api/sync/v1/connect?clientID=clientID&clientGroupID=testClientGroupID&schemaVersion=3&userID=userID&baseCookie=1234&ts=0&lmid=0&wsid=wsidx',
+    'ws://example.com/zero/sync/v1/connect?clientID=clientID&clientGroupID=testClientGroupID&schemaVersion=3&userID=userID&baseCookie=1234&ts=0&lmid=0&wsid=wsidx',
   );
 
   t(
@@ -390,7 +390,7 @@ suite('createSocket', () => {
     0,
     false,
     0,
-    'ws://example.com/api/sync/v1/connect?clientID=clientID&clientGroupID=testClientGroupID&schemaVersion=3&userID=userID&baseCookie=1234&ts=0&lmid=0&wsid=wsidx',
+    'ws://example.com/zero/sync/v1/connect?clientID=clientID&clientGroupID=testClientGroupID&schemaVersion=3&userID=userID&baseCookie=1234&ts=0&lmid=0&wsid=wsidx',
   );
 
   t(
@@ -403,7 +403,7 @@ suite('createSocket', () => {
     123,
     false,
     0,
-    'ws://example.com/api/sync/v1/connect?clientID=clientID&clientGroupID=testClientGroupID&schemaVersion=3&userID=userID&baseCookie=&ts=0&lmid=123&wsid=wsidx',
+    'ws://example.com/zero/sync/v1/connect?clientID=clientID&clientGroupID=testClientGroupID&schemaVersion=3&userID=userID&baseCookie=&ts=0&lmid=123&wsid=wsidx',
   );
 
   t(
@@ -416,7 +416,7 @@ suite('createSocket', () => {
     123,
     false,
     0,
-    'ws://example.com/api/sync/v1/connect?clientID=clientID&clientGroupID=testClientGroupID&schemaVersion=3&userID=userID&baseCookie=&ts=0&lmid=123&wsid=wsidx',
+    'ws://example.com/zero/sync/v1/connect?clientID=clientID&clientGroupID=testClientGroupID&schemaVersion=3&userID=userID&baseCookie=&ts=0&lmid=123&wsid=wsidx',
   );
 
   t(
@@ -429,7 +429,7 @@ suite('createSocket', () => {
     0,
     false,
     0,
-    'ws://example.com/api/sync/v1/connect?clientID=clientID&clientGroupID=testClientGroupID&schemaVersion=3&userID=userID&baseCookie=&ts=0&lmid=0&wsid=wsidx',
+    'ws://example.com/zero/sync/v1/connect?clientID=clientID&clientGroupID=testClientGroupID&schemaVersion=3&userID=userID&baseCookie=&ts=0&lmid=0&wsid=wsidx',
   );
 
   t(
@@ -442,7 +442,7 @@ suite('createSocket', () => {
     0,
     false,
     0,
-    'ws://example.com/api/sync/v1/connect?clientID=clientID&clientGroupID=testClientGroupID&schemaVersion=3&userID=userID&jurisdiction=eu&baseCookie=&ts=0&lmid=0&wsid=wsidx',
+    'ws://example.com/zero/sync/v1/connect?clientID=clientID&clientGroupID=testClientGroupID&schemaVersion=3&userID=userID&jurisdiction=eu&baseCookie=&ts=0&lmid=0&wsid=wsidx',
   );
 
   t(
@@ -455,7 +455,7 @@ suite('createSocket', () => {
     0,
     true,
     0,
-    'ws://example.com/api/sync/v1/connect?clientID=clientID&clientGroupID=testClientGroupID&schemaVersion=3&userID=userID&jurisdiction=eu&baseCookie=&ts=0&lmid=0&wsid=wsidx&debugPerf=true',
+    'ws://example.com/zero/sync/v1/connect?clientID=clientID&clientGroupID=testClientGroupID&schemaVersion=3&userID=userID&jurisdiction=eu&baseCookie=&ts=0&lmid=0&wsid=wsidx&debugPerf=true',
   );
 
   t(
@@ -468,7 +468,7 @@ suite('createSocket', () => {
     0,
     false,
     456,
-    'ws://example.com/api/sync/v1/connect?clientID=clientID&clientGroupID=testClientGroupID&schemaVersion=3&userID=userID&baseCookie=&ts=456&lmid=0&wsid=wsidx',
+    'ws://example.com/zero/sync/v1/connect?clientID=clientID&clientGroupID=testClientGroupID&schemaVersion=3&userID=userID&baseCookie=&ts=456&lmid=0&wsid=wsidx',
   );
 });
 
