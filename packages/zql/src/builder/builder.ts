@@ -5,6 +5,8 @@ import type {
   AST,
   Condition,
   Conjunction,
+  CorrelatedSubQuery,
+  CorrelatedSubQueryCondition,
   Disjunction,
   LiteralValue,
   Ordering,
@@ -14,6 +16,7 @@ import type {
 } from '../../../zero-protocol/src/ast.js';
 import type {Row} from '../../../zero-protocol/src/data.js';
 import type {PrimaryKey} from '../../../zero-protocol/src/primary-key.js';
+import {Exists} from '../ivm/exists.js';
 import {FanIn} from '../ivm/fan-in.js';
 import {FanOut} from '../ivm/fan-out.js';
 import {Filter} from '../ivm/filter.js';
@@ -104,15 +107,25 @@ export function bindStaticParameters(
   };
 
   function bindCondition(condition: Condition): Condition {
-    return condition.type === 'simple'
-      ? {
-          ...condition,
-          value: bindValue(condition.value),
-        }
-      : {
-          ...condition,
-          conditions: condition.conditions.map(bindCondition),
-        };
+    if (condition.type === 'simple') {
+      return {
+        ...condition,
+        value: bindValue(condition.value),
+      };
+    }
+    if (condition.type === 'subquery') {
+      return {
+        ...condition,
+        related: {
+          ...condition.related,
+          subquery: visit(condition.related.subquery),
+        },
+      };
+    }
+    return {
+      ...condition,
+      conditions: condition.conditions.map(bindCondition),
+    };
   }
 
   const bindValue = (value: ValuePosition): LiteralValue => {
@@ -157,8 +170,20 @@ function buildPipelineInternal(
     end = new Skip(end, ast.start);
   }
 
+  const correlatedSubQueryConditions = gatherCorrelatedSubQueryConditions(
+    ast.where,
+  );
+
+  for (const csqc of correlatedSubQueryConditions) {
+    let csq = csqc.related;
+    if (csqc.condition.type === 'exists') {
+      csq = {...csq, subquery: {...csq.subquery, limit: EXISTS_LIMIT}};
+    }
+    end = applyCorrelatedSubQuery(csq, delegate, staticQueryParameters, end);
+  }
+
   if (ast.where) {
-    end = applyWhere(end, ast.where, appliedFilters);
+    end = applyWhere(end, ast.where, appliedFilters, delegate);
   }
 
   if (ast.limit) {
@@ -167,25 +192,35 @@ function buildPipelineInternal(
 
   if (ast.related) {
     for (const sq of ast.related) {
-      assert(sq.subquery.alias, 'Subquery must have an alias');
-      const child = buildPipelineInternal(
-        sq.subquery,
-        delegate,
-        staticQueryParameters,
-        sq.correlation.childField,
-      );
-      end = new Join({
-        parent: end,
-        child,
-        storage: delegate.createStorage(),
-        parentKey: sq.correlation.parentField,
-        childKey: sq.correlation.childField,
-        relationshipName: sq.subquery.alias,
-        hidden: sq.hidden ?? false,
-      });
+      end = applyCorrelatedSubQuery(sq, delegate, staticQueryParameters, end);
     }
   }
 
+  return end;
+}
+
+function applyCorrelatedSubQuery(
+  sq: CorrelatedSubQuery,
+  delegate: BuilderDelegate,
+  staticQueryParameters: StaticQueryParameters | undefined,
+  end: Input,
+) {
+  assert(sq.subquery.alias, 'Subquery must have an alias');
+  const child = buildPipelineInternal(
+    sq.subquery,
+    delegate,
+    staticQueryParameters,
+    sq.correlation.childField,
+  );
+  end = new Join({
+    parent: end,
+    child,
+    storage: delegate.createStorage(),
+    parentKey: sq.correlation.parentField,
+    childKey: sq.correlation.childField,
+    relationshipName: sq.subquery.alias,
+    hidden: sq.hidden ?? false,
+  });
   return end;
 }
 
@@ -197,12 +232,15 @@ function applyWhere(
   // Or we do the union of queries approach and retain this `appliedFilters` and `sourceConnect` behavior.
   // Downside of that being unbounded memory usage.
   appliedFilters: boolean,
+  delegate: BuilderDelegate,
 ): Input {
   switch (condition.type) {
     case 'and':
-      return applyAnd(input, condition, appliedFilters);
+      return applyAnd(input, condition, appliedFilters, delegate);
     case 'or':
-      return applyOr(input, condition, appliedFilters);
+      return applyOr(input, condition, appliedFilters, delegate);
+    case 'subquery':
+      return applyCorrelatedSubqueryCondition(input, condition, delegate);
     default:
       return applySimpleCondition(input, condition, appliedFilters);
   }
@@ -212,9 +250,10 @@ function applyAnd(
   input: Input,
   condition: Conjunction,
   appliedFilters: boolean,
+  delegate: BuilderDelegate,
 ) {
   for (const subCondition of condition.conditions) {
-    input = applyWhere(input, subCondition, appliedFilters);
+    input = applyWhere(input, subCondition, appliedFilters, delegate);
   }
   return input;
 }
@@ -223,11 +262,12 @@ function applyOr(
   input: Input,
   condition: Disjunction,
   appliedFilters: boolean,
+  delegate: BuilderDelegate,
 ): Input {
   const fanOut = new FanOut(input);
   const branches: Input[] = [];
   for (const subCondition of condition.conditions) {
-    branches.push(applyWhere(fanOut, subCondition, appliedFilters));
+    branches.push(applyWhere(fanOut, subCondition, appliedFilters, delegate));
   }
   assert(branches.length > 0, 'Or condition must have at least one branch');
   return new FanIn(fanOut, branches as [Input, ...Input[]]);
@@ -264,3 +304,37 @@ export function assertOrderingIncludesPK(
     );
   }
 }
+function applyCorrelatedSubqueryCondition(
+  input: Input,
+  condition: CorrelatedSubQueryCondition,
+  delegate: BuilderDelegate,
+): Input {
+  assert(condition.condition.type === 'exists');
+  return new Exists(
+    input,
+    delegate.createStorage(),
+    must(condition.related.subquery.alias),
+  );
+}
+
+function gatherCorrelatedSubQueryConditions(condition: Condition | undefined) {
+  const correlatedSubQueryConditions: CorrelatedSubQueryCondition[] = [];
+  const gather = (condition: Condition) => {
+    if (condition.type === 'subquery') {
+      correlatedSubQueryConditions.push(condition);
+      return;
+    }
+    if (condition.type === 'and' || condition.type === 'or') {
+      for (const c of condition.conditions) {
+        gather(c);
+      }
+      return;
+    }
+  };
+  if (condition) {
+    gather(condition);
+  }
+  return correlatedSubQueryConditions;
+}
+
+const EXISTS_LIMIT = 5;

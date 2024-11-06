@@ -292,6 +292,7 @@ describe('kitchen sink query', () => {
     const issueQuery = newQuery(queryDelegate, issueSchema)
       .where('ownerId', 'IN', ['001', '002', '003'])
       .where('closed', false)
+      .whereExists('comments', q => q.whereExists('revisions'))
       .related('owner')
       .related('comments', q =>
         q
@@ -417,28 +418,51 @@ describe('kitchen sink query', () => {
               type: 'simple',
               value: false,
             },
+            {
+              condition: {
+                type: 'exists',
+              },
+              related: {
+                correlation: {
+                  childField: 'issueId',
+                  op: '=',
+                  parentField: 'id',
+                },
+                hidden: true,
+                subquery: {
+                  alias: '_exists_comments',
+                  orderBy: [['id', 'asc']],
+                  table: 'comment',
+                  where: {
+                    condition: {
+                      type: 'exists',
+                    },
+                    related: {
+                      correlation: {
+                        childField: 'commentId',
+                        op: '=',
+                        parentField: 'id',
+                      },
+                      hidden: true,
+                      subquery: {
+                        alias: '_exists_revisions',
+                        orderBy: [['id', 'asc']],
+                        table: 'revision',
+                      },
+                    },
+                    type: 'subquery',
+                  },
+                },
+              },
+              type: 'subquery',
+            },
           ],
         },
       },
     ]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let rows: unknown[] = [];
-    view.addListener(data => {
-      rows = [...data].map(row => ({
-        ...row,
-        owner: [...row.owner],
-        comments: [...row.comments].map(comment => ({
-          ...comment,
-          revisions: [...comment.revisions],
-        })),
-        labels: [...row.labels].map(label => ({
-          ...label,
-        })),
-      }));
-    });
-    expect(rows).toEqual([
-      {
+    expect(view.data).toEqual([
+      /*{
         closed: false,
         comments: [
           {
@@ -478,7 +502,7 @@ describe('kitchen sink query', () => {
         ],
         ownerId: '001',
         title: 'Issue 2',
-      },
+      },*/
       {
         closed: false,
         comments: [
@@ -530,21 +554,21 @@ describe('kitchen sink query', () => {
         ownerId: '001',
         title: 'Issue 3',
       },
-      {
-        closed: false,
-        comments: [],
-        description: 'Description 4',
-        id: '104',
-        labels: [],
-        owner: [
-          {
-            id: '002',
-            name: 'Bob',
-          },
-        ],
-        ownerId: '002',
-        title: 'Issue 4',
-      },
+      // {
+      //   closed: false,
+      //   comments: [],
+      //   description: 'Description 4',
+      //   id: '104',
+      //   labels: [],
+      //   owner: [
+      //     {
+      //       id: '002',
+      //       name: 'Bob',
+      //     },
+      //   ],
+      //   ownerId: '002',
+      //   title: 'Issue 4',
+      // },
       {
         closed: false,
         comments: [
@@ -584,21 +608,21 @@ describe('kitchen sink query', () => {
         ownerId: '002',
         title: 'Issue 5',
       },
-      {
-        closed: false,
-        comments: [],
-        description: 'Description 9',
-        id: '109',
-        labels: [],
-        owner: [
-          {
-            id: '003',
-            name: 'Charlie',
-          },
-        ],
-        ownerId: '003',
-        title: 'Issue 9',
-      },
+      // {
+      //   closed: false,
+      //   comments: [],
+      //   description: 'Description 9',
+      //   id: '109',
+      //   labels: [],
+      //   owner: [
+      //     {
+      //       id: '003',
+      //       name: 'Charlie',
+      //     },
+      //   ],
+      //   ownerId: '003',
+      //   title: 'Issue 9',
+      // },
     ]);
   });
 });

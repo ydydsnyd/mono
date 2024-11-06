@@ -69,10 +69,25 @@ export const simpleConditionSchema = v.object({
   ),
 });
 
+export const existsConditionSchema = v.readonlyObject({
+  type: v.literal('exists'),
+});
+
+export const correlatedSubqueryConditionConditionSchema = v.union(
+  existsConditionSchema,
+);
+
+export const correlatedSubqueryConditionSchema = v.readonlyObject({
+  type: v.literal('subquery'),
+  related: v.lazy(() => correlatedSubquerySchema),
+  condition: correlatedSubqueryConditionConditionSchema,
+});
+
 export const conditionSchema = v.union(
   simpleConditionSchema,
   v.lazy(() => conjunctionSchema),
   v.lazy(() => disjunctionSchema),
+  correlatedSubqueryConditionSchema,
 );
 
 const conjunctionSchema: v.Type<Conjunction> = v.readonlyObject({
@@ -200,7 +215,11 @@ export type LiteralValue =
  * ivm1 supports Conjunctions and Disjunctions.
  * We'll support them in the future.
  */
-export type Condition = SimpleCondition | Conjunction | Disjunction;
+export type Condition =
+  | SimpleCondition
+  | Conjunction
+  | Disjunction
+  | CorrelatedSubQueryCondition;
 
 export type SimpleCondition = {
   type: 'simple';
@@ -228,6 +247,16 @@ export type Conjunction = {
 export type Disjunction = {
   type: 'or';
   conditions: readonly Condition[];
+};
+
+export type CorrelatedSubQueryCondition = {
+  type: 'subquery';
+  related: CorrelatedSubQuery;
+  condition: CorrelatedSubQueryConditionCondition;
+};
+
+export type CorrelatedSubQueryConditionCondition = {
+  type: 'exists';
 };
 
 /**
@@ -297,7 +326,7 @@ export function normalizeAST(ast: AST): Required<AST> {
 }
 
 function sortedWhere(where: Condition): Condition {
-  if (where.type === 'simple') {
+  if (where.type === 'simple' || where.type === 'subquery') {
     return where;
   }
   return {
@@ -329,6 +358,19 @@ function cmpCondition(a: Condition, b: Condition): number {
 
   if (b.type === 'simple') {
     return 1; // Order SimpleConditions first to simplify logic for invalidation filtering.
+  }
+
+  if (a.type === 'subquery') {
+    if (b.type !== 'subquery') {
+      return -1; // Order subquery before conjuctions/disjuctions
+    }
+    return (
+      cmpRelated(a.related, b.related) ||
+      compareUTF8MaybeNull(a.condition.type, b.condition.type)
+    );
+  }
+  if (b.type === 'subquery') {
+    return -1; // Order subquery before conjuctions/disjuctions
   }
 
   const val = compareUTF8MaybeNull(a.type, b.type);
@@ -368,7 +410,7 @@ function flattened<T extends Condition>(cond: T | undefined): T | undefined {
   if (cond === undefined) {
     return undefined;
   }
-  if (cond.type === 'simple') {
+  if (cond.type === 'simple' || cond.type === 'subquery') {
     return cond;
   }
   const conditions = defined(

@@ -7,6 +7,7 @@ import type {AdvancedQuery} from './query-internal.js';
 import type {DefaultQueryResultRow} from './query.js';
 import {QueryDelegateImpl} from './test/query-delegate.js';
 import {and, cmp, or} from './expression.js';
+import type {Format} from '../ivm/view.js';
 
 /**
  * Some basic manual tests to get us started.
@@ -520,34 +521,39 @@ describe('joins and filters', () => {
     const q1 = newQuery(queryDelegate, issueSchema).one();
     expect((q1 as QueryImpl<never, never>).format).toEqual({
       singular: true,
+      hidden: false,
       relationships: {},
-    });
+    } satisfies Format);
 
     const q2 = newQuery(queryDelegate, issueSchema)
       .one()
       .related('comments', q => q.one());
     expect((q2 as QueryImpl<never, never>).format).toEqual({
       singular: true,
+      hidden: false,
       relationships: {
         comments: {
           singular: true,
+          hidden: false,
           relationships: {},
         },
       },
-    });
+    } satisfies Format);
 
     const q3 = newQuery(queryDelegate, issueSchema).related('comments', q =>
       q.one(),
     );
     expect((q3 as unknown as QueryImpl<never, never>).format).toEqual({
       singular: false,
+      hidden: false,
       relationships: {
         comments: {
           singular: true,
+          hidden: false,
           relationships: {},
         },
       },
-    });
+    } satisfies Format);
 
     const q4 = newQuery(queryDelegate, issueSchema)
       .related('comments', q =>
@@ -559,13 +565,15 @@ describe('joins and filters', () => {
       .orderBy('title', 'desc');
     expect((q4 as QueryImpl<never, never>).format).toEqual({
       singular: true,
+      hidden: false,
       relationships: {
         comments: {
           singular: true,
+          hidden: false,
           relationships: {},
         },
       },
-    });
+    } satisfies Format);
   });
 });
 

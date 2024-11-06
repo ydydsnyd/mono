@@ -168,6 +168,33 @@ export interface Query<
     ) => TSub,
   ): Query<TSchema, AddSubselect<TSub, TReturn, TRelationship & string>>;
 
+  whereExists<TRelationship extends keyof TSchema['relationships']>(
+    relationship: TRelationship,
+  ): Query<
+    TSchema,
+    AddSubselect<
+      Query<
+        PullSchemaForRelationship<TSchema, TRelationship>,
+        DefaultQueryResultRow<PullSchemaForRelationship<TSchema, TRelationship>>
+      >,
+      TReturn,
+      TRelationship & string
+    >
+  >;
+  whereExists<
+    TRelationship extends keyof TSchema['relationships'],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    TSub extends Query<any, any>,
+  >(
+    relationship: TRelationship,
+    cb: (
+      query: Query<
+        PullSchemaForRelationship<TSchema, TRelationship>,
+        DefaultQueryResultRow<PullSchemaForRelationship<TSchema, TRelationship>>
+      >,
+    ) => TSub,
+  ): Query<TSchema, AddSubselect<TSub, TReturn, TRelationship & string>>;
+
   where<
     TSelector extends NoJsonSelector<TSchema>,
     TOperator extends Operator,

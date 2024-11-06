@@ -89,7 +89,11 @@ export abstract class AbstractQuery<
     format?: Format | undefined,
   ) {
     this.#ast = ast;
-    this.#format = format ?? {singular: false, relationships: {}};
+    this.#format = format ?? {
+      singular: false,
+      hidden: false,
+      relationships: {},
+    };
     this.#schema = schema;
   }
 
@@ -253,6 +257,152 @@ export abstract class AbstractQuery<
     throw new Error(`Invalid relationship ${relationship as string}`);
   }
 
+  whereExists<TRelationship extends keyof TSchema['relationships']>(
+    relationship: TRelationship,
+  ): Query<
+    TSchema,
+    AddSubselect<
+      Query<
+        PullSchemaForRelationship<TSchema, TRelationship>,
+        DefaultQueryResultRow<PullSchemaForRelationship<TSchema, TRelationship>>
+      >,
+      TReturn,
+      TRelationship & string
+    >
+  >;
+  whereExists<
+    TRelationship extends keyof TSchema['relationships'],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    TSub extends Query<any, any>,
+  >(
+    relationship: TRelationship,
+    cb: (
+      query: Query<
+        PullSchemaForRelationship<TSchema, TRelationship>,
+        DefaultQueryResultRow<PullSchemaForRelationship<TSchema, TRelationship>>
+      >,
+    ) => TSub = q => q as any,
+  ) {
+    const related = this.#schema.relationships[relationship as string];
+    assert(related, 'Invalid relationship');
+    const related1 = related;
+
+    // TODO what if they have multiple exists on same relationship?
+    // this is also broken for related
+    const alias = '_exists_' + (relationship as string);
+    if (isFieldRelationship(related1)) {
+      const destSchema = related1.dest.schema;
+      const sq = cb(
+        this._newQuery(
+          destSchema,
+          {
+            table: destSchema.tableName,
+            alias,
+          },
+          {
+            singular: false,
+            hidden: true,
+            relationships: {},
+          },
+        ),
+      ) as unknown as QueryImpl<any, any>;
+
+      let cond: Condition = {
+        type: 'subquery',
+        related: {
+          correlation: {
+            parentField: related1.source,
+            childField: related1.dest.field,
+            op: '=',
+          },
+          hidden: true,
+          subquery: addPrimaryKeysToAst(destSchema, sq.#ast),
+        },
+        condition: {type: 'exists'},
+      };
+      const existingWhere = this.#ast.where;
+      if (existingWhere) {
+        cond = and(
+          existingWhere as GenericCondition<TSchema>,
+          // TODO
+          cond as unknown as GenericCondition<TSchema>,
+        ) as Condition;
+      }
+
+      return this._newQuery(
+        this.#schema,
+        {
+          ...this.#ast,
+          where: cond,
+        },
+        {
+          ...this.#format,
+          relationships: {
+            ...this.#format.relationships,
+            [alias]: sq.#format,
+          },
+        },
+      );
+    }
+
+    // TODO
+    // const related2 = related;
+    // if (isJunctionRelationship(related2)) {
+    //   const destSchema = related2.dest.schema;
+    //   const junctionSchema = related2.junction.schema;
+    //   const sq = cb(
+    //     this._newQuery(
+    //       destSchema,
+    //       {
+    //         table: destSchema.tableName,
+    //         alias: relationship as string,
+    //       },
+    //       undefined,
+    //     ),
+    //   ) as unknown as QueryImpl<any, any>;
+    //   return this._newQuery(
+    //     this.#schema,
+    //     {
+    //       ...this.#ast,
+    //       related: [
+    //         ...(this.#ast.related ?? []),
+    //         {
+    //           correlation: {
+    //             parentField: related2.source,
+    //             childField: related2.junction.sourceField,
+    //             op: '=',
+    //           },
+    //           subquery: {
+    //             table: junctionSchema.tableName,
+    //             alias: relationship as string,
+    //             orderBy: addPrimaryKeys(junctionSchema, undefined),
+    //             related: [
+    //               {
+    //                 correlation: {
+    //                   parentField: related2.junction.destField,
+    //                   childField: related2.dest.field,
+    //                   op: '=',
+    //                 },
+    //                 hidden: true,
+    //                 subquery: addPrimaryKeysToAst(destSchema, sq.#ast),
+    //               },
+    //             ],
+    //           },
+    //         },
+    //       ],
+    //     },
+    //     {
+    //       ...this.#format,
+    //       relationships: {
+    //         ...this.#format.relationships,
+    //         [relationship as string]: sq.#format,
+    //       },
+    //     },
+    //   );
+    // }
+    throw new Error(`Invalid relationship ${relationship as string}`);
+  }
+
   where(
     field: string | GenericCondition<TSchema>,
     opOrValue?:
@@ -274,8 +424,12 @@ export abstract class AbstractQuery<
     }
 
     const existingWhere = this.#ast.where;
+    // TODO
     if (existingWhere) {
-      cond = and(existingWhere, cond);
+      cond = and(
+        existingWhere as GenericCondition<TSchema>,
+        cond as GenericCondition<TSchema>,
+      ) as Condition;
     }
 
     return this._newQuery(

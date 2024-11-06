@@ -15,6 +15,10 @@ import type {TableSchema} from '../../../zero-schema/src/table-schema.js';
 export type GenericCondition<TSchema extends TableSchema> =
   | GenericConjunction<TSchema>
   | GenericDisjunction<TSchema>
+  // TODO
+  | {
+      type: 'subquery';
+    }
   | {
       type: 'simple';
       op: SimpleOperator;
@@ -107,6 +111,8 @@ export function and<TSchema extends TableSchema>(
     if (c.type === 'and') {
       return c.conditions;
     } else if (c.type === 'simple') {
+      return [c];
+    } else if (c.type === 'subquery') {
       return [c];
     }
     return [];

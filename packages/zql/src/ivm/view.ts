@@ -9,6 +9,7 @@ export type Entry = {[key: string]: Value | View};
 
 export type Format = {
   singular: boolean;
+  hidden: boolean;
   relationships: Record<string, Format>;
 };
 

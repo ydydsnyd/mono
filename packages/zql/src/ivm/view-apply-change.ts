@@ -19,6 +19,9 @@ export function applyChange(
   relationship: string,
   format: Format,
 ) {
+  if (format.hidden) {
+    return;
+  }
   if (schema.isHidden) {
     switch (change.type) {
       case 'add':
@@ -88,6 +91,9 @@ export function applyChange(
         // TODO: Is there a flag to make TypeScript complain that dictionary access might be undefined?
         const childSchema = must(schema.relationships[relationship]);
         const childFormat = must(childFormats[relationship]);
+        if (childFormat.hidden) {
+          continue;
+        }
         const newView = childFormat.singular ? undefined : ([] as EntryList);
         newEntry[relationship] = newView;
         for (const node of children) {
