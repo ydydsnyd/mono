@@ -238,17 +238,26 @@ export class Take implements Operator {
     }
 
     assert(this.#output, 'Output not set');
-    // When take below join is supported, this assert should be removed
-    // and a 'child' change should be pushed to output if its row
-    // is <= bound.
-    assert(change.type !== 'child', 'child changes are not supported');
+
+    const {compareRows} = this.getSchema();
+    if (change.type === 'child') {
+      // A 'child' change should be pushed to output if its row
+      // is <= bound.
+      const {takeState} = this.#getStateAndConstraint(change.row);
+      if (!takeState || !takeState.bound) {
+        return;
+      }
+      if (compareRows(change.row, takeState.bound) <= 0) {
+        this.#output.push(change);
+      }
+      return;
+    }
 
     const {takeState, takeStateKey, maxBound, constraint} =
       this.#getStateAndConstraint(change.node.row);
     if (!takeState) {
       return;
     }
-    const {compareRows} = this.getSchema();
 
     if (change.type === 'add') {
       if (takeState.size < this.#limit) {
