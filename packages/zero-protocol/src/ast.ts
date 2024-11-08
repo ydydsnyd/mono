@@ -70,11 +70,16 @@ export const simpleConditionSchema = v.object({
 });
 
 export const existsConditionSchema = v.readonlyObject({
-  type: v.literal('exists'),
+  type: v.literal('EXISTS'),
+});
+
+export const notExistsConditionSchema = v.readonlyObject({
+  type: v.literal('NOT EXISTS'),
 });
 
 export const correlatedSubqueryConditionConditionSchema = v.union(
   existsConditionSchema,
+  notExistsConditionSchema,
 );
 
 export const correlatedSubqueryConditionSchema = v.readonlyObject({
@@ -255,9 +260,13 @@ export type CorrelatedSubQueryCondition = {
   condition: CorrelatedSubQueryConditionCondition;
 };
 
-export type CorrelatedSubQueryConditionCondition = {
-  type: 'exists';
-};
+export type CorrelatedSubQueryConditionCondition =
+  | {
+      type: 'EXISTS';
+    }
+  | {
+      type: 'NOT EXISTS';
+    };
 
 /**
  * A parameter is a value that is not known at the time the query is written

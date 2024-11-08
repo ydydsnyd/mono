@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type {
+  CorrelatedSubQueryConditionCondition,
   SimpleOperator,
   ValuePosition,
 } from '../../../zero-protocol/src/ast.js';
@@ -15,9 +16,10 @@ import type {TableSchema} from '../../../zero-schema/src/table-schema.js';
 export type GenericCondition<TSchema extends TableSchema> =
   | GenericConjunction<TSchema>
   | GenericDisjunction<TSchema>
-  // TODO
   | {
       type: 'subquery';
+      // TODO...
+      condition: CorrelatedSubQueryConditionCondition;
     }
   | {
       type: 'simple';
@@ -71,6 +73,50 @@ export function cmp<
     | Parameter<TParamAnchor, TParamField, TParamTypeBound>,
 ): GenericCondition<TSchema>;
 export function cmp(
+  field: string,
+  opOrValue:
+    | Operator
+    | GetFieldTypeNoNullOrUndefined<any, any, any>
+    | Parameter<any, any, any>,
+  value?:
+    | GetFieldTypeNoNullOrUndefined<any, any, any>
+    | Parameter<any, any, any>,
+): GenericCondition<any> {
+  let op: Operator;
+  if (value === undefined) {
+    value = opOrValue;
+    op = '=';
+  } else {
+    op = opOrValue as Operator;
+  }
+
+  return {
+    type: 'simple',
+    field,
+    op,
+    value: value as ValuePosition,
+  };
+}
+
+export function exists<
+  TSchema extends TableSchema,
+  TSelector extends NoJsonSelector<TSchema>,
+  TOperator extends Operator,
+  TParamAnchor = never,
+  TParamField extends keyof TParamAnchor = never,
+  TParamTypeBound extends GetFieldTypeNoNullOrUndefined<
+    TSchema,
+    TSelector,
+    TOperator
+  > = never,
+>(
+  field: TSelector,
+  op: TOperator,
+  value:
+    | GetFieldTypeNoNullOrUndefined<TSchema, TSelector, TOperator>
+    | Parameter<TParamAnchor, TParamField, TParamTypeBound>,
+): GenericCondition<TSchema>;
+export function exists(
   field: string,
   opOrValue:
     | Operator
@@ -163,12 +209,17 @@ export function not<TSchema extends TableSchema>(
         type: 'and',
         conditions: expr.conditions.map(not),
       };
-    default:
+    case 'simple':
       return {
         type: 'simple',
         op: negateOperator(expr.op),
         field: expr.field,
         value: expr.value,
+      };
+    case 'subquery':
+      return {
+        ...expr,
+        condition: negateCorrelatedSubQueryConditionCondition(expr.condition),
       };
   }
 }
@@ -220,5 +271,16 @@ function negateOperator(op: SimpleOperator): SimpleOperator {
       return 'NOT ILIKE';
     case 'NOT ILIKE':
       return 'ILIKE';
+  }
+}
+
+function negateCorrelatedSubQueryConditionCondition(
+  op: CorrelatedSubQueryConditionCondition,
+): CorrelatedSubQueryConditionCondition {
+  switch (op.type) {
+    case 'EXISTS':
+      return {type: 'NOT EXISTS'};
+    case 'NOT EXISTS':
+      return {type: 'EXISTS'};
   }
 }

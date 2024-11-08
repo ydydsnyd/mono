@@ -283,6 +283,52 @@ export abstract class AbstractQuery<
       >,
     ) => TSub = q => q as any,
   ) {
+    return this.#whereExists(relationship, cb, 'EXISTS');
+  }
+
+  whereNotExists<TRelationship extends keyof TSchema['relationships']>(
+    relationship: TRelationship,
+  ): Query<
+    TSchema,
+    AddSubselect<
+      Query<
+        PullSchemaForRelationship<TSchema, TRelationship>,
+        DefaultQueryResultRow<PullSchemaForRelationship<TSchema, TRelationship>>
+      >,
+      TReturn,
+      TRelationship & string
+    >
+  >;
+  whereNotExists<
+    TRelationship extends keyof TSchema['relationships'],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    TSub extends Query<any, any>,
+  >(
+    relationship: TRelationship,
+    cb: (
+      query: Query<
+        PullSchemaForRelationship<TSchema, TRelationship>,
+        DefaultQueryResultRow<PullSchemaForRelationship<TSchema, TRelationship>>
+      >,
+    ) => TSub = q => q as any,
+  ) {
+    return this.#whereExists(relationship, cb, 'NOT EXISTS');
+  }
+
+  #whereExists<
+    TRelationship extends keyof TSchema['relationships'],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    TSub extends Query<any, any>,
+  >(
+    relationship: TRelationship,
+    cb: (
+      query: Query<
+        PullSchemaForRelationship<TSchema, TRelationship>,
+        DefaultQueryResultRow<PullSchemaForRelationship<TSchema, TRelationship>>
+      >,
+    ) => TSub = q => q as any,
+    conditionType: 'EXISTS' | 'NOT EXISTS',
+  ) {
     const related = this.#schema.relationships[relationship as string];
     assert(related, 'Invalid relationship');
     const related1 = related;
@@ -318,15 +364,11 @@ export abstract class AbstractQuery<
           hidden: true,
           subquery: addPrimaryKeysToAst(destSchema, sq.#ast),
         },
-        condition: {type: 'exists'},
+        condition: {type: conditionType},
       };
       const existingWhere = this.#ast.where;
       if (existingWhere) {
-        cond = and(
-          existingWhere as GenericCondition<TSchema>,
-          // TODO
-          cond as unknown as GenericCondition<TSchema>,
-        ) as Condition;
+        cond = and(existingWhere, cond) as Condition;
       }
 
       return this._newQuery(

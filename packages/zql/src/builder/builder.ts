@@ -309,11 +309,15 @@ function applyCorrelatedSubqueryCondition(
   condition: CorrelatedSubQueryCondition,
   delegate: BuilderDelegate,
 ): Input {
-  assert(condition.condition.type === 'exists');
+  assert(
+    condition.condition.type === 'EXISTS' ||
+      condition.condition.type === 'NOT EXISTS',
+  );
   return new Exists(
     input,
     delegate.createStorage(),
     must(condition.related.subquery.alias),
+    condition.condition.type,
   );
 }
 

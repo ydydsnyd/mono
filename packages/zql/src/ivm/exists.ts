@@ -28,14 +28,21 @@ export class Exists implements Operator {
   readonly #input: Input;
   readonly #relationshipName: string;
   readonly #storage: ExistsStorage;
+  readonly #not: boolean;
 
   #output: Output | undefined;
 
-  constructor(input: Input, storage: Storage, relationshipName: string) {
+  constructor(
+    input: Input,
+    storage: Storage,
+    relationshipName: string,
+    type: 'EXISTS' | 'NOT EXISTS',
+  ) {
     this.#input = input;
     this.#relationshipName = relationshipName;
     this.#input.setOutput(this);
     this.#storage = storage as ExistsStorage;
+    this.#not = type === 'NOT EXISTS';
   }
 
   setOutput(output: Output) {
@@ -60,7 +67,8 @@ export class Exists implements Operator {
 
   *#filter(stream: Stream<Node>) {
     for (const node of stream) {
-      if (this.#fetchRelationshipAndStoreSize(node) > 0) {
+      const exists = this.#fetchRelationshipAndStoreSize(node) > 0;
+      if (this.#not ? !exists : exists) {
         yield node;
       }
     }
@@ -70,16 +78,20 @@ export class Exists implements Operator {
     assert(this.#output, 'Output not set');
 
     switch (change.type) {
-      case 'add':
-        if (this.#fetchRelationshipAndStoreSize(change.node) > 0) {
+      case 'add': {
+        const exists = this.#fetchRelationshipAndStoreSize(change.node) > 0;
+        if (this.#not ? !exists : exists) {
           this.#output.push(change);
         }
         break;
-      case 'remove':
-        if (this.#getSize(change.node.row) > 0) {
+      }
+      case 'remove': {
+        const exists = this.#getSize(change.node.row) > 0;
+        if (this.#not ? !exists : exists) {
           this.#output.push(change);
         }
         break;
+      }
       case 'child':
         if (change.child.relationshipName === this.#relationshipName) {
           switch (change.child.change.type) {
@@ -89,7 +101,7 @@ export class Exists implements Operator {
               this.#setSize(change.row, size);
               if (size === 1) {
                 this.#output.push({
-                  type: 'add',
+                  type: this.#not ? 'remove' : 'add',
                   node: must(
                     first(
                       this.#input.fetch({
@@ -108,7 +120,7 @@ export class Exists implements Operator {
               this.#setSize(change.row, size);
               if (size === 0) {
                 this.#output.push({
-                  type: 'remove',
+                  type: this.#not ? 'add' : 'remove',
                   node: must(
                     first(
                       this.#input.fetch({
@@ -123,11 +135,13 @@ export class Exists implements Operator {
           }
         }
         break;
-      case 'edit':
-        if ((this.#getSize(change.row) ?? 0) > 0) {
+      case 'edit': {
+        const exists = this.#getSize(change.row) > 0;
+        if (this.#not ? !exists : exists) {
           this.#output.push(change);
         }
         break;
+      }
       default:
         unreachable(change);
     }

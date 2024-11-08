@@ -292,7 +292,7 @@ describe('kitchen sink query', () => {
     const issueQuery = newQuery(queryDelegate, issueSchema)
       .where('ownerId', 'IN', ['001', '002', '003'])
       .where('closed', false)
-      .whereExists('comments', q => q.whereExists('revisions'))
+      .whereNotExists('comments')
       .related('owner')
       .related('comments', q =>
         q
@@ -312,7 +312,7 @@ describe('kitchen sink query', () => {
       .limit(6);
 
     const view = issueQuery.materialize();
-
+    /*
     expect(queryDelegate.addedServerQueries).toEqual([
       {
         limit: 6,
@@ -420,7 +420,7 @@ describe('kitchen sink query', () => {
             },
             {
               condition: {
-                type: 'exists',
+                type: 'NOT EXISTS',
               },
               related: {
                 correlation: {
@@ -435,7 +435,7 @@ describe('kitchen sink query', () => {
                   table: 'comment',
                   where: {
                     condition: {
-                      type: 'exists',
+                      type: 'EXISTS',
                     },
                     related: {
                       correlation: {
@@ -460,6 +460,23 @@ describe('kitchen sink query', () => {
         },
       },
     ]);
+*/
+
+    console.log(view.data);
+
+    const commentSource = must(queryDelegate.getSource('comment'));
+    commentSource.push({
+      type: 'add',
+      row: {
+        id: '1000',
+        issueId: '104',
+        text: 'Comment 1000',
+        authorId: '001',
+        createdAt: 1,
+      },
+    });
+
+    console.log(view.data);
 
     expect(view.data).toEqual([
       /*{

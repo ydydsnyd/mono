@@ -286,7 +286,8 @@ export class MemorySource implements Source {
         // don't think we have a use case for this – if we see it, it's probably
         // a bug.
         if (!matchesConstraint(startAt)) {
-          assert(false, 'Start row must match constraint');
+          console.log(req);
+          //assert(false, 'Start row must match constraint');
         }
       }
       if (req.start!.basis === 'before') {

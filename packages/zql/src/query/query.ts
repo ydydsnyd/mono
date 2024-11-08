@@ -170,17 +170,7 @@ export interface Query<
 
   whereExists<TRelationship extends keyof TSchema['relationships']>(
     relationship: TRelationship,
-  ): Query<
-    TSchema,
-    AddSubselect<
-      Query<
-        PullSchemaForRelationship<TSchema, TRelationship>,
-        DefaultQueryResultRow<PullSchemaForRelationship<TSchema, TRelationship>>
-      >,
-      TReturn,
-      TRelationship & string
-    >
-  >;
+  ): Query<TSchema, TReturn>;
   whereExists<
     TRelationship extends keyof TSchema['relationships'],
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -193,7 +183,24 @@ export interface Query<
         DefaultQueryResultRow<PullSchemaForRelationship<TSchema, TRelationship>>
       >,
     ) => TSub,
-  ): Query<TSchema, AddSubselect<TSub, TReturn, TRelationship & string>>;
+  ): Query<TSchema, TReturn>;
+
+  whereNotExists<TRelationship extends keyof TSchema['relationships']>(
+    relationship: TRelationship,
+  ): Query<TSchema, TReturn>;
+  whereNotExists<
+    TRelationship extends keyof TSchema['relationships'],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    TSub extends Query<any, any>,
+  >(
+    relationship: TRelationship,
+    cb: (
+      query: Query<
+        PullSchemaForRelationship<TSchema, TRelationship>,
+        DefaultQueryResultRow<PullSchemaForRelationship<TSchema, TRelationship>>
+      >,
+    ) => TSub,
+  ): Query<TSchema, TReturn>;
 
   where<
     TSelector extends NoJsonSelector<TSchema>,
