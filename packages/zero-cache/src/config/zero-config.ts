@@ -9,8 +9,6 @@ import * as v from '../../../shared/src/valita.js';
 import {astSchema} from '../../../zero-protocol/src/ast.js';
 import {parseOptions, type Config} from './config.js';
 
-export type Action = 'select' | 'insert' | 'update' | 'delete';
-
 const ruleSchema = v.tuple([v.literal('allow'), astSchema]);
 export type Rule = v.Infer<typeof ruleSchema>;
 const policySchema = v.array(ruleSchema);

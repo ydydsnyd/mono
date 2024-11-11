@@ -13,7 +13,6 @@ import type {Query} from '../../../zql/src/query/query.js';
 import {ConfigQuery} from './config-query.js';
 import {authDataRef, preMutationRowRef} from './refs.js';
 import type {
-  Action,
   AssetAuthorization as CompiledAssetAuthorization,
   AuthorizationConfig as CompiledAuthorizationConfig,
 } from './zero-config.js';
