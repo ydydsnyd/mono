@@ -17,7 +17,7 @@ export type GenericCondition<TSchema extends TableSchema> =
   | GenericConjunction<TSchema>
   | GenericDisjunction<TSchema>
   | {
-      type: 'subquery';
+      type: 'correlatedSubQuery';
       // TODO...
       condition: CorrelatedSubQueryConditionCondition;
     }

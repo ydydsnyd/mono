@@ -292,13 +292,12 @@ describe('kitchen sink query', () => {
     const issueQuery = newQuery(queryDelegate, issueSchema)
       .where('ownerId', 'IN', ['001', '002', '003'])
       .where('closed', false)
-      .whereNotExists('comments')
+      .whereExists('comments', q => q.whereNotExists('revisions'))
       .related('owner')
       .related('comments', q =>
         q
           .orderBy('createdAt', 'desc')
-          .related('revisions', q => q.orderBy('id', 'desc').limit(1))
-          .limit(2),
+          .related('revisions', q => q.orderBy('id', 'desc').limit(1)),
       )
       .related('labels')
       .start({
@@ -450,11 +449,11 @@ describe('kitchen sink query', () => {
                         table: 'revision',
                       },
                     },
-                    type: 'subquery',
+                    type: 'correlatedSubQuery',
                   },
                 },
               },
-              type: 'subquery',
+              type: 'correlatedSubQuery',
             },
           ],
         },

@@ -83,7 +83,7 @@ export const correlatedSubqueryConditionConditionSchema = v.union(
 );
 
 export const correlatedSubqueryConditionSchema = v.readonlyObject({
-  type: v.literal('subquery'),
+  type: v.literal('correlatedSubQuery'),
   related: v.lazy(() => correlatedSubquerySchema),
   condition: correlatedSubqueryConditionConditionSchema,
 });
@@ -255,7 +255,7 @@ export type Disjunction = {
 };
 
 export type CorrelatedSubQueryCondition = {
-  type: 'subquery';
+  type: 'correlatedSubQuery';
   related: CorrelatedSubQuery;
   condition: CorrelatedSubQueryConditionCondition;
 };
@@ -335,7 +335,7 @@ export function normalizeAST(ast: AST): Required<AST> {
 }
 
 function sortedWhere(where: Condition): Condition {
-  if (where.type === 'simple' || where.type === 'subquery') {
+  if (where.type === 'simple' || where.type === 'correlatedSubQuery') {
     return where;
   }
   return {
@@ -369,8 +369,8 @@ function cmpCondition(a: Condition, b: Condition): number {
     return 1; // Order SimpleConditions first to simplify logic for invalidation filtering.
   }
 
-  if (a.type === 'subquery') {
-    if (b.type !== 'subquery') {
+  if (a.type === 'correlatedSubQuery') {
+    if (b.type !== 'correlatedSubQuery') {
       return -1; // Order subquery before conjuctions/disjuctions
     }
     return (
@@ -378,8 +378,8 @@ function cmpCondition(a: Condition, b: Condition): number {
       compareUTF8MaybeNull(a.condition.type, b.condition.type)
     );
   }
-  if (b.type === 'subquery') {
-    return -1; // Order subquery before conjuctions/disjuctions
+  if (b.type === 'correlatedSubQuery') {
+    return -1; // Order correlatedSubQuery before conjuctions/disjuctions
   }
 
   const val = compareUTF8MaybeNull(a.type, b.type);
@@ -419,7 +419,7 @@ function flattened<T extends Condition>(cond: T | undefined): T | undefined {
   if (cond === undefined) {
     return undefined;
   }
-  if (cond.type === 'simple' || cond.type === 'subquery') {
+  if (cond.type === 'simple' || cond.type === 'correlatedSubQuery') {
     return cond;
   }
   const conditions = defined(

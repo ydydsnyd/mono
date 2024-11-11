@@ -354,7 +354,7 @@ export abstract class AbstractQuery<
       ) as unknown as QueryImpl<any, any>;
 
       let cond: Condition = {
-        type: 'subquery',
+        type: 'correlatedSubQuery',
         related: {
           correlation: {
             parentField: related1.source,
