@@ -158,7 +158,7 @@ export function and<TSchema extends TableSchema>(
       return c.conditions;
     } else if (c.type === 'simple') {
       return [c];
-    } else if (c.type === 'subquery') {
+    } else if (c.type === 'correlatedSubQuery') {
       return [c];
     }
     return [];
@@ -216,7 +216,7 @@ export function not<TSchema extends TableSchema>(
         field: expr.field,
         value: expr.value,
       };
-    case 'subquery':
+    case 'correlatedSubQuery':
       return {
         ...expr,
         condition: negateCorrelatedSubQueryConditionCondition(expr.condition),
