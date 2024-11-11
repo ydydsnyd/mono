@@ -113,7 +113,7 @@ export function bindStaticParameters(
         value: bindValue(condition.value),
       };
     }
-    if (condition.type === 'subquery') {
+    if (condition.type === 'correlatedSubQuery') {
       return {
         ...condition,
         related: {
@@ -176,7 +176,10 @@ function buildPipelineInternal(
 
   for (const csqc of correlatedSubQueryConditions) {
     let csq = csqc.related;
-    if (csqc.condition.type === 'exists') {
+    if (
+      csqc.condition.type === 'EXISTS' ||
+      csqc.condition.type === 'NOT EXISTS'
+    ) {
       csq = {...csq, subquery: {...csq.subquery, limit: EXISTS_LIMIT}};
     }
     end = applyCorrelatedSubQuery(csq, delegate, staticQueryParameters, end);
@@ -239,7 +242,7 @@ function applyWhere(
       return applyAnd(input, condition, appliedFilters, delegate);
     case 'or':
       return applyOr(input, condition, appliedFilters, delegate);
-    case 'subquery':
+    case 'correlatedSubQuery':
       return applyCorrelatedSubqueryCondition(input, condition, delegate);
     default:
       return applySimpleCondition(input, condition, appliedFilters);
@@ -324,7 +327,7 @@ function applyCorrelatedSubqueryCondition(
 function gatherCorrelatedSubQueryConditions(condition: Condition | undefined) {
   const correlatedSubQueryConditions: CorrelatedSubQueryCondition[] = [];
   const gather = (condition: Condition) => {
-    if (condition.type === 'subquery') {
+    if (condition.type === 'correlatedSubQuery') {
       correlatedSubQueryConditions.push(condition);
       return;
     }
