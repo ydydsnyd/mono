@@ -14,7 +14,6 @@ ZERO_UPSTREAM_MAX_CONNS = "60"
 ZERO_CHANGE_MAX_CONNS = "3"
 ZERO_REPLICA_FILE = "/data/sync-replica-1111.db"
 ZERO_CVR_MAX_CONNS = "275"
-ZERO_LITESTREAM = "1"
 ZERO_CONFIG_PATH = "/opt/app/apps/zbugs/zero.config.ts"
 LOG_LEVEL = "debug"
 
