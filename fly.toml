@@ -3,7 +3,7 @@
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'zero-cache'
+app = 'my-app-zero-cache'
 primary_region = 'lax'
 
 [build]
@@ -36,5 +36,5 @@ LOG_LEVEL = "debug"
   cpus = 2
 
 [mounts]
-  source = "zero_cache_sqlite_db"
+  source = "my_app_zero_cache_sqlite_db"
   destination = "/data"
