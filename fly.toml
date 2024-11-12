@@ -1,0 +1,41 @@
+# fly.toml app configuration file generated for zero-cache on 2024-11-08T12:20:44-07:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'zero-cache'
+primary_region = 'lax'
+
+[build]
+dockerfile = "prod/fly/Dockerfile"
+
+[env]
+ZERO_UPSTREAM_MAX_CONNS = "60"
+ZERO_CHANGE_MAX_CONNS = "3"
+ZERO_REPLICA_FILE = "/data/sync-replica-1111.db"
+ZERO_CVR_MAX_CONNS = "275"
+ZERO_LITESTREAM = "1"
+ZERO_CONFIG_PATH = "/opt/app/apps/zbugs/zero.config.ts"
+LOG_LEVEL = "debug"
+
+[http_service]
+  internal_port = 4848
+  force_https = true
+  auto_stop_machines = 'off'
+  min_machines_running = 1
+
+[[http_service.checks]]
+  grace_period = "10s"
+  interval = "30s"
+  method = "GET"
+  timeout = "5s"
+  path = "/"
+
+[[vm]]
+  memory = '2gb'
+  cpu_kind = 'shared'
+  cpus = 2
+
+[mounts]
+  source = "zero_cache_sqlite_db"
+  destination = "/data"
