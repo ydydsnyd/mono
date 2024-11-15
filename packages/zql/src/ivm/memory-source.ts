@@ -202,6 +202,7 @@ export class MemorySource implements Source {
   }
 
   *#fetch(req: FetchRequest, from: Connection): Stream<Node> {
+    console.log('fetch', req);
     let overlay: Overlay | undefined;
 
     const callingConnectionNum = this.#connections.indexOf(from);
@@ -323,7 +324,7 @@ export class MemorySource implements Source {
       // 😬 - btree library doesn't support ideas like start "before" this
       // key.
       data.keys(scanStart as Row),
-      req.constraint,
+      matchesConstraintAndFilters,
       overlay,
       comparator,
     );
@@ -427,6 +428,7 @@ function* generateWithConstraint(
     ) {
       break;
     }
+    console.log('fetch yield node', node);
     yield node;
   }
 }
@@ -496,17 +498,22 @@ export function* generateWithStart(
 export function* generateWithOverlay(
   startAt: Row | undefined,
   rows: Iterable<Row>,
-  constraint: Constraint | undefined,
+  matchesConstraintAndFilters: (row: Row) => boolean,
   overlay: Overlay | undefined,
   compare: Comparator,
 ) {
-  const overlays = computeOverlays(startAt, constraint, overlay, compare);
+  const overlays = computeOverlays(
+    startAt,
+    matchesConstraintAndFilters,
+    overlay,
+    compare,
+  );
   yield* generateWithOverlayInner(rows, overlays, compare);
 }
 
 function computeOverlays(
   startAt: Row | undefined,
-  constraint: Constraint | undefined,
+  matchesConstraintAndFilters: (row: Row) => boolean,
   overlay: Overlay | undefined,
   compare: Comparator,
 ): Overlays {
@@ -539,10 +546,13 @@ function computeOverlays(
     overlays = overlaysForStartAt(overlays, startAt, compare);
   }
 
-  if (constraint) {
-    overlays = overlaysForConstraint(overlays, constraint);
-  }
-
+  const undefinedIfDoesntMatch = (row: Row | undefined) =>
+    row === undefined || !matchesConstraintAndFilters(row) ? undefined : row;
+  overlays = {
+    add: undefinedIfDoesntMatch(overlays.add),
+    remove: undefinedIfDoesntMatch(overlays.remove),
+  };
+  console.log('overlays', overlays);
   return overlays;
 }
 

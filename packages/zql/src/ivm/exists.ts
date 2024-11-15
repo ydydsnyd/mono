@@ -208,13 +208,15 @@ export class Exists implements Operator {
   }
 
   #fetchNodeForRow(row: Row) {
-    return must(
+    const node = must(
       first(
         this.#input.fetch({
           start: {row, basis: 'at'},
         }),
       ),
     );
+    assert(this.getSchema().compareRows(node.row, row) === 0);
+    return node;
   }
 
   #makeSizeStorageKey(row: Row) {
