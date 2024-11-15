@@ -1,6 +1,14 @@
 import {PG_UNIQUE_VIOLATION} from '@drdgvhbh/postgres-error-codes';
 import postgres from 'postgres';
-import {afterEach, beforeEach, describe, expect, test} from 'vitest';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  onTestFailed,
+  test,
+} from 'vitest';
+import {AbortError} from '../../../shared/src/abort-error.js';
 import {createSilentLogContext} from '../../../shared/src/logging-test-utils.js';
 import {Queue} from '../../../shared/src/queue.js';
 import {sleep} from '../../../shared/src/sleep.js';
@@ -46,14 +54,16 @@ describe('db/transaction-pool', () => {
   const cleanupTask = task(`INSERT INTO cleaned (id) VALUES (DEFAULT);`);
   const keepaliveTask = task(`INSERT INTO keepalive (id) VALUES (DEFAULT);`);
 
+  function ensureCleanup(pool: TransactionPool): TransactionPool {
+    // Make sure pools release their connections if the test fails to avoid
+    // holding up the database.
+    onTestFailed(() => pool.fail(new AbortError()));
+    return pool;
+  }
+
   test('single transaction, serialized processing', async () => {
-    const single = new TransactionPool(
-      lc,
-      Mode.SERIALIZABLE,
-      initTask,
-      cleanupTask,
-      1,
-      1,
+    const single = ensureCleanup(
+      new TransactionPool(lc, Mode.SERIALIZABLE, initTask, cleanupTask, 1, 1),
     );
 
     expect(single.isRunning()).toBe(false);
@@ -81,13 +91,8 @@ describe('db/transaction-pool', () => {
   });
 
   test('ref counting', async () => {
-    const single = new TransactionPool(
-      lc,
-      Mode.SERIALIZABLE,
-      initTask,
-      cleanupTask,
-      1,
-      1,
+    const single = ensureCleanup(
+      new TransactionPool(lc, Mode.SERIALIZABLE, initTask, cleanupTask, 1, 1),
     );
 
     expect(single.isRunning()).toBe(false);
@@ -119,13 +124,8 @@ describe('db/transaction-pool', () => {
   });
 
   test('multiple transactions', async () => {
-    const pool = new TransactionPool(
-      lc,
-      Mode.SERIALIZABLE,
-      initTask,
-      cleanupTask,
-      3,
-      3,
+    const pool = ensureCleanup(
+      new TransactionPool(lc, Mode.SERIALIZABLE, initTask, cleanupTask, 3, 3),
     );
 
     expect(pool.isRunning()).toBe(false);
@@ -158,13 +158,8 @@ describe('db/transaction-pool', () => {
   });
 
   test('pool resizing before run', async () => {
-    const pool = new TransactionPool(
-      lc,
-      Mode.SERIALIZABLE,
-      initTask,
-      cleanupTask,
-      2,
-      5,
+    const pool = ensureCleanup(
+      new TransactionPool(lc, Mode.SERIALIZABLE, initTask, cleanupTask, 2, 5),
     );
 
     pool.process(task(`INSERT INTO foo (id) VALUES (1)`));
@@ -192,13 +187,8 @@ describe('db/transaction-pool', () => {
   });
 
   test('pool resizing after run', async () => {
-    const pool = new TransactionPool(
-      lc,
-      Mode.SERIALIZABLE,
-      initTask,
-      cleanupTask,
-      2,
-      5,
+    const pool = ensureCleanup(
+      new TransactionPool(lc, Mode.SERIALIZABLE, initTask, cleanupTask, 2, 5),
     );
 
     const processing = new Queue<boolean>();
@@ -252,14 +242,8 @@ describe('db/transaction-pool', () => {
   });
 
   test('pool resizing and idle/keepalive timeouts', async () => {
-    const pool = new TransactionPool(
-      lc,
-      Mode.SERIALIZABLE,
-      initTask,
-      cleanupTask,
-      2,
-      5,
-      {
+    const pool = ensureCleanup(
+      new TransactionPool(lc, Mode.SERIALIZABLE, initTask, cleanupTask, 2, 5, {
         forInitialWorkers: {
           timeoutMs: 100,
           task: keepaliveTask,
@@ -268,7 +252,7 @@ describe('db/transaction-pool', () => {
           timeoutMs: 50,
           task: 'done',
         },
-      },
+      }),
     );
 
     const processing = new Queue<boolean>();
@@ -333,7 +317,7 @@ describe('db/transaction-pool', () => {
     }
 
     // Let the new extra workers hit their 50ms idle timeout.
-    await sleep(75);
+    await sleep(150);
 
     await expectTables(db, {
       ['public.cleaned']: [
@@ -391,13 +375,8 @@ describe('db/transaction-pool', () => {
   });
 
   test('external failure before running', async () => {
-    const pool = new TransactionPool(
-      lc,
-      Mode.SERIALIZABLE,
-      initTask,
-      cleanupTask,
-      3,
-      3,
+    const pool = ensureCleanup(
+      new TransactionPool(lc, Mode.SERIALIZABLE, initTask, cleanupTask, 3, 3),
     );
 
     pool.process(task(`INSERT INTO foo (id) VALUES (1)`));
@@ -434,13 +413,8 @@ describe('db/transaction-pool', () => {
     INSERT INTO foo (id) VALUES (3);
     `.simple();
 
-    const pool = new TransactionPool(
-      lc,
-      Mode.SERIALIZABLE,
-      initTask,
-      cleanupTask,
-      1,
-      3,
+    const pool = ensureCleanup(
+      new TransactionPool(lc, Mode.SERIALIZABLE, initTask, cleanupTask, 1, 3),
     );
     pool.run(db);
 
@@ -459,13 +433,8 @@ describe('db/transaction-pool', () => {
   });
 
   test('external failure while running', async () => {
-    const pool = new TransactionPool(
-      lc,
-      Mode.SERIALIZABLE,
-      initTask,
-      cleanupTask,
-      3,
-      3,
+    const pool = ensureCleanup(
+      new TransactionPool(lc, Mode.SERIALIZABLE, initTask, cleanupTask, 3, 3),
     );
 
     pool.process(task(`INSERT INTO foo (id) VALUES (1)`));
@@ -493,13 +462,8 @@ describe('db/transaction-pool', () => {
   });
 
   test('non-statement task error fails pool', async () => {
-    const pool = new TransactionPool(
-      lc,
-      Mode.SERIALIZABLE,
-      initTask,
-      cleanupTask,
-      3,
-      3,
+    const pool = ensureCleanup(
+      new TransactionPool(lc, Mode.SERIALIZABLE, initTask, cleanupTask, 3, 3),
     );
 
     const readError = new Error('doh');
@@ -528,13 +492,8 @@ describe('db/transaction-pool', () => {
   });
 
   test('abort rolls back all transactions', async () => {
-    const pool = new TransactionPool(
-      lc,
-      Mode.SERIALIZABLE,
-      initTask,
-      cleanupTask,
-      3,
-      3,
+    const pool = ensureCleanup(
+      new TransactionPool(lc, Mode.SERIALIZABLE, initTask, cleanupTask, 3, 3),
     );
 
     pool.process(task(`INSERT INTO foo (id) VALUES (1)`));
@@ -555,13 +514,8 @@ describe('db/transaction-pool', () => {
   });
 
   test('postgres error is surfaced', async () => {
-    const pool = new TransactionPool(
-      lc,
-      Mode.SERIALIZABLE,
-      initTask,
-      cleanupTask,
-      3,
-      3,
+    const pool = ensureCleanup(
+      new TransactionPool(lc, Mode.SERIALIZABLE, initTask, cleanupTask, 3, 3),
     );
 
     // With a total of 4 insert statements with id = 1, at least one tx is guaranteed to fail.
@@ -588,13 +542,8 @@ describe('db/transaction-pool', () => {
   });
 
   test('partial success; error from post-resize worker', async () => {
-    const pool = new TransactionPool(
-      lc,
-      Mode.SERIALIZABLE,
-      initTask,
-      cleanupTask,
-      2,
-      5,
+    const pool = ensureCleanup(
+      new TransactionPool(lc, Mode.SERIALIZABLE, initTask, cleanupTask, 2, 5),
     );
 
     const processing = new Queue<boolean>();
@@ -658,17 +607,21 @@ describe('db/transaction-pool', () => {
 
     const {exportSnapshot, cleanupExport, setSnapshot} =
       synchronizedSnapshots();
-    const leader = new TransactionPool(
-      lc.withContext('pool', 'leader'),
-      Mode.SERIALIZABLE,
-      exportSnapshot,
-      cleanupExport,
-      3,
+    const leader = ensureCleanup(
+      new TransactionPool(
+        lc.withContext('pool', 'leader'),
+        Mode.SERIALIZABLE,
+        exportSnapshot,
+        cleanupExport,
+        3,
+      ),
     );
-    const follower = new TransactionPool(
-      lc.withContext('pool', 'follower'),
-      Mode.SERIALIZABLE,
-      setSnapshot,
+    const follower = ensureCleanup(
+      new TransactionPool(
+        lc.withContext('pool', 'follower'),
+        Mode.SERIALIZABLE,
+        setSnapshot,
+      ),
     );
 
     // Start off with some existing values in the db.
@@ -736,18 +689,11 @@ describe('db/transaction-pool', () => {
   test('snapshot synchronization error handling', async () => {
     const {exportSnapshot, cleanupExport, setSnapshot} =
       synchronizedSnapshots();
-    const leader = new TransactionPool(
-      lc,
-      Mode.SERIALIZABLE,
-      exportSnapshot,
-      cleanupExport,
+    const leader = ensureCleanup(
+      new TransactionPool(lc, Mode.SERIALIZABLE, exportSnapshot, cleanupExport),
     );
-    const followers = new TransactionPool(
-      lc,
-      Mode.READONLY,
-      setSnapshot,
-      undefined,
-      3,
+    const followers = ensureCleanup(
+      new TransactionPool(lc, Mode.READONLY, setSnapshot, undefined, 3),
     );
 
     const err = new Error('oh nose');
@@ -771,7 +717,9 @@ describe('db/transaction-pool', () => {
     };
 
     const {init, cleanup} = sharedSnapshot();
-    const pool = new TransactionPool(lc, Mode.READONLY, init, cleanup, 2, 5);
+    const pool = ensureCleanup(
+      new TransactionPool(lc, Mode.READONLY, init, cleanup, 2, 5),
+    );
 
     // Start off with some existing values in the db.
     await db`
@@ -834,7 +782,9 @@ describe('db/transaction-pool', () => {
     };
 
     const {init, cleanup, snapshotID} = sharedSnapshot();
-    const pool = new TransactionPool(lc, Mode.SERIALIZABLE, init, cleanup, 1);
+    const pool = ensureCleanup(
+      new TransactionPool(lc, Mode.SERIALIZABLE, init, cleanup, 1),
+    );
 
     // Start off with some existing values in the db.
     await db`
@@ -848,7 +798,9 @@ describe('db/transaction-pool', () => {
 
     // Run the readers.
     const {init: importInit, imported} = importSnapshot(await snapshotID);
-    const readers = new TransactionPool(lc, Mode.READONLY, importInit);
+    const readers = ensureCleanup(
+      new TransactionPool(lc, Mode.READONLY, importInit),
+    );
     readers.run(db);
     await imported;
 
@@ -901,7 +853,7 @@ describe('db/transaction-pool', () => {
     INSERT INTO foo (id) VALUES (3);
     `.simple();
 
-    const pool = new TransactionPool(lc, Mode.READONLY);
+    const pool = ensureCleanup(new TransactionPool(lc, Mode.READONLY));
     pool.run(db);
 
     const readTask = () => async (tx: postgres.TransactionSql) =>
