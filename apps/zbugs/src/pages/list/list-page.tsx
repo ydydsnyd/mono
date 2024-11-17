@@ -38,6 +38,9 @@ export default function ListPage() {
   const labels = qs.getAll('label');
   const textFilter = qs.get('q');
 
+  const comments = useQuery(z.query.comment);
+  console.log('numComments', comments.length);
+
   const sortField =
     qs.get('sort')?.toLowerCase() === 'created' ? 'created' : 'modified';
   const sortDirection =
@@ -65,7 +68,20 @@ export default function ListPage() {
   }
 
   if (textFilter) {
-    q = q.where('title', 'ILIKE', `%${escapeLike(textFilter)}%`);
+    q = q.whereExists('comments', q =>
+      q.where('body', 'ILIKE', `%${escapeLike(textFilter)}%`),
+    );
+    /*
+    q = q.where(({or, cmp, exists}) =>
+      or(
+        //cmp('title', 'ILIKE', `%${escapeLike(textFilter)}%`),
+        //cmp('description', 'ILIKE', `%${escapeLike(textFilter)}%`),
+        exists('comments', q =>
+          q.where('body', 'ILIKE', `%${escapeLike(textFilter)}%`),
+        ),
+      ),
+    )
+      */
   }
 
   for (const label of labels) {

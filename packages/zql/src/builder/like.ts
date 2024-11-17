@@ -12,6 +12,8 @@ export function getLikePredicate(
   };
 }
 
+let likeCount = 0;
+
 function getLikeOp(pattern: string, flags: 'i' | ''): (lhs: string) => boolean {
   // if lhs does not contain '%' or '_' then it is a simple string comparison.
   // if it does contain '%' or '_' then it is a regex comparison.
@@ -27,7 +29,14 @@ function getLikeOp(pattern: string, flags: 'i' | ''): (lhs: string) => boolean {
     return (lhs: string) => lhs === pattern;
   }
   const re = patternToRegExp(pattern, flags);
-  return (lhs: string) => re.test(lhs);
+  // eslint-disable-next-line arrow-body-style
+  return (lhs: string) => {
+    likeCount++;
+    if (likeCount % 100 === 0) {
+      console.log('likeCount', likeCount);
+    }
+    return re.test(lhs);
+  };
 }
 
 const specialCharsRe = /[$()*+.?[\]\\^{|}]/;
