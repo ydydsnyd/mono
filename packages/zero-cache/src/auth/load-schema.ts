@@ -2,10 +2,19 @@ import path from 'node:path';
 import type {AuthorizationConfig} from '../../../zero-schema/src/compiled-authorization.js';
 import {fileURLToPath} from 'node:url';
 import {tsImport} from 'tsx/esm/api';
+import type {Schema} from '../../../zero-schema/src/schema.js';
 
-let loadedConfig: Promise<AuthorizationConfig> | undefined;
+let loadedConfig:
+  | Promise<{
+      schema: Schema;
+      authorization: AuthorizationConfig;
+    }>
+  | undefined;
 
-export function getAuthorizationConfig(): Promise<AuthorizationConfig> {
+export function getSchema(): Promise<{
+  schema: Schema;
+  authorization: AuthorizationConfig;
+}> {
   if (loadedConfig) {
     return loadedConfig;
   }
@@ -19,7 +28,13 @@ export function getAuthorizationConfig(): Promise<AuthorizationConfig> {
   );
 
   loadedConfig = tsImport(relativePath, import.meta.url)
-    .then(async module => (await module.authorization) as AuthorizationConfig)
+    .then(
+      async module =>
+        (await module.default) as {
+          schema: Schema;
+          authorization: AuthorizationConfig;
+        },
+    )
     .catch(e => {
       console.error(
         `Failed to load zero schema from ${absoluteConfigPath}: ${e}`,
