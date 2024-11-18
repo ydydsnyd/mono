@@ -76,6 +76,11 @@ CREATE TABLE "loggedInRow" (
 );
 
 INSERT INTO "loggedInRow" VALUES ('1', 'a');
+
+CREATE TABLE "userMatch" (
+  id text PRIMARY KEY,
+  a text
+);
 `;
 
 async function createUpstreamTables(db: PostgresDB) {
@@ -147,6 +152,15 @@ const schema = createSchema({
       primaryKey: ['id'],
       relationships: {},
     },
+    userMatch: {
+      tableName: 'userMatch',
+      columns: {
+        id: {type: 'string'},
+        a: {type: 'string'},
+      },
+      primaryKey: ['id'],
+      relationships: {},
+    },
   },
 });
 
@@ -175,6 +189,10 @@ const authorizationConfig = await defineAuthorization<AuthData, typeof schema>(
       authData: AuthData,
       {cmpLit}: ExpressionBuilder<TableSchema>,
     ) => cmpLit(authData.sub, 'IS NOT', null);
+    const allowIfPostMutationIDMatchesLoggedInUser = (
+      authData: AuthData,
+      {cmp}: ExpressionBuilder<typeof schema.tables.userMatch>,
+    ) => cmp('id', '=', authData.sub);
 
     return {
       roCell: {
@@ -215,6 +233,11 @@ const authorizationConfig = await defineAuthorization<AuthData, typeof schema>(
           insert: [allowIfLoggedIn],
           update: [allowIfLoggedIn],
           delete: [allowIfLoggedIn],
+        },
+      },
+      userMatch: {
+        row: {
+          insert: [allowIfPostMutationIDMatchesLoggedInUser],
         },
       },
     };
@@ -452,5 +475,20 @@ test('allows if logged in', async () => {
 
   await procMutation('loggedInRow', 'insert', {id: '2', a: 'a'}, 'usr');
   rows = await upstream`SELECT * FROM "loggedInRow" WHERE id = '2'`;
+  expect(rows.length).toBe(1);
+});
+
+// TODO (mlaw): expand "post mutation" rules to be enabled for update as well.
+test('userMatch postMutation check', async () => {
+  await procMutation('userMatch', 'insert', {id: '1', a: 'a'}, 'usr');
+  let rows = await upstream`SELECT * FROM "userMatch" WHERE id = '1'`;
+  expect(rows.length).toBe(0);
+
+  await procMutation('userMatch', 'insert', {id: '1', a: 'a'}, 'admn');
+  rows = await upstream`SELECT * FROM "userMatch" WHERE id = '1'`;
+  expect(rows.length).toBe(0);
+
+  await procMutation('userMatch', 'insert', {id: '1', a: 'a'}, '1');
+  rows = await upstream`SELECT * FROM "userMatch" WHERE id = '1'`;
   expect(rows.length).toBe(1);
 });
