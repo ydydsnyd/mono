@@ -1,12 +1,14 @@
 import type postgres from 'postgres';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {assert} from '../../../../../../shared/src/asserts.js';
+import {getPgVersion, PG_V15} from '../../../../db/pg-version.js';
 import {testDBs} from '../../../../test/db.js';
 import {type PublicationInfo, getPublicationInfo} from './published.js';
 
 describe('tables/published', () => {
   type Case = {
     name: string;
+    minPgVersion?: number;
     setupQuery: string;
     expectedResult?: PublicationInfo;
     expectedError?: string;
@@ -17,7 +19,7 @@ describe('tables/published', () => {
       name: 'zero.clients',
       setupQuery: `
       CREATE SCHEMA zero;
-      CREATE PUBLICATION zero_all FOR TABLES IN SCHEMA zero;
+      CREATE PUBLICATION zero_all FOR ALL TABLES;
       CREATE TABLE zero.clients (
         "clientID" VARCHAR (180) PRIMARY KEY,
         "lastMutationID" BIGINT
@@ -214,6 +216,7 @@ describe('tables/published', () => {
     },
     {
       name: 'row filter',
+      minPgVersion: PG_V15, // row filters were introduced in PG v15
       setupQuery: `
       CREATE SCHEMA test;
       CREATE TABLE test.users (
@@ -273,6 +276,7 @@ describe('tables/published', () => {
     },
     {
       name: 'multiple row filters',
+      minPgVersion: PG_V15, // row filters were introduced in PG v15
       setupQuery: `
       CREATE SCHEMA test;
       CREATE TABLE test.users (
@@ -343,6 +347,7 @@ describe('tables/published', () => {
     },
     {
       name: 'multiple row filters with unconditional',
+      minPgVersion: PG_V15, // row filters were introduced in PG v15
       setupQuery: `
       CREATE SCHEMA test;
       CREATE TABLE test.users (
@@ -413,6 +418,7 @@ describe('tables/published', () => {
     },
     {
       name: 'multiple row filters with conflicting columns',
+      minPgVersion: PG_V15, // row filters were introduced in PG v15
       setupQuery: `
       CREATE SCHEMA test;
       CREATE TABLE test.users (
@@ -428,6 +434,7 @@ describe('tables/published', () => {
     },
     {
       name: 'column subset',
+      minPgVersion: PG_V15, // column subsets were introduced in PG v15
       setupQuery: `
       CREATE SCHEMA test;
       CREATE TABLE test.users (
@@ -569,6 +576,7 @@ describe('tables/published', () => {
     },
     {
       name: 'multiple schemas',
+      minPgVersion: PG_V15, // publishing by schema was introduced in PG v15
       setupQuery: `
       CREATE SCHEMA test;
       CREATE TABLE test.issues (
@@ -1059,7 +1067,12 @@ describe('tables/published', () => {
   });
 
   for (const c of cases) {
-    test(c.name, async () => {
+    test(c.name, async ({skip}) => {
+      const pgVersion = await getPgVersion(db);
+      if (pgVersion < (c.minPgVersion ?? 0)) {
+        skip();
+      }
+
       await db.unsafe(c.setupQuery);
 
       try {

@@ -2,6 +2,7 @@ import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {createSilentLogContext} from '../../../../../shared/src/logging-test-utils.js';
 import {Database} from '../../../../../zqlite/src/db.js';
 import {listIndexes, listTables} from '../../../db/lite-tables.js';
+import {getPgVersion, PG_V15} from '../../../db/pg-version.js';
 import type {
   LiteIndexSpec,
   LiteTableSpec,
@@ -160,6 +161,7 @@ const REPLICATED_ZERO_CLIENTS_SPEC: LiteTableSpec = {
 describe('replicator/initial-sync', () => {
   type Case = {
     name: string;
+    minPgVersion?: number;
     setupUpstreamQuery?: string;
     requestedPublications?: string[];
     setupReplicaQuery?: string;
@@ -556,6 +558,7 @@ describe('replicator/initial-sync', () => {
     },
     {
       name: 'existing partial publication',
+      minPgVersion: PG_V15,
       setupUpstreamQuery: `
         CREATE TABLE not_published("issueID" INTEGER, "orgID" INTEGER, PRIMARY KEY ("orgID", "issueID"));
         CREATE TABLE users("userID" INTEGER, password TEXT, handle TEXT, PRIMARY KEY ("userID"));
@@ -649,6 +652,7 @@ describe('replicator/initial-sync', () => {
     },
     {
       name: 'existing partial filtered publication',
+      minPgVersion: PG_V15,
       setupUpstreamQuery: `
         CREATE TABLE not_published("issueID" INTEGER, "orgID" INTEGER, PRIMARY KEY ("orgID", "issueID"));
         CREATE TABLE users("userID" INTEGER, password TEXT, handle TEXT, PRIMARY KEY ("userID"));
@@ -881,10 +885,12 @@ describe('replicator/initial-sync', () => {
 
   let upstream: PostgresDB;
   let replica: Database;
+  let pgVersion: number;
 
   beforeEach(async () => {
     upstream = await testDBs.create('initial_sync_upstream');
     replica = new Database(createSilentLogContext(), ':memory:');
+    pgVersion = await getPgVersion(upstream);
   });
 
   afterEach(async () => {
@@ -892,7 +898,10 @@ describe('replicator/initial-sync', () => {
   });
 
   for (const c of cases) {
-    test(`startInitialDataSynchronization: ${c.name}`, async () => {
+    test(`startInitialDataSynchronization: ${c.name}`, async ({skip}) => {
+      if (pgVersion < (c.minPgVersion ?? 0)) {
+        skip();
+      }
       await initDB(upstream, c.setupUpstreamQuery, c.upstream);
       initLiteDB(replica, c.setupReplicaQuery);
 

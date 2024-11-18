@@ -1,5 +1,6 @@
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {createSilentLogContext} from '../../../../../shared/src/logging-test-utils.js';
+import {getPgVersion} from '../../../db/pg-version.js';
 import {
   expectTables,
   getConnectionURI,
@@ -29,6 +30,7 @@ describe('change-streamer/pg/sync-schema', () => {
   type Case = {
     name: string;
 
+    minPgVersion?: number;
     upstreamSetup?: string;
     requestedPublications?: string[];
     upstreamPreState?: Record<string, object[]>;
@@ -63,6 +65,7 @@ describe('change-streamer/pg/sync-schema', () => {
     },
     {
       name: 'sync partially published upstream data',
+      minPgVersion: 150000,
       upstreamSetup: `
         CREATE TABLE unpublished(issue_id INTEGER, org_id INTEGER, PRIMARY KEY (org_id, issue_id));
         CREATE TABLE users("userID" INTEGER, password TEXT, handle TEXT, PRIMARY KEY ("userID"));
@@ -117,7 +120,11 @@ describe('change-streamer/pg/sync-schema', () => {
   for (const c of cases) {
     test(
       c.name,
-      async () => {
+      async ({skip}) => {
+        const pgVersion = await getPgVersion(upstream);
+        if (pgVersion < (c.minPgVersion ?? 0)) {
+          skip();
+        }
         const replica = replicaFile.connect(lc);
         await initDB(upstream, c.upstreamSetup, c.upstreamPreState);
         initLiteDB(replica, c.replicaSetup, c.replicaPreState);

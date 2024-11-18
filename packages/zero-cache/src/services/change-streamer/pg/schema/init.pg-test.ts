@@ -27,6 +27,7 @@ describe('change-streamer/pg/schema/init', () => {
   beforeEach(async () => {
     lc = createSilentLogContext();
     upstream = await testDBs.create('shard_schema_migration_upstream');
+    await upstream`CREATE TABLE bar(id INT4 PRIMARY KEY);`;
   });
 
   afterEach(async () => {
@@ -132,7 +133,7 @@ describe('change-streamer/pg/schema/init', () => {
       );
 
       CREATE PUBLICATION _zero_metadata_${SHARD_ID}
-        FOR TABLE zero."schemaVersions", TABLE zero_${SHARD_ID}."clients";
+        FOR TABLE zero."schemaVersions", zero_${SHARD_ID}."clients";
 
       CREATE TABLE zero_${SHARD_ID}."shardConfig" (
         "publications"  TEXT[] NOT NULL,

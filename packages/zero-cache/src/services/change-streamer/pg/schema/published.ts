@@ -2,9 +2,10 @@ import {literal} from 'pg-format';
 import type postgres from 'postgres';
 import {equals} from '../../../../../../shared/src/set-utils.js';
 import * as v from '../../../../../../shared/src/valita.js';
+import {getPgVersion, v15plus} from '../../../../db/pg-version.js';
 import {indexSpec, publishedTableSpec} from '../../../../db/specs.js';
 
-export function publishedTableQuery(publications: string[]) {
+export function publishedTableQuery(publications: string[], pgVersion: number) {
   return `
 WITH published_columns AS (SELECT 
   pc.oid::int8 AS "oid",
@@ -19,7 +20,7 @@ WITH published_columns AS (SELECT
   attnotnull AS "notNull",
   pg_get_expr(pd.adbin, pd.adrelid) as "dflt",
   NULLIF(ARRAY_POSITION(conkey, attnum), -1) AS "keyPos", 
-  pb.rowfilter as "rowFilter",
+  ${v15plus(pgVersion) ? `pb.rowfilter` : `NULL`} as "rowFilter",
   pb.pubname as "publication"
 FROM pg_attribute
 JOIN pg_class pc ON pc.oid = attrelid
@@ -27,8 +28,8 @@ JOIN pg_namespace pns ON pns.oid = relnamespace
 JOIN pg_type pt ON atttypid = pt.oid
 JOIN pg_publication_tables as pb ON 
   pb.schemaname = nspname AND 
-  pb.tablename = pc.relname AND
-  attname = ANY(pb.attnames)
+  pb.tablename = pc.relname 
+  ${v15plus(pgVersion) ? 'AND attname = ANY(pb.attnames)' : ''}
 LEFT JOIN pg_constraint pk ON pk.contype = 'p' AND pk.connamespace = relnamespace AND pk.conrelid = attrelid
 LEFT JOIN pg_attrdef pd ON pd.adrelid = attrelid AND pd.adnum = attnum
 WHERE pb.pubname IN (${literal(publications)})
@@ -165,11 +166,15 @@ export async function getPublicationInfo(
   sql: postgres.Sql,
   publications: string[],
 ): Promise<PublicationInfo> {
+  const pgVersion = await getPgVersion(sql);
   const result = await sql.unsafe(`
   SELECT 
     schemaname AS "schema",
     tablename AS "table", 
-    json_object_agg(pubname, attnames) AS "publications"
+    ${
+      // Only relevant v15+
+      v15plus(pgVersion) ? `json_object_agg(pubname, attnames)` : `'{}'::JSON`
+    } AS "publications"
     FROM pg_publication_tables pb
     WHERE pb.pubname IN (${literal(publications)})
     GROUP BY schemaname, tablename;
@@ -180,7 +185,7 @@ export async function getPublicationInfo(
     WHERE pb.pubname IN (${literal(publications)})
     ORDER BY pubname;
 
-  ${publishedTableQuery(publications)};
+  ${publishedTableQuery(publications, pgVersion)};
 
   ${indexDefinitionsQuery(publications)};
 `);

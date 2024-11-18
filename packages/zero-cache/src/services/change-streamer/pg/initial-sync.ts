@@ -9,6 +9,7 @@ import {
   mapPostgresToLite,
   mapPostgresToLiteIndex,
 } from '../../../db/pg-to-lite.js';
+import {PG_V14} from '../../../db/pg-version.js';
 import type {IndexSpec, PublishedTableSpec} from '../../../db/specs.js';
 import {
   importSnapshot,
@@ -109,7 +110,7 @@ async function checkUpstreamConfig(upstreamDB: PostgresDB) {
   const {walLevel, version} = (
     await upstreamDB<{walLevel: string; version: number}[]>`
       SELECT current_setting('wal_level') as "walLevel", 
-             current_setting('server_version_num') as "version";
+             current_setting('server_version_num')::int4 as "version";
   `
   )[0];
 
@@ -118,9 +119,9 @@ async function checkUpstreamConfig(upstreamDB: PostgresDB) {
       `Postgres must be configured with "wal_level = logical" (currently: "${walLevel})`,
     );
   }
-  if (version < 150000) {
+  if (version < PG_V14) {
     throw new Error(
-      `Must be running Postgres 15 or higher (currently: "${version}")`,
+      `Must be running Postgres 14 or higher (currently: "${version}")`,
     );
   }
 }

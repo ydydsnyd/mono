@@ -1,9 +1,10 @@
 import {PG_INSUFFICIENT_PRIVILEGE} from '@drdgvhbh/postgres-error-codes';
 import type {LogContext} from '@rocicorp/logger';
-import {literal} from 'pg-format';
+import {ident, literal} from 'pg-format';
 import postgres from 'postgres';
 import {assert} from '../../../../../../shared/src/asserts.js';
 import * as v from '../../../../../../shared/src/valita.js';
+import {getPgVersion, v15plus} from '../../../../db/pg-version.js';
 import type {PostgresDB, PostgresTransaction} from '../../../../types/pg.js';
 import {id} from '../../../../types/sql.js';
 import type {ShardConfig} from '../shard-config.js';
@@ -75,7 +76,7 @@ function shardSetup(shardID: string, publications: string[]): string {
   );
 
   CREATE PUBLICATION ${id(metadataPublication)}
-    FOR TABLE zero."schemaVersions", TABLE ${schema}."clients";
+    FOR TABLE zero."schemaVersions", ${schema}."clients";
 
   CREATE TABLE ${schema}."shardConfig" (
     "publications"  TEXT[] NOT NULL,
@@ -120,10 +121,14 @@ export type InternalShardConfig = v.Infer<typeof internalShardConfigSchema>;
 // triggerSetup is run separately in a sub-transaction (i.e. SAVEPOINT) so
 // that a failure (e.g. due to lack of superuser permissions) can be handled
 // by continuing in a degraded mode (ddlDetection = false).
-function triggerSetup(shardID: string, publications: string[]): string {
+function triggerSetup(
+  shardID: string,
+  publications: string[],
+  pgVersion: number,
+): string {
   const schema = schemaFor(shardID);
   return (
-    createEventTriggerStatements(shardID, publications) +
+    createEventTriggerStatements(shardID, publications, pgVersion) +
     `UPDATE ${schema}."shardConfig" SET "ddlDetection" = true;`
   );
 }
@@ -173,6 +178,7 @@ export async function setupTablesAndReplication(
   }
 
   const allPublications: string[] = [];
+  const pgVersion = await getPgVersion(tx);
 
   // Setup application publications.
   if (publications.length) {
@@ -191,19 +197,34 @@ export async function setupTablesAndReplication(
     const defaultPub = await tx`
     SELECT 1 FROM pg_publication WHERE pubname = ${DEFAULT_APP_PUBLICATION}`;
     if (defaultPub.length === 0) {
-      await tx`
-      CREATE PUBLICATION ${tx(
-        DEFAULT_APP_PUBLICATION,
-      )} FOR TABLES IN SCHEMA public`;
+      if (v15plus(pgVersion)) {
+        await tx`
+          CREATE PUBLICATION ${tx(
+            DEFAULT_APP_PUBLICATION,
+          )} FOR TABLES IN SCHEMA public`;
+      } else {
+        // TODO: create an allow list of all tables in the public schema
+        const publicTables = await getPublicTables(tx);
+        if (publicTables.length === 0) {
+          throw new Error('no tables in the "public" schema to publish');
+        }
+        await tx.unsafe(`
+          CREATE PUBLICATION ${ident(
+            DEFAULT_APP_PUBLICATION,
+          )} FOR TABLE ${publicTables
+            .map(t => `public.${ident(t)}`)
+            .join(',')}`);
+      }
     }
     allPublications.push(DEFAULT_APP_PUBLICATION);
   }
 
   // Setup the global tables and shard tables / publications.
   await tx.unsafe(GLOBAL_SETUP + shardSetup(id, allPublications));
-
   try {
-    await tx.savepoint(sub => sub.unsafe(triggerSetup(id, allPublications)));
+    await tx.savepoint(sub =>
+      sub.unsafe(triggerSetup(id, allPublications, pgVersion)),
+    );
   } catch (e) {
     if (
       !(
@@ -244,4 +265,12 @@ export function validatePublications(
   });
 
   published.tables.forEach(table => validate(lc, shardID, table));
+}
+
+async function getPublicTables(db: PostgresDB): Promise<string[]> {
+  const result = await db<{relname: string}[]>`
+    SELECT relname FROM pg_class
+      JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid
+      WHERE reltype != 0 AND nspname = 'public'`.values();
+  return result.flat();
 }

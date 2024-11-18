@@ -46,7 +46,7 @@ describe('change-source/pg', () => {
           "issueID" INTEGER PRIMARY KEY, 
           "orgID" INTEGER
         );
-        CREATE PUBLICATION zero_foo FOR TABLES IN SCHEMA _zero;
+        CREATE PUBLICATION zero_foo FOR TABLE _zero.is_not_allowed;
         `,
     },
     {
@@ -54,7 +54,7 @@ describe('change-source/pg', () => {
       setupUpstreamQuery: `
         CREATE SCHEMA unsupported;
         CREATE TABLE unsupported.issues ("issueID" INTEGER PRIMARY KEY, "orgID" INTEGER);
-        CREATE PUBLICATION zero_foo FOR TABLES IN SCHEMA unsupported;
+        CREATE PUBLICATION zero_foo FOR TABLE unsupported.issues;
       `,
     },
     {

@@ -1,3 +1,4 @@
+import {resolver} from '@rocicorp/resolver';
 import {
   LogicalReplicationService,
   Pgoutput,
@@ -6,6 +7,7 @@ import {
 import type postgres from 'postgres';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {Queue} from '../../../../../../shared/src/queue.js';
+import {getPgVersion, PG_V15, v15plus} from '../../../../db/pg-version.js';
 import {getConnectionURI, testDBs} from '../../../../test/db.js';
 import type {PostgresDB} from '../../../../types/pg.js';
 import {
@@ -31,19 +33,25 @@ describe('change-source/tables/ddl', () => {
     );
 
     const upstreamURI = getConnectionURI(upstream);
-    await upstream.unsafe(STARTING_SCHEMA);
-
+    const pgVersion = await getPgVersion(upstream);
+    await upstream.unsafe(startingSchema(pgVersion));
     await upstream.unsafe(
-      createEventTriggerStatements(SHARD_ID, ['zero_all', 'zero_sum']),
+      createEventTriggerStatements(
+        SHARD_ID,
+        ['zero_all', 'zero_sum'],
+        pgVersion,
+      ),
     );
 
     await upstream`SELECT pg_create_logical_replication_slot(${SLOT_NAME}, 'pgoutput')`;
 
+    const {promise: startup, resolve: started} = resolver();
     messages = new Queue<Pgoutput.Message>();
     service = new LogicalReplicationService(
       {connectionString: upstreamURI},
       {acknowledge: {auto: false, timeoutSeconds: 0}},
     )
+      .on('start', started)
       .on('heartbeat', (lsn, _time, respond) => {
         respond && void service.acknowledge(lsn);
       })
@@ -57,6 +65,8 @@ describe('change-source/tables/ddl', () => {
       }),
       SLOT_NAME,
     );
+
+    await startup;
   });
 
   afterEach(async () => {
@@ -74,7 +84,8 @@ describe('change-source/tables/ddl', () => {
     return drained;
   }
 
-  const STARTING_SCHEMA = `
+  function startingSchema(pgVersion: number) {
+    return `
     CREATE SCHEMA zero;
     CREATE SCHEMA pub;
     CREATE SCHEMA private;
@@ -91,10 +102,19 @@ describe('change-source/tables/ddl', () => {
     CREATE INDEX foo_custom_index ON pub.foo (description, name);
     CREATE INDEX yoo_custom_index ON pub.yoo (description, name);
     
-    CREATE PUBLICATION zero_all FOR TABLES IN SCHEMA pub;
-    CREATE PUBLICATION zero_sum FOR TABLE pub.foo (id, name), pub.boo;
+    ${
+      v15plus(pgVersion)
+        ? `CREATE PUBLICATION zero_all FOR TABLES IN SCHEMA pub;`
+        : `CREATE PUBLICATION zero_all FOR TABLE pub.foo, pub.boo, pub.yoo;`
+    }
+    ${
+      v15plus(pgVersion)
+        ? `CREATE PUBLICATION zero_sum FOR TABLE pub.foo (id, name), pub.boo;`
+        : `CREATE PUBLICATION zero_sum FOR TABLE pub.foo, pub.boo;`
+    }
     CREATE PUBLICATION nonzeropub FOR TABLE pub.foo, pub.boo;
     `;
+  }
 
   // For zero_all, zero_sum
   const DDL_START: Omit<DdlStartEvent, 'context'> = {
@@ -280,6 +300,7 @@ describe('change-source/tables/ddl', () => {
   test.each([
     [
       'create table',
+      PG_V15, // PG v14 won't pick up the new table because it doesn't support FOR TABLES IN SCHEMA ...
       `CREATE TABLE pub.bar(id TEXT PRIMARY KEY, a INT4 UNIQUE, b INT8 UNIQUE, UNIQUE(b, a))`,
       {
         context: {
@@ -359,6 +380,7 @@ describe('change-source/tables/ddl', () => {
     ],
     [
       'create index',
+      140000,
       `CREATE INDEX foo_name_index on pub.foo (name desc, id)`,
       {
         context: {
@@ -387,6 +409,7 @@ describe('change-source/tables/ddl', () => {
     ],
     [
       'rename table',
+      140000,
       `ALTER TABLE pub.foo RENAME TO food`,
       {
         context: {
@@ -462,6 +485,7 @@ describe('change-source/tables/ddl', () => {
     ],
     [
       'add column that results in a new index',
+      140000,
       `ALTER TABLE pub.foo ADD username TEXT UNIQUE`,
       {
         context: {
@@ -530,6 +554,7 @@ describe('change-source/tables/ddl', () => {
     ],
     [
       'add column with default value',
+      140000,
       `ALTER TABLE pub.foo ADD bar text DEFAULT 'boo'`,
       {
         context: {
@@ -592,6 +617,7 @@ describe('change-source/tables/ddl', () => {
     ],
     [
       'alter column default value',
+      140000,
       `ALTER TABLE pub.foo ALTER name SET DEFAULT 'alice'`,
       {
         context: {
@@ -646,6 +672,7 @@ describe('change-source/tables/ddl', () => {
     ],
     [
       'rename column',
+      140000,
       `ALTER TABLE pub.foo RENAME name to handle`,
       {
         context: {
@@ -721,6 +748,7 @@ describe('change-source/tables/ddl', () => {
     ],
     [
       'drop column',
+      140000,
       `ALTER TABLE pub.foo drop description`,
       {
         context: {query: 'ALTER TABLE pub.foo drop description'},
@@ -766,6 +794,7 @@ describe('change-source/tables/ddl', () => {
     ],
     [
       'drop table',
+      140000,
       `DROP TABLE pub.foo, pub.yoo`,
       {
         context: {query: 'DROP TABLE pub.foo, pub.yoo'},
@@ -825,6 +854,7 @@ describe('change-source/tables/ddl', () => {
     ],
     [
       'drop index',
+      140000,
       `DROP INDEX pub.foo_custom_index, pub.yoo_custom_index`,
       {
         context: {
@@ -863,6 +893,7 @@ describe('change-source/tables/ddl', () => {
     ],
     [
       'alter table publication add table',
+      140000,
       `ALTER PUBLICATION zero_sum ADD TABLE pub.yoo`,
       {
         context: {query: 'ALTER PUBLICATION zero_sum ADD TABLE pub.yoo'},
@@ -912,6 +943,7 @@ describe('change-source/tables/ddl', () => {
     ],
     [
       'alter table publication drop table',
+      140000,
       `ALTER PUBLICATION zero_sum DROP TABLE pub.foo`,
       {
         context: {query: 'ALTER PUBLICATION zero_sum DROP TABLE pub.foo'},
@@ -961,6 +993,7 @@ describe('change-source/tables/ddl', () => {
     ],
     [
       'alter schema publication',
+      PG_V15, // v14 does not support publication by schema
       `ALTER PUBLICATION zero_all ADD TABLES IN SCHEMA zero`,
       {
         context: {
@@ -996,9 +1029,13 @@ describe('change-source/tables/ddl', () => {
         },
       },
     ],
-  ] satisfies [string, string, DdlUpdateEvent][])(
+  ] satisfies [string, number, string, DdlUpdateEvent][])(
     '%s',
-    async (_, query, ddlUpdate) => {
+    async (_, minPgVersion, query, ddlUpdate) => {
+      const pgVersion = await getPgVersion(upstream);
+      if (pgVersion < minPgVersion) {
+        return; // don't use skip() because we still want afterEach() to execute.
+      }
       await upstream.begin(async tx => {
         await tx`INSERT INTO pub.boo(id) VALUES('1')`;
         await tx.unsafe(query);
@@ -1152,7 +1189,13 @@ describe('change-source/tables/ddl', () => {
       `ALTER TABLE pub.foo ADD boo text; ALTER TABLE pub.foo DROP boo;`,
     );
 
-    const messages = await drainReplicationMessages(10);
+    const pgVersion = await getPgVersion(upstream);
+
+    const messages = v15plus(pgVersion)
+      ? // PG v15+ filters out empty transactions (https://amitkapila16.blogspot.com/2022/11/logical-replication-improvements-in.html)
+        await drainReplicationMessages(10)
+      : // Whereas PG v14 will start with an empty begin/commit transaction
+        (await drainReplicationMessages(12)).slice(2);
     expect(messages).toMatchObject([
       {tag: 'begin'},
       {

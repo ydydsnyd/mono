@@ -145,6 +145,7 @@ export function append(shardID: string) {
 function createEventFunctionStatements(
   shardID: string,
   publications: string[],
+  pgVersion: number,
 ) {
   const schema = append(shardID)('zero'); // e.g. "zero_SHARD_ID"
   return `
@@ -175,7 +176,7 @@ DECLARE
   tables record;
   indexes record;
 BEGIN
-  ${publishedTableQuery(publications)} INTO tables;
+  ${publishedTableQuery(publications, pgVersion)} INTO tables;
   ${indexDefinitionsQuery(publications)} INTO indexes;
   RETURN json_build_object(
     'tables', tables.tables,
@@ -317,13 +318,16 @@ export const TAGS = [
 export function createEventTriggerStatements(
   shardID: string,
   publications: string[],
+  pgVersion: number,
 ) {
   // Unlike functions, which are namespaced in shard-specific schemas,
   // EVENT TRIGGER names are in the global namespace and instead have the shardID appended.
   const sharded = append(shardID);
   const schema = sharded('zero');
 
-  const triggers = [createEventFunctionStatements(shardID, publications)];
+  const triggers = [
+    createEventFunctionStatements(shardID, publications, pgVersion),
+  ];
 
   // A single ddl_command_start trigger covering all relevant tags.
   triggers.push(`

@@ -1,6 +1,7 @@
 import {LogContext} from '@rocicorp/logger';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {TestLogSink} from '../../../../../../shared/src/logging-test-utils.js';
+import {getPgVersion, v15plus} from '../../../../db/pg-version.js';
 import {expectTables, initDB, testDBs} from '../../../../test/db.js';
 import type {PostgresDB} from '../../../../types/pg.js';
 import {getPublicationInfo} from './published.js';
@@ -10,11 +11,14 @@ describe('change-source/pg', () => {
   let logSink: TestLogSink;
   let lc: LogContext;
   let db: PostgresDB;
+  let pgVersion: number;
 
   beforeEach(async () => {
     logSink = new TestLogSink();
     lc = new LogContext('warn', {}, logSink);
     db = await testDBs.create('zero_schema_test');
+    pgVersion = await getPgVersion(db);
+    await db`CREATE TABLE foo(id INT4 PRIMARY KEY);`;
   });
 
   afterEach(async () => {
@@ -22,8 +26,13 @@ describe('change-source/pg', () => {
   });
 
   function publications() {
-    return db<{pubname: string; rowfilter: string | null}[]>`
+    return v15plus(pgVersion)
+      ? db<{pubname: string; rowfilter: string | null}[]>`
     SELECT p.pubname, t.schemaname, t.tablename, rowfilter FROM pg_publication p
+      LEFT JOIN pg_publication_tables t ON p.pubname = t.pubname 
+      WHERE p.pubname LIKE '%zero_%' ORDER BY p.pubname`.values()
+      : db<{pubname: string; rowfilter: string | null}[]>`
+    SELECT p.pubname, t.schemaname, t.tablename, NULL as rowfilter FROM pg_publication p
       LEFT JOIN pg_publication_tables t ON p.pubname = t.pubname 
       WHERE p.pubname LIKE '%zero_%' ORDER BY p.pubname`.values();
   }
@@ -36,7 +45,7 @@ describe('change-source/pg', () => {
     expect(await publications()).toEqual([
       [`_zero_metadata_0`, 'zero', 'schemaVersions', null],
       [`_zero_metadata_0`, `zero_0`, 'clients', null],
-      ['zero_public', null, null, null],
+      ['zero_public', 'public', 'foo', null],
     ]);
 
     await expectTables(db, {
@@ -75,7 +84,7 @@ describe('change-source/pg', () => {
     expect(await publications()).toEqual([
       [`_zero_metadata_'has quotes'`, 'zero', 'schemaVersions', null],
       [`_zero_metadata_'has quotes'`, `zero_'has quotes'`, 'clients', null],
-      ['zero_public', null, null, null],
+      ['zero_public', 'public', 'foo', null],
     ]);
 
     await expectTables(db, {
@@ -107,7 +116,7 @@ describe('change-source/pg', () => {
       [`_zero_metadata_0`, `zero_0`, 'clients', null],
       [`_zero_metadata_1`, 'zero', 'schemaVersions', null],
       [`_zero_metadata_1`, `zero_1`, 'clients', null],
-      ['zero_public', null, null, null],
+      ['zero_public', 'public', 'foo', null],
     ]);
 
     await expectTables(db, {
@@ -156,7 +165,45 @@ describe('change-source/pg', () => {
 
   test('supplied publications', async () => {
     await db`
-    CREATE TABLE foo(id INT4 PRIMARY KEY);
+    CREATE TABLE bar(id TEXT PRIMARY KEY);
+    CREATE PUBLICATION zero_foo FOR TABLE foo;
+    CREATE PUBLICATION zero_bar FOR TABLE bar;`.simple();
+
+    await db.begin(tx =>
+      setupTablesAndReplication(lc, tx, {
+        id: 'A',
+        publications: ['zero_foo', 'zero_bar'],
+      }),
+    );
+
+    expect(await publications()).toEqual([
+      [`_zero_metadata_A`, 'zero', 'schemaVersions', null],
+      [`_zero_metadata_A`, `zero_A`, 'clients', null],
+      ['zero_bar', 'public', 'bar', null],
+      ['zero_foo', 'public', 'foo', null],
+    ]);
+
+    await expectTables(db, {
+      ['zero.schemaVersions']: [
+        {lock: true, minSupportedVersion: 1, maxSupportedVersion: 1},
+      ],
+      ['zero_A.shardConfig']: [
+        {
+          lock: true,
+          publications: ['_zero_metadata_A', 'zero_bar', 'zero_foo'],
+          ddlDetection: true,
+          initialSchema: null,
+        },
+      ],
+      ['zero_A.clients']: [],
+    });
+  });
+
+  test('supplied publications with rowfilter', async ({skip}) => {
+    if (!v15plus(await getPgVersion(db))) {
+      skip();
+    }
+    await db`
     CREATE TABLE bar(id TEXT PRIMARY KEY);
     CREATE PUBLICATION zero_foo FOR TABLE foo WHERE (id > 1000);
     CREATE PUBLICATION zero_bar FOR TABLE bar;`.simple();
@@ -193,7 +240,6 @@ describe('change-source/pg', () => {
 
   test('non-superuser: ddlDetection = false', async () => {
     await db`
-    CREATE TABLE foo(id INT4 PRIMARY KEY);
     CREATE PUBLICATION zero_foo FOR TABLE foo;
     
     CREATE ROLE supaneon NOSUPERUSER IN ROLE current_user;
@@ -277,7 +323,7 @@ describe('change-source/pg', () => {
           "issueID" INTEGER PRIMARY KEY, 
           "orgID" INTEGER
         );
-        CREATE PUBLICATION zero_foo FOR TABLES IN SCHEMA _zero;
+        CREATE PUBLICATION zero_foo FOR TABLE _zero.is_not_allowed;
         `,
       requestedPublications: ['zero_foo'],
     },
@@ -286,7 +332,7 @@ describe('change-source/pg', () => {
       setupUpstreamQuery: `
         CREATE SCHEMA unsupported;
         CREATE TABLE unsupported.issues ("issueID" INTEGER PRIMARY KEY, "orgID" INTEGER);
-        CREATE PUBLICATION zero_foo FOR TABLES IN SCHEMA unsupported;
+        CREATE PUBLICATION zero_foo FOR TABLE unsupported.issues;
       `,
       requestedPublications: ['zero_foo'],
     },
@@ -324,8 +370,7 @@ describe('change-source/pg', () => {
     test(`Invalid publication: ${c.error}`, async () => {
       await initDB(
         db,
-        c.setupUpstreamQuery +
-          `CREATE PUBLICATION zero_public FOR TABLES IN SCHEMA public;`,
+        c.setupUpstreamQuery + `CREATE PUBLICATION zero_public FOR ALL TABLES;`,
         c.upstream,
       );
 

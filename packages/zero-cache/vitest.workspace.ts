@@ -17,6 +17,7 @@ export default defineWorkspace([
       include: ['src/**/*.test.?(c|m)[jt]s?(x)'],
     },
   },
+  pgConfigForVersion(14),
   pgConfigForVersion(15),
   pgConfigForVersion(16),
   pgConfigForVersion(17),
