@@ -193,7 +193,6 @@ export class WriteAuthorizerImpl {
     }
 
     const rowPolicies = rules.row;
-
     let rowQuery = authQuery(
       must(
         this.#schema.tables[op.tableName],
@@ -205,14 +204,10 @@ export class WriteAuthorizerImpl {
       rowQuery = rowQuery.where(pk, '=', op.value[pk] as any);
     });
 
-    if (
-      rowPolicies &&
-      !this.#passesPolicy(rowPolicies[action], authData, rowQuery)
-    ) {
-      return false;
-    }
+    const applicableRowPolicy = rowPolicies && rowPolicies[action];
 
     const cellPolicies = rules.cell;
+    const applicableCellPolicies: Policy[] = [];
     if (cellPolicies) {
       for (const [column, policy] of Object.entries(cellPolicies)) {
         if (action === 'update' && op.value[column] === undefined) {
@@ -220,8 +215,46 @@ export class WriteAuthorizerImpl {
           // the cell rules.
           continue;
         }
-        if (!this.#passesPolicy(policy[action], authData, rowQuery)) {
+        if (policy[action]) {
+          applicableCellPolicies.push(policy[action]);
+        }
+      }
+    }
+
+    if (
+      applicableRowPolicy !== undefined ||
+      applicableCellPolicies.length > 0
+    ) {
+      if (action === 'insert') {
+        this.#statementRunner.beginConcurrent();
+      }
+      try {
+        if (action === 'insert') {
+          assert(op.op === 'insert');
+          const source = this.#getSource(op.tableName);
+          source.push({
+            type: 'add',
+            row: op.value,
+          });
+        }
+
+        if (
+          applicableRowPolicy &&
+          !this.#passesPolicy(applicableRowPolicy, authData, rowQuery)
+        ) {
           return false;
+        }
+
+        for (const policy of applicableCellPolicies) {
+          if (!this.#passesPolicy(policy, authData, rowQuery)) {
+            return false;
+          }
+        }
+      } finally {
+        if (action === 'insert') {
+          // This assumes that all write permission queries are run once and thrown away.
+          // There is no reactive write permission checking.
+          this.#statementRunner.rollback();
         }
       }
     }
@@ -250,14 +283,10 @@ export class WriteAuthorizerImpl {
   }
 
   #passesPolicy(
-    policy: Policy | undefined,
+    policy: Policy,
     authData: JWTPayload,
     rowQuery: Query<TableSchema>,
   ) {
-    if (!policy) {
-      return true;
-    }
-
     let rowQueryAst = (rowQuery as AuthQuery<TableSchema>).ast;
     rowQueryAst = {
       ...rowQueryAst,
