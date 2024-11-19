@@ -9,6 +9,10 @@ import type {
 } from '../../zero-protocol/src/ast.js';
 import type {Row, Value} from '../../zero-protocol/src/data.js';
 import type {PrimaryKey} from '../../zero-protocol/src/primary-key.js';
+import type {
+  SchemaValue,
+  ValueType,
+} from '../../zero-schema/src/table-schema.js';
 import {assertOrderingIncludesPK} from '../../zql/src/builder/builder.js';
 import type {Change} from '../../zql/src/ivm/change.js';
 import {
@@ -37,10 +41,6 @@ import type {Stream} from '../../zql/src/ivm/stream.js';
 import {Database, Statement} from './db.js';
 import {compile, format, sql} from './internal/sql.js';
 import {StatementCache} from './internal/statement-cache.js';
-import type {
-  SchemaValue,
-  ValueType,
-} from '../../zero-schema/src/table-schema.js';
 
 type Connection = {
   input: Input;
@@ -208,7 +208,8 @@ export class TableSource implements Source {
         assert(idx !== -1, 'Connection not found');
         this.#connections.splice(idx, 1);
       },
-      appliedFilters: !transformedFilters.conditionsRemoved,
+      appliedFilters:
+        !transformedFilters.conditionsRemoved && !transformedFilters.hasLike,
     };
 
     const connection: Connection = {
@@ -836,32 +837,41 @@ type NoSubqueryCondition =
 function transformFilters(filters: Condition | undefined): {
   filters: NoSubqueryCondition | undefined;
   conditionsRemoved: boolean;
+  // SQLite does not support LIKE so we apply the filter if it is a LIKE operator.
+  hasLike: boolean;
 } {
   if (!filters) {
-    return {filters: undefined, conditionsRemoved: false};
+    return {filters: undefined, conditionsRemoved: false, hasLike: false};
   }
   switch (filters.type) {
     case 'simple':
-      return {filters, conditionsRemoved: false};
+      return {
+        filters,
+        conditionsRemoved: false,
+        hasLike: isLikeOp(filters),
+      };
     case 'correlatedSubquery':
-      return {filters: undefined, conditionsRemoved: true};
+      return {filters: undefined, conditionsRemoved: true, hasLike: false};
     case 'and': {
       const transformedConditions = [];
+      let hasLike = false;
       for (const cond of filters.conditions) {
         assert(cond.type === 'simple' || cond.type === 'correlatedSubquery');
         if (cond.type === 'simple') {
           transformedConditions.push(cond);
+          hasLike ||= isLikeOp(cond);
         }
       }
       const conditionsRemoved =
         transformedConditions.length !== filters.conditions.length;
       if (transformedConditions.length === 0) {
-        return {filters: undefined, conditionsRemoved};
+        return {filters: undefined, conditionsRemoved, hasLike};
       }
       if (transformedConditions.length === 1) {
         return {
           filters: transformedConditions[0],
           conditionsRemoved,
+          hasLike,
         };
       }
       return {
@@ -870,26 +880,36 @@ function transformFilters(filters: Condition | undefined): {
           conditions: transformedConditions,
         },
         conditionsRemoved,
+        hasLike,
       };
     }
     case 'or': {
       const transformedConditions: NoSubqueryCondition[] = [];
       let conditionsRemoved = false;
+      let hasLike = false;
       for (const cond of filters.conditions) {
         assert(cond.type !== 'or');
         const transformed = transformFilters(cond);
         if (transformed.filters === undefined) {
-          return {filters: undefined, conditionsRemoved: true};
+          return {filters: undefined, conditionsRemoved: true, hasLike: false};
         }
-        conditionsRemoved = conditionsRemoved || transformed.conditionsRemoved;
+        conditionsRemoved ||= transformed.conditionsRemoved;
+        if (transformed.filters.type === 'simple') {
+          hasLike ||= isLikeOp(transformed.filters);
+        }
         transformedConditions.push(transformed.filters);
       }
       return {
         filters: {type: 'or', conditions: transformedConditions},
         conditionsRemoved,
+        hasLike,
       };
     }
     default:
       unreachable(filters);
   }
+}
+
+function isLikeOp(cond: SimpleCondition): boolean {
+  return cond.op === 'LIKE' || cond.op === 'NOT LIKE';
 }

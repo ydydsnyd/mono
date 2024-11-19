@@ -1,15 +1,18 @@
 import {beforeEach, expect, test} from 'vitest';
-import {Database} from './db.js';
 import {createSilentLogContext} from '../../shared/src/logging-test-utils.js';
-import type {Source} from '../../zql/src/ivm/source.js';
-import {TableSource, toSQLiteTypeName} from './table-source.js';
+import {must} from '../../shared/src/must.js';
+import type {TableSchema} from '../../zero-schema/src/table-schema.js';
 import {MemoryStorage} from '../../zql/src/ivm/memory-storage.js';
+import type {Source} from '../../zql/src/ivm/source.js';
 import {newQuery, type QueryDelegate} from '../../zql/src/query/query-impl.js';
 import {schemas} from '../../zql/src/query/test/testSchemas.js';
-import type {TableSchema} from '../../zero-schema/src/table-schema.js';
-import {must} from '../../shared/src/must.js';
+import {Database} from './db.js';
+import {TableSource, toSQLiteTypeName} from './table-source.js';
 
 let queryDelegate: QueryDelegate;
+let userSource: Source;
+let issueSource: Source;
+
 beforeEach(() => {
   const db = new Database(createSilentLogContext(), ':memory:');
   const sources = new Map<string, Source>();
@@ -50,8 +53,8 @@ beforeEach(() => {
     },
   };
 
-  const userSource = must(queryDelegate.getSource('user'));
-  const issueSource = must(queryDelegate.getSource('issue'));
+  userSource = must(queryDelegate.getSource('user'));
+  issueSource = must(queryDelegate.getSource('issue'));
 
   userSource.push({
     type: 'add',
@@ -190,3 +193,59 @@ test('null compare', () => {
     ]
   `);
 });
+
+test.each([
+  {title: 'a', op: 'LIKE', pattern: 'a', expected: true},
+  {title: 'a', op: 'ILIKE', pattern: 'a', expected: true},
+
+  {title: 'A', op: 'LIKE', pattern: 'a', expected: false},
+  {title: 'A', op: 'ILIKE', pattern: 'a', expected: true},
+
+  {title: 'ǆ', op: 'LIKE', pattern: 'ǆ', expected: true},
+  {title: 'ǆ', op: 'LIKE', pattern: 'ǅ', expected: false},
+  {title: 'ǆ', op: 'LIKE', pattern: 'Ǆ', expected: false},
+  {title: 'ǆ', op: 'ILIKE', pattern: 'ǆ', expected: true},
+  {title: 'ǆ', op: 'ILIKE', pattern: 'ǅ', expected: true},
+  {title: 'ǆ', op: 'ILIKE', pattern: 'Ǆ', expected: true},
+
+  {title: 'ǅ', op: 'LIKE', pattern: 'ǆ', expected: false},
+  {title: 'ǅ', op: 'LIKE', pattern: 'ǅ', expected: true},
+  {title: 'ǅ', op: 'LIKE', pattern: 'Ǆ', expected: false},
+  {title: 'ǅ', op: 'ILIKE', pattern: 'ǆ', expected: true},
+  {title: 'ǅ', op: 'ILIKE', pattern: 'ǅ', expected: true},
+  {title: 'ǅ', op: 'ILIKE', pattern: 'Ǆ', expected: true},
+
+  {title: 'Ǆ', op: 'LIKE', pattern: 'ǆ', expected: false},
+  {title: 'Ǆ', op: 'LIKE', pattern: 'ǅ', expected: false},
+  {title: 'Ǆ', op: 'LIKE', pattern: 'Ǆ', expected: true},
+  {title: 'Ǆ', op: 'ILIKE', pattern: 'ǆ', expected: true},
+  {title: 'Ǆ', op: 'ILIKE', pattern: 'ǅ', expected: true},
+  {title: 'Ǆ', op: 'ILIKE', pattern: 'Ǆ', expected: true},
+] as const)(
+  '$title $op $pattern => $expected',
+  ({title, op, pattern, expected}) => {
+    issueSource.push({
+      type: 'add',
+      row: {
+        id: '0004',
+        title,
+        description: 'description 4',
+        closed: false,
+        ownerId: null,
+      },
+    });
+
+    const rows = newQuery(queryDelegate, schemas.issue)
+      .where('title', op, pattern)
+      .run();
+
+    expect(rows.length === 1).toEqual(expected);
+
+    // Also test with '%' because that triggers the RegExp path.
+    const rows2 = newQuery(queryDelegate, schemas.issue)
+      .where('title', op, '%' + pattern + '%')
+      .run();
+
+    expect(rows2.length === 1).toEqual(expected);
+  },
+);

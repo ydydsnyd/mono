@@ -1,11 +1,13 @@
 import {expect, test} from 'vitest';
 import {getLikePredicate} from './like.js';
 
-export const cases: {
+type Case = {
   pattern: string;
   flags: 'i' | '';
   inputs: [string, boolean][];
-}[] = [
+};
+
+export const cases: Case[] = [
   {
     pattern: 'foo',
     flags: '',
@@ -174,6 +176,74 @@ export const cases: {
     ],
   },
 ];
+
+const more: Case[] = [
+  {
+    pattern: 'ǆ',
+    flags: '',
+    inputs: [
+      ['ǆ', true],
+      ['ǅ', false],
+      ['Ǆ', false],
+    ],
+  },
+  {
+    pattern: 'ǆ',
+    flags: 'i',
+    inputs: [
+      ['ǆ', true],
+      ['ǅ', true],
+      ['Ǆ', true],
+    ],
+  },
+
+  {
+    pattern: 'ǅ',
+    flags: '',
+    inputs: [
+      ['ǆ', false],
+      ['ǅ', true],
+      ['Ǆ', false],
+    ],
+  },
+  {
+    pattern: 'ǅ',
+    flags: 'i',
+    inputs: [
+      ['ǆ', true],
+      ['ǅ', true],
+      ['Ǆ', true],
+    ],
+  },
+
+  {
+    pattern: 'Ǆ',
+    flags: '',
+    inputs: [
+      ['ǆ', false],
+      ['ǅ', false],
+      ['Ǆ', true],
+    ],
+  },
+  {
+    pattern: 'Ǆ',
+    flags: 'i',
+    inputs: [
+      ['ǆ', true],
+      ['ǅ', true],
+      ['Ǆ', true],
+    ],
+  },
+];
+
+cases.push(...more);
+// Also test with '%' because that triggers the RegExp path.
+cases.push(
+  ...more.map(c => ({
+    ...c,
+    pattern: '%' + c.pattern + '%',
+  })),
+);
 
 test('basics', () => {
   for (const {pattern, flags, inputs} of cases) {
