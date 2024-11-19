@@ -11,8 +11,6 @@ import type {Condition} from '../../zero-protocol/src/ast.js';
 import {staticParam} from '../../zql/src/query/query-impl.js';
 import type {ExpressionBuilder} from '../../zql/src/query/expression.js';
 
-type Action = 'select' | 'insert' | 'update' | 'delete';
-
 export type Queries<TSchema extends Schema> = {
   [K in keyof TSchema['tables']]: Query<TSchema['tables'][K]>;
 };
@@ -23,7 +21,13 @@ type AuthorizationRule<TAuthDataShape, TSchema extends TableSchema> = (
 ) => Condition;
 
 type AssetAuthorization<TAuthDataShape, TSchema extends TableSchema> = {
-  [K in Action]?: AuthorizationRule<TAuthDataShape, TSchema>[];
+  select?: AuthorizationRule<TAuthDataShape, TSchema>[];
+  insert?: AuthorizationRule<TAuthDataShape, TSchema>[];
+  update?: {
+    preMutation?: AuthorizationRule<TAuthDataShape, TSchema>[];
+    postProposedMutation?: AuthorizationRule<TAuthDataShape, TSchema>[];
+  };
+  delete?: AuthorizationRule<TAuthDataShape, TSchema>[];
 };
 
 export type AuthorizationConfig<TAuthDataShape, TSchema extends Schema> = {
@@ -88,7 +92,16 @@ function compileRowConfig<TAuthDataShape, TSchema extends TableSchema>(
   return {
     select: compileRules(rowRules.select, expressionBuilder),
     insert: compileRules(rowRules.insert, expressionBuilder),
-    update: compileRules(rowRules.update, expressionBuilder),
+    update: {
+      preMutation: compileRules(
+        rowRules.update?.preMutation,
+        expressionBuilder,
+      ),
+      postProposedMutation: compileRules(
+        rowRules.update?.postProposedMutation,
+        expressionBuilder,
+      ),
+    },
     delete: compileRules(rowRules.delete, expressionBuilder),
   };
 }
@@ -124,7 +137,13 @@ function compileCellConfig<TAuthDataShape, TSchema extends TableSchema>(
     ret[columnName] = {
       select: compileRules(rules.select, expressionBuilder),
       insert: compileRules(rules.insert, expressionBuilder),
-      update: compileRules(rules.update, expressionBuilder),
+      update: {
+        preMutation: compileRules(rules.update?.preMutation, expressionBuilder),
+        postProposedMutation: compileRules(
+          rules.update?.postProposedMutation,
+          expressionBuilder,
+        ),
+      },
       delete: compileRules(rules.delete, expressionBuilder),
     };
   }

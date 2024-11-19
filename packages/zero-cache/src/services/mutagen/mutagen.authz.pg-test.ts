@@ -6,7 +6,7 @@ import type {TableSchema} from '../../../../zero-schema/src/table-schema.js';
 import {Database} from '../../../../zqlite/src/db.js';
 import {createSilentLogContext} from '../../../../shared/src/logging-test-utils.js';
 import {processMutation} from './mutagen.js';
-import {WriteAuthorizerImpl, type WriteAuthorizer} from './write-authorizer.js';
+import {WriteAuthorizerImpl} from './write-authorizer.js';
 import {MutationType} from '../../../../zero-protocol/src/push.js';
 import {zeroSchema} from './mutagen-test-shared.js';
 import {defineAuthorization} from '../../../../zero-schema/src/authorization.js';
@@ -199,7 +199,9 @@ const authorizationConfig = await defineAuthorization<AuthData, typeof schema>(
         cell: {
           a: {
             insert: [],
-            update: [],
+            update: {
+              preMutation: [],
+            },
             delete: [],
           },
         },
@@ -207,7 +209,9 @@ const authorizationConfig = await defineAuthorization<AuthData, typeof schema>(
       roRow: {
         row: {
           insert: [],
-          update: [],
+          update: {
+            preMutation: [],
+          },
           delete: [],
         },
       },
@@ -216,7 +220,9 @@ const authorizationConfig = await defineAuthorization<AuthData, typeof schema>(
           a: {
             // insert is always allow since it can't be admin locked on create.
             // TODO (mlaw): this should raise a type error due to schema mismatch between rule and auth def
-            update: [allowIfNotAdminLockedCell, allowIfAdmin],
+            update: {
+              preMutation: [allowIfNotAdminLockedCell, allowIfAdmin],
+            },
             delete: [allowIfNotAdminLockedCell, allowIfAdmin],
           },
         },
@@ -224,14 +230,14 @@ const authorizationConfig = await defineAuthorization<AuthData, typeof schema>(
       adminOnlyRow: {
         row: {
           // insert is always allow since it can't be admin locked on create.
-          update: [allowIfNotAdminLockedRow, allowIfAdmin],
+          update: {preMutation: [allowIfNotAdminLockedRow, allowIfAdmin]},
           delete: [allowIfNotAdminLockedRow, allowIfAdmin],
         },
       },
       loggedInRow: {
         row: {
           insert: [allowIfLoggedIn],
-          update: [allowIfLoggedIn],
+          update: {preMutation: [allowIfLoggedIn]},
           delete: [allowIfLoggedIn],
         },
       },
@@ -246,7 +252,7 @@ const authorizationConfig = await defineAuthorization<AuthData, typeof schema>(
 
 let upstream: PostgresDB;
 let replica: Database;
-let authorizer: WriteAuthorizer;
+let authorizer: WriteAuthorizerImpl;
 let lmid = 0;
 const lc = createSilentLogContext();
 beforeEach(async () => {
