@@ -200,51 +200,58 @@ type AuthData = {
   sub: string;
 };
 
-export const authorization = defineAuthorization<AuthData, Schema>(
+const authorization = defineAuthorization<AuthData, Schema>(schema, query => {
+  const allowIfLoggedIn = (authData: AuthData) =>
+    query.user.where('id', '=', authData.sub);
+
+  const allowIfIssueCreator = (authData: AuthData, row: {id: string}) => {
+    return query.issue
+      .where('id', row.id)
+      .where('creatorID', '=', authData.sub);
+  };
+
+  // TODO: It would be nice to share code with above.
+  const allowIfCommentCreator = (authData: AuthData, row: {id: string}) => {
+    return query.comment
+      .where('id', row.id)
+      .where('creatorID', '=', authData.sub);
+  };
+
+  const allowIfAdmin = (authData: AuthData) =>
+    query.user.where('id', '=', authData.sub).where('role', '=', 'crew');
+
+  return {
+    user: {
+      // Only the authentication system can write to the user table.
+      row: {
+        insert: [],
+        update: [],
+        delete: [],
+      },
+    },
+    issue: {
+      row: {
+        insert: [allowIfLoggedIn],
+        update: [allowIfIssueCreator, allowIfAdmin],
+        delete: [allowIfIssueCreator, allowIfAdmin],
+      },
+    },
+    comment: {
+      row: {
+        insert: [allowIfLoggedIn],
+        update: [allowIfCommentCreator, allowIfAdmin],
+        delete: [allowIfCommentCreator, allowIfAdmin],
+      },
+    },
+  };
+}) as ReturnType<typeof defineAuthorization>;
+
+const exported: {
+  schema: Schema;
+  authorization: ReturnType<typeof defineAuthorization>;
+} = {
   schema,
-  query => {
-    const allowIfLoggedIn = (authData: AuthData) =>
-      query.user.where('id', '=', authData.sub);
+  authorization,
+};
 
-    const allowIfIssueCreator = (authData: AuthData, row: {id: string}) => {
-      return query.issue
-        .where('id', row.id)
-        .where('creatorID', '=', authData.sub);
-    };
-
-    // TODO: It would be nice to share code with above.
-    const allowIfCommentCreator = (authData: AuthData, row: {id: string}) => {
-      return query.comment
-        .where('id', row.id)
-        .where('creatorID', '=', authData.sub);
-    };
-
-    const allowIfAdmin = (authData: AuthData) =>
-      query.user.where('id', '=', authData.sub).where('role', '=', 'crew');
-
-    return {
-      user: {
-        // Only the authentication system can write to the user table.
-        row: {
-          insert: [],
-          update: [],
-          delete: [],
-        },
-      },
-      issue: {
-        row: {
-          insert: [allowIfLoggedIn],
-          update: [allowIfIssueCreator, allowIfAdmin],
-          delete: [allowIfIssueCreator, allowIfAdmin],
-        },
-      },
-      comment: {
-        row: {
-          insert: [allowIfLoggedIn],
-          update: [allowIfCommentCreator, allowIfAdmin],
-          delete: [allowIfCommentCreator, allowIfAdmin],
-        },
-      },
-    };
-  },
-) as ReturnType<typeof defineAuthorization>;
+export default exported;
