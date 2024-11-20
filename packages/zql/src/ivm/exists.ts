@@ -76,7 +76,6 @@ export class Exists implements Operator {
 
   push(change: Change) {
     assert(this.#output, 'Output not set');
-    console.log('exists push', change);
 
     switch (change.type) {
       // add, remove and edit cannot change the size of the

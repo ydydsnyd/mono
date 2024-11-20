@@ -156,21 +156,21 @@ export function applyChange(
         assertObject(parentEntry[relationship]);
         parentEntry[relationship] = {
           ...parentEntry[relationship],
-          ...change.node.row,
+          ...change.row,
         };
       } else {
         assertArray(parentEntry[relationship]);
         const view = parentEntry[relationship];
         // If the order changed due to the edit, we need to remove and reinsert.
-        if (schema.compareRows(change.oldNode.row, change.node.row) === 0) {
+        if (schema.compareRows(change.oldRow, change.row) === 0) {
           const {pos, found} = binarySearch(
             view,
-            change.oldNode.row,
+            change.oldRow,
             schema.compareRows,
           );
           assert(found, 'node does not exists');
           view[pos] = makeEntryPreserveRelationships(
-            change.node.row,
+            change.row,
             view[pos],
             schema.relationships,
           );
@@ -178,7 +178,7 @@ export function applyChange(
           // Remove
           const {pos, found} = binarySearch(
             view,
-            change.oldNode.row,
+            change.oldRow,
             schema.compareRows,
           );
           assert(found, 'node does not exists');
@@ -189,7 +189,7 @@ export function applyChange(
           {
             const {pos, found} = binarySearch(
               view,
-              change.node.row,
+              change.row,
               schema.compareRows,
             );
             assert(!found, 'node already exists');
@@ -197,7 +197,7 @@ export function applyChange(
               pos,
               0,
               makeEntryPreserveRelationships(
-                change.node.row,
+                change.row,
                 oldEntry,
                 schema.relationships,
               ),

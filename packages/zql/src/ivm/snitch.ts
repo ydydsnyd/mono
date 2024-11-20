@@ -88,8 +88,8 @@ function toChangeRecord(change: Change): ChangeRecord {
     case 'edit':
       return {
         type: change.type,
-        row: change.node.row,
-        oldRow: change.oldNode.row,
+        row: change.row,
+        oldRow: change.oldRow,
       };
     case 'child':
       return {

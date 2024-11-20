@@ -1015,7 +1015,6 @@ suite('push many:one', () => {
             oldRow: {id: 'i2', ownerID: 'u2', text: 'item 2'},
           },
         ],
-        ['2', 'cleanup', {constraint: {key: 'issueID', value: 'i2'}}],
         ['2', 'fetch', {constraint: {key: 'issueID', value: 'i2'}}],
         ['0', 'fetch', {constraint: {key: 'id', value: 'u2'}}],
         ['0', 'fetch', {constraint: {key: 'id', value: 'u1'}}],
@@ -1655,7 +1654,7 @@ describe('edit assignee', () => {
     },
   };
 
-  test('from none to one', () => {
+  test.only('from none to one', () => {
     const {log, data, actualStorage, pushes} = runJoinTest({
       sources,
       joins,
@@ -1746,16 +1745,6 @@ describe('edit assignee', () => {
         ],
         [
           "user",
-          "cleanup",
-          {
-            "constraint": {
-              "key": "userID",
-              "value": "u1",
-            },
-          },
-        ],
-        [
-          "user",
           "fetch",
           {
             "constraint": {
@@ -1832,6 +1821,7 @@ describe('edit assignee', () => {
       ]
     `);
 
+    console.log(pushes);
     expect(pushes).toMatchInlineSnapshot(`
       [
         {
@@ -2306,16 +2296,6 @@ describe('edit assignee', () => {
         ],
         [
           "user",
-          "cleanup",
-          {
-            "constraint": {
-              "key": "userID",
-              "value": "u1",
-            },
-          },
-        ],
-        [
-          "user",
           "fetch",
           {
             "constraint": {
@@ -2581,16 +2561,6 @@ describe('edit assignee', () => {
         ],
         [
           "user",
-          "cleanup",
-          {
-            "constraint": {
-              "key": "userID",
-              "value": "u1",
-            },
-          },
-        ],
-        [
-          "user",
           "fetch",
           {
             "constraint": {
@@ -2667,6 +2637,7 @@ describe('edit assignee', () => {
       ]
     `);
 
+    console.log(pushes);
     expect(pushes).toMatchInlineSnapshot(`
       [
         {

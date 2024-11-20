@@ -140,35 +140,38 @@ export class Join implements Input {
         //   as an edit but with relationships added
         // - Otherwise we convert to a remove and add
 
-        const oldKeyValue = normalizeUndefined(
-          change.oldNode.row[this.#parentKey],
-        );
-        const newKeyValue = normalizeUndefined(
-          change.node.row[this.#parentKey],
-        );
+        const oldKeyValue = normalizeUndefined(change.oldRow[this.#parentKey]);
+        const newKeyValue = normalizeUndefined(change.row[this.#parentKey]);
 
         if (oldKeyValue === newKeyValue) {
+          console.log('same', this.#parentKey, this.#childKey);
+          const {relationships} = this.#processParentNode(
+            change.row,
+            change.relationships,
+            'fetch',
+          );
           this.#output.push({
-            type: 'edit',
-            oldNode: this.#processParentNode(
-              change.oldNode.row,
-              change.oldNode.relationships,
-              'cleanup',
-            ),
-            node: this.#processParentNode(
-              change.node.row,
-              change.node.relationships,
-              'fetch',
-            ),
+            ...change,
+            relationships,
           });
         } else {
+          console.log('join change', this.#parentKey, this.#childKey);
+          console.log(
+            Object.entries(change.relationships).map(([k, v]) => [k, [...v]]),
+          );
           this.#pushParent({
             type: 'remove',
-            node: change.oldNode,
+            node: {
+              row: change.oldRow,
+              relationships: change.relationships,
+            },
           });
           this.#pushParent({
             type: 'add',
-            node: change.node,
+            node: {
+              row: change.row,
+              relationships: change.relationships,
+            },
           });
         }
 
@@ -212,8 +215,8 @@ export class Join implements Input {
         pushChildChange(change.row, change);
         break;
       case 'edit': {
-        const childRow = change.node.row;
-        const oldChildRow = change.oldNode.row;
+        const childRow = change.row;
+        const oldChildRow = change.oldRow;
         if (
           normalizeUndefined(oldChildRow[this.#childKey]) ===
           normalizeUndefined(childRow[this.#childKey])
@@ -227,11 +230,17 @@ export class Join implements Input {
           // add to the new row.
           pushChildChange(oldChildRow, {
             type: 'remove',
-            node: change.oldNode,
+            node: {
+              row: change.oldRow,
+              relationships: change.relationships,
+            },
           });
           pushChildChange(childRow, {
             type: 'add',
-            node: change.node,
+            node: {
+              row: change.row,
+              relationships: change.relationships,
+            },
           });
         }
         break;

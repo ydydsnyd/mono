@@ -690,24 +690,19 @@ test('collapse', () => {
       relationshipName: 'labels',
       change: {
         type: 'edit',
-        oldNode: {
-          row: {
-            id: 2,
-            issueId: 1,
-            labelId: 2,
-            extra: 'b',
-          },
-          relationships: {},
+        oldRow: {
+          id: 2,
+          issueId: 1,
+          labelId: 2,
+          extra: 'b',
         },
-        node: {
-          row: {
-            id: 2,
-            issueId: 1,
-            labelId: 2,
-            extra: 'b2',
-          },
-          relationships: {},
+        row: {
+          id: 2,
+          issueId: 1,
+          labelId: 2,
+          extra: 'b2',
         },
+        relationships: {},
       },
     },
   });
@@ -751,20 +746,15 @@ test('collapse', () => {
           relationshipName: 'labels',
           change: {
             type: 'edit',
-            oldNode: {
-              row: {
-                id: 2,
-                name: 'label2',
-              },
-              relationships: {},
+            oldRow: {
+              id: 2,
+              name: 'label2',
             },
-            node: {
-              row: {
-                id: 2,
-                name: 'label2x',
-              },
-              relationships: {},
+            row: {
+              id: 2,
+              name: 'label2x',
             },
+            relationships: {},
           },
         },
       },
@@ -1262,11 +1252,9 @@ test('edit to preserve relationships', () => {
 
   view.push({
     type: 'edit',
-    oldNode: {
-      row: {id: 1, title: 'issue1'},
-      relationships: {},
-    },
-    node: {row: {id: 1, title: 'issue1 changed'}, relationships: {}},
+    oldRow: {id: 1, title: 'issue1'},
+    row: {id: 1, title: 'issue1 changed'},
+    relationships: {},
   });
   view.flush();
   expect(data).toMatchInlineSnapshot(`
@@ -1297,8 +1285,9 @@ test('edit to preserve relationships', () => {
   // And now edit to change order
   view.push({
     type: 'edit',
-    oldNode: {row: {id: 1, title: 'issue1 changed'}, relationships: {}},
-    node: {row: {id: 3, title: 'issue1 is now issue3'}, relationships: {}},
+    oldRow: {id: 1, title: 'issue1 changed'},
+    row: {id: 3, title: 'issue1 is now issue3'},
+    relationships: {},
   });
   view.flush();
   expect(data).toMatchInlineSnapshot(`

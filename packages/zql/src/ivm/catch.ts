@@ -70,8 +70,8 @@ export function expandChange(change: Change): CaughtChange {
     case 'edit':
       return {
         type: 'edit',
-        oldRow: change.oldNode.row,
-        row: change.node.row,
+        oldRow: change.oldRow,
+        row: change.row,
       };
     case 'child':
       return {

@@ -380,8 +380,7 @@ export class Take implements Operator {
 
     if (
       this.#partitionKey &&
-      change.oldNode.row[this.#partitionKey] !==
-        change.node.row[this.#partitionKey]
+      change.oldRow[this.#partitionKey] !== change.row[this.#partitionKey]
     ) {
       // different partition key so fall back to remove/add.
 
@@ -395,33 +394,34 @@ export class Take implements Operator {
 
       this.push({
         type: 'remove',
-        node: change.oldNode,
+        node: {
+          row: change.oldRow,
+          relationships: change.relationships,
+        },
       });
       this.push({
         type: 'add',
-        node: change.node,
+        node: {
+          row: change.row,
+          relationships: change.relationships,
+        },
       });
       return;
     }
 
     const {takeState, takeStateKey, maxBound, constraint} =
-      this.#getStateAndConstraint(change.oldNode.row);
+      this.#getStateAndConstraint(change.oldRow);
     if (!takeState) {
       return;
     }
 
     assert(takeState.bound, 'Bound should be set');
     const {compareRows} = this.getSchema();
-    const oldCmp = compareRows(change.oldNode.row, takeState.bound);
-    const newCmp = compareRows(change.node.row, takeState.bound);
+    const oldCmp = compareRows(change.oldRow, takeState.bound);
+    const newCmp = compareRows(change.row, takeState.bound);
 
     const replaceBoundAndForwardChange = () => {
-      this.#setTakeState(
-        takeStateKey,
-        takeState.size,
-        change.node.row,
-        maxBound,
-      );
+      this.#setTakeState(takeStateKey, takeState.size, change.row, maxBound);
       this.#output!.push(change);
     };
 
@@ -482,7 +482,7 @@ export class Take implements Operator {
 
       // The next row is the new row. We can replace the bounds and keep the
       // edit change.
-      if (compareRows(newBoundNode.row, change.node.row) === 0) {
+      if (compareRows(newBoundNode.row, change.row) === 0) {
         replaceBoundAndForwardChange();
         return;
       }
@@ -497,7 +497,10 @@ export class Take implements Operator {
       );
       this.#output.push({
         type: 'remove',
-        node: change.oldNode,
+        node: {
+          row: change.oldRow,
+          relationships: change.relationships,
+        },
       });
       this.#output.push({
         type: 'add',
@@ -542,7 +545,10 @@ export class Take implements Operator {
 
       this.#output.push({
         type: 'add',
-        node: change.node,
+        node: {
+          row: change.row,
+          relationships: change.relationships,
+        },
       });
 
       return;
@@ -576,7 +582,7 @@ export class Take implements Operator {
       );
 
       // The new row is the new bound. Use an edit change.
-      if (compareRows(afterBoundNode.row, change.node.row) === 0) {
+      if (compareRows(afterBoundNode.row, change.row) === 0) {
         replaceBoundAndForwardChange();
         return;
       }
@@ -590,7 +596,10 @@ export class Take implements Operator {
 
       this.#output.push({
         type: 'remove',
-        node: change.oldNode,
+        node: {
+          row: change.oldRow,
+          relationships: change.relationships,
+        },
       });
       this.#output.push({
         type: 'add',

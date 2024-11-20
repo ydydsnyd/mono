@@ -161,8 +161,9 @@ test('fetch during push edit change', () => {
     push(change: Change): void {
       expect(change).toEqual({
         type: 'edit',
-        oldNode: {row: {a: 'a', b: 'b', c: 'c'}, relationships: {}},
-        node: {row: {a: 'a', b: 'b2', c: 'c2'}, relationships: {}},
+        oldRow: {a: 'a', b: 'b', c: 'c'},
+        row: {a: 'a', b: 'b2', c: 'c2'},
+        relationships: {},
       });
       fetchDuringPush = [...conn.fetch({})];
     },

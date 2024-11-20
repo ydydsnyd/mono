@@ -1,5 +1,6 @@
 import type {Row} from '../../../zero-protocol/src/data.js';
 import type {Node} from './data.js';
+import type {Stream} from './stream.js';
 
 export type Change = AddChange | RemoveChange | ChildChange | EditChange;
 export type ChangeType = Change['type'];
@@ -40,18 +41,21 @@ export type ChildChange = {
  * likely the PK stayed the same but there is really no restriction in how it
  * can change.
  *
- * The edit changes flows down in a {@linkcode Output.push}. There are cases
- * where an edit change gets split into a remove and an add change when the
- * presence of the row in the result changes (for example the row is no longer
- * present due to a filter)
+ * The edit changes flows down in a {@linkcode Output.push}.
+ * There are cases where an edit change gets split into a remove and/or an add
+ * change.
+ * 1. when the presence of the row in the result changes (for example the row
+ *    is no longer present due to a filter)
+ * 2. the edit results in the rows relationships changing
  */
 export type EditChange = {
   type: 'edit';
-  node: Node;
-  oldNode: Node;
+  row: Row;
+  oldRow: Row;
+  relationships: Record<string, Stream<Node>>;
 };
 
 export function rowForChange(change: Change): Row {
   const {type} = change;
-  return type === 'child' ? change.row : change.node.row;
+  return type === 'child' || type === 'edit' ? change.row : change.node.row;
 }

@@ -364,17 +364,7 @@ export class TableSource implements Source {
 
     const outputChange: Change =
       change.type === 'edit'
-        ? {
-            type: change.type,
-            oldNode: {
-              row: change.oldRow,
-              relationships: {},
-            },
-            node: {
-              row: change.row,
-              relationships: {},
-            },
-          }
+        ? {...change, relationships: {}}
         : {
             type: change.type,
             node: {
