@@ -122,11 +122,11 @@ export class Syncer implements SingletonService {
 
     try {
       const tokenData =
-        auth === undefined
+        auth === undefined || decodedToken === undefined
           ? undefined
           : {
-              raw: must(auth),
-              decoded: must(decodedToken),
+              raw: auth,
+              decoded: decodedToken,
             };
       const [viewSyncer, mutagen] = await Promise.all([
         this.#viewSyncers.getService(clientGroupID, tokenData),

@@ -1487,4 +1487,7 @@ function toIdsOnly(nodes: Node[]): any[] {
   });
 }
 
-// TODO (mlaw): test that `exists` does not provide an oracle
+// TODO (mlaw): test that `exists` does not provide an oracle.
+// TODO (mlaw): test that permission rules are not subject to permission rules.
+// TODO (mlaw): test the reactive (push) case for all the above.
+// TODO (mlaw): add an example framework to the schema to allow users to easily test their own permissions.
