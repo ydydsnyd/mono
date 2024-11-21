@@ -1468,11 +1468,12 @@ describe('read permissions against nested paths', () => {
       },
       query,
     );
+    // TODO (mlaw): test the reactive cases
+    // based on user-id we can remove/add them from owner/creator of an issue or membership of a project.
     expect(toIdsOnly(actual)).toEqual(expected);
   });
 });
 
-// maps over nodes, drops all information from `row` except the id
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toIdsOnly(nodes: Node[]): any[] {
   return nodes.map(node => {
