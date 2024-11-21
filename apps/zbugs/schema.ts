@@ -247,6 +247,7 @@ const authorization = defineAuthorization<AuthData, Schema>(schema, () => {
           preMutation: [allowIfIssueCreator, allowIfAdmin],
         },
         delete: [allowIfIssueCreator, allowIfAdmin],
+        // select: [allowIfAdmin],
       },
     },
     comment: {

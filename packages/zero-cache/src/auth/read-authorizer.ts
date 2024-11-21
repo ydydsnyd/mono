@@ -68,6 +68,10 @@ function transformQueryInternal(
     return undefined;
   }
 
+  // Rules must be added to where AFTER the where has been transformed.
+  // If they're added before transforming the where we can end up recursively
+  // adding rules. That is, adding rules to the permission rules.
+  // Permissions rules themselves are not subject to permission checks.
   const updatedWhere = addRulesToWhere(
     query.where ? transformCondition(query.where, permissionRules) : undefined,
     rowSelectRules,

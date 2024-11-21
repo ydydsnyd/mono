@@ -175,6 +175,7 @@ describe('view-syncer/service', () => {
       ),
       stateChanges,
       drainCoordinator,
+      {},
     );
     viewSyncerDone = vs.run();
   });

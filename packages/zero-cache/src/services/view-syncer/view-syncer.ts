@@ -48,6 +48,8 @@ import {
   type RowID,
 } from './schema/types.js';
 import {SchemaChangeError} from './snapshotter.js';
+import {transformAndHashQuery} from '../../auth/read-authorizer.js';
+import type {AuthorizationConfig} from '../../../../zero-schema/src/compiled-authorization.js';
 import type {JWTPayload} from 'jose';
 
 export type TokenData = {
@@ -107,6 +109,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
   readonly #clients = new Map<string, ClientHandler>();
   readonly #cvrStore: CVRStore;
   readonly #stopped = resolver();
+  readonly #permissions: AuthorizationConfig;
 
   #cvr: CVRSnapshot | undefined;
   #pipelinesSynced = false;
@@ -119,6 +122,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
     pipelineDriver: PipelineDriver,
     versionChanges: Subscription<ReplicaState>,
     drainCoordinator: DrainCoordinator,
+    permissions: AuthorizationConfig,
     keepaliveMs = DEFAULT_KEEPALIVE_MS,
     idleTimeoutMs = DEFAULT_IDLE_TIMEOUT_MS,
   ) {
@@ -131,6 +135,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
     this.#keepaliveMs = keepaliveMs;
     this.#idleTimeoutMs = idleTimeoutMs;
     this.#cvrStore = new CVRStore(lc, db, clientGroupID);
+    this.#permissions = permissions;
   }
 
   #runInLockWithCVR<T>(fn: (cvr: CVRSnapshot) => Promise<T> | T): Promise<T> {
@@ -542,13 +547,24 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
       if (!query.internal && Object.keys(query.desiredBy).length === 0) {
         continue; // No longer desired.
       }
-      const newTransformationHash = hash; // Currently, no transformations are done.
-      if (newTransformationHash !== transformationHash) {
+      const {query: transformedAst, hash: newTransformationHash} =
+        transformAndHashQuery(ast, this.#permissions);
+      if (
+        newTransformationHash !== transformationHash ||
+        // if the transformation hash is undefined that means the user may not run the query at all
+        newTransformationHash === undefined
+      ) {
         continue; // Query results may have changed.
       }
       const start = Date.now();
       let count = 0;
-      for (const _ of this.#pipelines.addQuery(hash, ast)) {
+      for (const _ of this.#pipelines.addQuery(
+        // A single hash cannot have multiple transformation hashes so this is safe.
+        // This is true because all clients in a given client group must be logged in as the same user
+        // and use the same auth token.
+        hash,
+        transformedAst,
+      )) {
         count++;
       }
       const elapsed = Date.now() - start;
@@ -570,10 +586,21 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
 
     const hydratedQueries = this.#pipelines.addedQueries();
     const allClientQueries = new Set(Object.keys(cvr.queries));
+    const transformedQueries = new Map<
+      string,
+      ReturnType<typeof transformAndHashQuery>
+    >();
     const desiredClientQueries = new Set(
       Object.keys(cvr.queries).filter(id => {
         const q = cvr.queries[id];
-        return q.internal || Object.keys(q.desiredBy).length > 0;
+        const transformed = transformAndHashQuery(q.ast, this.#permissions);
+        if (transformed.query) {
+          transformedQueries.set(id, transformed);
+        }
+        return (
+          (q.internal || Object.keys(q.desiredBy).length > 0) &&
+          transformed.query !== undefined
+        );
       }),
     );
 
@@ -583,7 +610,13 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
     ];
     if (addQueries.length > 0 || removeQueries.length > 0) {
       // Note: clients are caught up as part of #addAndRemoveQueries().
-      await this.#addAndRemoveQueries(lc, cvr, addQueries, removeQueries);
+      await this.#addAndRemoveQueries(
+        lc,
+        cvr,
+        addQueries,
+        removeQueries,
+        transformedQueries,
+      );
     } else {
       await this.#catchupClients(lc, cvr);
     }
@@ -606,6 +639,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
     cvr: CVRSnapshot,
     addQueries: string[],
     removeQueries: string[],
+    transformedQueries: Map<string, ReturnType<typeof transformAndHashQuery>>,
   ) {
     assert(addQueries.length > 0 || removeQueries.length > 0);
     const start = Date.now();
@@ -625,7 +659,10 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
     // executed and removed queries.
     const {newVersion, queryPatches} = updater.trackQueries(
       lc,
-      addQueries.map(hash => ({id: hash, transformationHash: hash})),
+      addQueries.map(hash => ({
+        id: hash,
+        transformationHash: must(transformedQueries.get(hash)?.hash),
+      })),
       removeQueries,
     );
     const pokers = [...this.#clients.values()].map(c =>
@@ -646,7 +683,10 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
       for (const hash of addQueries) {
         const {ast} = cvr.queries[hash];
         lc.debug?.(`adding pipeline for query ${hash}`, ast);
-        yield* pipelines.addQuery(hash, ast);
+        yield* pipelines.addQuery(
+          hash,
+          must(transformedQueries.get(hash)?.query),
+        );
       }
     }
     // #processChanges does batched de-duping of rows. Wrap all pipelines in
