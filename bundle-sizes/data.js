@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732112714947,
+  "lastUpdate": 1732207277168,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -49977,6 +49977,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/c48cc4f84a9a1b295cb228f3c89821fcf701ca75"
         },
         "date": 1732112697528,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 313434,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54702,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 115369,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32028,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "132324914+darkgnotic@users.noreply.github.com",
+            "name": "Darick Tong",
+            "username": "darkgnotic"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ca3621c00507b73f0e7defe37d87715b8c7fbcfe",
+          "message": "chore(shared): move zero-cache config library to \"shared/src/options\" (#3079)",
+          "timestamp": "2024-11-21T08:40:09-08:00",
+          "tree_id": "b9db88717f52f131370359c4e3beca1e2a4c5c59",
+          "url": "https://github.com/rocicorp/mono/commit/ca3621c00507b73f0e7defe37d87715b8c7fbcfe"
+        },
+        "date": 1732207260250,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
