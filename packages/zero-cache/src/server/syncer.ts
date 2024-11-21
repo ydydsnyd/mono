@@ -25,6 +25,7 @@ import {replicaFileModeSchema, replicaFileName} from '../workers/replicator.js';
 import {Syncer} from '../workers/syncer.js';
 import {exitAfter, runUntilKilled} from './life-cycle.js';
 import {createLogContext} from './logging.js';
+import type {JWTPayload} from 'jose';
 
 export default async function runWorker(
   parent: Worker,
@@ -71,6 +72,7 @@ export default async function runWorker(
     id: string,
     sub: Subscription<ReplicaState>,
     drainCoordinator: DrainCoordinator,
+    token: JWTPayload | undefined,
   ) => {
     const logger = lc
       .withContext('component', 'view-syncer')
@@ -84,13 +86,14 @@ export default async function runWorker(
         logger,
         new Snapshotter(logger, replicaFile),
         operatorStorage.createClientGroupStorage(id),
+        token,
       ),
       sub,
       drainCoordinator,
     );
   };
 
-  const mutagenFactory = (id: string) =>
+  const mutagenFactory = (id: string, token: JWTPayload | undefined) =>
     new MutagenService(
       lc.withContext('component', 'mutagen').withContext('clientGroupID', id),
       config.shard.id,
@@ -99,6 +102,7 @@ export default async function runWorker(
       config,
       schema,
       authorization,
+      token,
     );
 
   const syncer = new Syncer(

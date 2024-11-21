@@ -45,9 +45,10 @@ export type MutationError = [
 export interface Mutagen {
   processMutation(
     mutation: Mutation,
-    authData: JWTPayload,
     schemaVersion: number,
   ): Promise<MutationError | undefined>;
+  isStopped(): boolean;
+  onStop(cb: () => void): void;
 }
 
 export class MutagenService implements Mutagen, Service {
@@ -59,6 +60,8 @@ export class MutagenService implements Mutagen, Service {
   readonly #replica: Database;
   readonly #writeAuthorizer: WriteAuthorizerImpl;
   readonly #limiter: SlidingWindowLimiter | undefined;
+  readonly #authData: JWTPayload | undefined;
+  #isStopped = false;
 
   constructor(
     lc: LogContext,
@@ -68,11 +71,13 @@ export class MutagenService implements Mutagen, Service {
     config: ZeroConfig,
     schema: Schema,
     authorization: AuthorizationConfig,
+    authData: JWTPayload | undefined,
   ) {
     this.id = clientGroupID;
     this.#lc = lc;
     this.#upstream = upstream;
     this.#shardID = shardID;
+    this.#authData = authData;
     this.#replica = new Database(this.#lc, config.replicaFile, {
       fileMustExist: true,
     });
@@ -95,7 +100,6 @@ export class MutagenService implements Mutagen, Service {
 
   processMutation(
     mutation: Mutation,
-    authData: JWTPayload,
     schemaVersion: number,
   ): Promise<MutationError | undefined> {
     if (this.#limiter?.canDo() === false) {
@@ -106,7 +110,7 @@ export class MutagenService implements Mutagen, Service {
     }
     return processMutation(
       this.#lc,
-      authData,
+      this.#authData,
       this.#upstream,
       this.#shardID,
       this.id,
@@ -121,8 +125,17 @@ export class MutagenService implements Mutagen, Service {
   }
 
   stop(): Promise<void> {
+    this.#isStopped = true;
     this.#stopped.resolve();
     return Promise.resolve();
+  }
+
+  onStop(cb: () => void): void {
+    void this.#stopped.promise.then(cb);
+  }
+
+  isStopped() {
+    return this.#isStopped;
   }
 }
 
@@ -130,7 +143,7 @@ const MAX_SERIALIZATION_ATTEMPTS = 3;
 
 export async function processMutation(
   lc: LogContext | undefined,
-  authData: JWTPayload,
+  authData: JWTPayload | undefined,
   db: PostgresDB,
   shardID: string,
   clientGroupID: string,
@@ -247,7 +260,7 @@ export async function processMutation(
 
 async function processMutationWithTx(
   tx: PostgresTransaction,
-  authData: JWTPayload,
+  authData: JWTPayload | undefined,
   shardID: string,
   clientGroupID: string,
   schemaVersion: number,

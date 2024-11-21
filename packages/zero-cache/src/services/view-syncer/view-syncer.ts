@@ -65,6 +65,8 @@ export interface ViewSyncer {
     ctx: SyncContext,
     msg: ChangeDesiredQueriesMessage,
   ): Promise<void>;
+
+  onStop(cb: () => void): void;
 }
 
 type ShutdownToken = {
@@ -139,6 +141,10 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
         throw e;
       }
     });
+  }
+
+  onStop(cb: () => void): void {
+    void this.#stopped.promise.then(cb);
   }
 
   async run(): Promise<void> {

@@ -29,8 +29,8 @@ import {Take} from '../ivm/take.js';
 import {createPredicate} from './filter.js';
 
 export type StaticQueryParameters = {
-  authData: Record<string, JSONValue>;
-  preMutationRow: Row | undefined;
+  authData: Record<string, JSONValue> | undefined;
+  preMutationRow?: Row | undefined;
 };
 
 /**

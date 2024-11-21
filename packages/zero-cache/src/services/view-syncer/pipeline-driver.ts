@@ -21,6 +21,8 @@ import type {SchemaVersions} from '../../types/schema-versions.js';
 import {getSubscriptionState} from '../replicator/schema/replication-state.js';
 import type {ClientGroupStorage} from './database-storage.js';
 import {type SnapshotDiff, Snapshotter} from './snapshotter.js';
+import type {JWTPayload} from 'jose';
+import type {JSONValue} from '../../../../shared/src/json.js';
 
 export type RowAdd = {
   readonly type: 'add';
@@ -89,15 +91,18 @@ export class PipelineDriver {
   #tableSpecs: Map<string, NormalizedTableSpec> | null = null;
   #streamer: Streamer | null = null;
   #replicaVersion: string | null = null;
+  readonly #authData: JWTPayload | undefined;
 
   constructor(
     lc: LogContext,
     snapshotter: Snapshotter,
     storage: ClientGroupStorage,
+    token: JWTPayload | undefined,
   ) {
     this.#lc = lc;
     this.#snapshotter = snapshotter;
     this.#storage = storage;
+    this.#authData = token;
   }
 
   /**
@@ -220,7 +225,9 @@ export class PipelineDriver {
         getSource: name => this.#getSource(name),
         createStorage: () => this.#createStorage(),
       },
-      undefined,
+      {
+        authData: this.#authData as Record<string, JSONValue>,
+      },
     );
     const schema = input.getSchema();
     input.setOutput({

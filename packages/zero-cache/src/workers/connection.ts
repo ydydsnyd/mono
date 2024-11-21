@@ -1,6 +1,5 @@
 import {Lock} from '@rocicorp/lock';
 import type {LogContext} from '@rocicorp/logger';
-import type {JWTPayload} from 'jose';
 import type {CloseEvent, Data, ErrorEvent} from 'ws';
 import WebSocket from 'ws';
 import {unreachable} from '../../../shared/src/asserts.js';
@@ -42,7 +41,6 @@ export class Connection {
   readonly #viewSyncer: ViewSyncer;
   readonly #mutagen: Mutagen;
   readonly #mutationLock = new Lock();
-  readonly #authData: JWTPayload;
 
   #outboundStream: Source<Downstream> | undefined;
   #closed = false;
@@ -50,7 +48,6 @@ export class Connection {
   constructor(
     lc: LogContext,
     config: ZeroConfig,
-    authData: JWTPayload,
     viewSyncer: ViewSyncer,
     mutagen: Mutagen,
     connectParams: ConnectParams,
@@ -58,7 +55,6 @@ export class Connection {
     onClose: () => void,
   ) {
     this.#ws = ws;
-    this.#authData = authData;
     const {clientGroupID, clientID, wsID, baseCookie, schemaVersion} =
       connectParams;
     this.#clientGroupID = clientGroupID;
@@ -164,7 +160,6 @@ export class Connection {
             for (const mutation of mutations) {
               const maybeError = await this.#mutagen.processMutation(
                 mutation,
-                this.#authData,
                 schemaVersion,
               );
               if (maybeError !== undefined) {

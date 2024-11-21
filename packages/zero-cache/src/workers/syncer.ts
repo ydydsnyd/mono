@@ -25,6 +25,7 @@ import {Subscription} from '../types/subscription.js';
 import {Connection, sendError} from './connection.js';
 import {createNotifierFrom, subscribeTo} from './replicator.js';
 import {ErrorKind} from '../../../zero-protocol/src/error.js';
+import {AuthError} from '../auth/error.js';
 
 export type SyncerWorkerData = {
   replicatorPort: MessagePort;
@@ -57,8 +58,12 @@ export class Syncer implements SingletonService {
       id: string,
       sub: Subscription<ReplicaState>,
       drainCoordinator: DrainCoordinator,
+      token: JWTPayload | undefined,
     ) => ViewSyncer & ActivityBasedService,
-    mutagenFactory: (id: string) => Mutagen & Service,
+    mutagenFactory: (
+      id: string,
+      token: JWTPayload | undefined,
+    ) => Mutagen & Service,
     parent: Worker,
   ) {
     this.#config = config;
@@ -70,10 +75,18 @@ export class Syncer implements SingletonService {
     this.#lc = lc;
     this.#viewSyncers = new ServiceRunner(
       lc,
-      id => viewSyncerFactory(id, notifier.subscribe(), this.#drainCoordinator),
+      (id, token) =>
+        viewSyncerFactory(
+          id,
+          notifier.subscribe(),
+          this.#drainCoordinator,
+          token,
+        ),
       v => v.keepalive(),
     );
-    this.#mutagens = new ServiceRunner(lc, mutagenFactory);
+    this.#mutagens = new ServiceRunner(lc, mutagenFactory, mutagen =>
+      mutagen.isStopped(),
+    );
     this.#parent = parent;
     this.#wss = new WebSocketServer({noServer: true});
 
@@ -100,34 +113,66 @@ export class Syncer implements SingletonService {
           userID,
         );
       } catch (e) {
-        sendError(this.#lc, ws, [
-          'error',
-          ErrorKind.AuthInvalidated,
-          'Failed to decode auth token',
-        ]);
-        ws.close(3000, 'Failed to decode JWT');
+        const msg = 'Failed to decode auth token';
+        sendError(this.#lc, ws, ['error', ErrorKind.AuthInvalidated, msg]);
+        ws.close(3000, msg);
+        return;
       }
     }
 
-    const connection = new Connection(
-      this.#lc,
-      this.#config,
-      decodedToken ?? {},
-      this.#viewSyncers.getService(clientGroupID),
-      this.#mutagens.getService(clientGroupID),
-      params,
-      ws,
-      () => {
-        if (this.#connections.get(clientID) === connection) {
-          this.#connections.delete(clientID);
-        }
-      },
-    );
-    this.#connections.set(clientID, connection);
-    if (params.initConnectionMsg) {
-      await connection.handleInitConnection(
-        JSON.stringify(params.initConnectionMsg),
+    try {
+      const tokenData =
+        auth === undefined
+          ? undefined
+          : {
+              raw: must(auth),
+              decoded: must(decodedToken),
+            };
+      const [viewSyncer, mutagen] = await Promise.all([
+        this.#viewSyncers.getService(clientGroupID, tokenData),
+        this.#mutagens.getService(clientGroupID, tokenData),
+      ]);
+
+      const connection = new Connection(
+        this.#lc,
+        this.#config,
+        viewSyncer,
+        mutagen,
+        params,
+        ws,
+        () => {
+          if (this.#connections.get(clientID) === connection) {
+            this.#connections.delete(clientID);
+          }
+        },
       );
+
+      viewSyncer.stop;
+
+      viewSyncer.onStop(() => {
+        connection.close();
+      });
+      mutagen.onStop(() => {
+        connection.close();
+      });
+
+      this.#connections.set(clientID, connection);
+      if (params.initConnectionMsg) {
+        await connection.handleInitConnection(
+          JSON.stringify(params.initConnectionMsg),
+        );
+      }
+    } catch (e) {
+      if (e instanceof AuthError) {
+        sendError(this.#lc, ws, [
+          'error',
+          ErrorKind.AuthInvalidated,
+          e.message,
+        ]);
+        ws.close(3000, e.message);
+        return;
+      }
+      throw e;
     }
   };
 
@@ -184,5 +229,6 @@ export async function decodeAndCheckToken(
     decodedToken.sub === userID,
     'JWT subject does not match the userID that Zero was constructed with.',
   );
+  assert(decodedToken.iat !== undefined, 'JWT must contain an issue time.');
   return decodedToken;
 }

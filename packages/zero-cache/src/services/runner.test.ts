@@ -31,38 +31,38 @@ describe('services/runner', () => {
     (s: TestService) => s.valid,
   );
 
-  test('caching', () => {
-    const s1 = runner.getService('foo');
-    const s2 = runner.getService('bar');
-    const s3 = runner.getService('foo');
+  test('caching', async () => {
+    const [s1, s2, s3] = await Promise.all(
+      ['foo', 'bar', 'foo'].map(id => runner.getService(id, undefined)),
+    );
 
     expect(s1).toBe(s3);
     expect(s1).not.toBe(s2);
   });
 
   test('stopped', async () => {
-    const s1 = runner.getService('foo');
+    const s1 = await runner.getService('foo', undefined);
     s1.resolver.resolve();
 
     await sleep(1);
-    const s2 = runner.getService('foo');
+    const s2 = await runner.getService('foo', undefined);
     expect(s1).not.toBe(s2);
   });
 
   test('fails', async () => {
-    const s1 = runner.getService('foo');
+    const s1 = await runner.getService('foo', undefined);
     s1.resolver.reject('foo');
 
     await sleep(1);
-    const s2 = runner.getService('foo');
+    const s2 = await runner.getService('foo', undefined);
     expect(s1).not.toBe(s2);
   });
 
-  test('validity', () => {
-    const s1 = runner.getService('foo');
+  test('validity', async () => {
+    const s1 = await runner.getService('foo', undefined);
     s1.valid = false;
 
-    const s2 = runner.getService('foo');
+    const s2 = await runner.getService('foo', undefined);
     expect(s1).not.toBe(s2);
   });
 });

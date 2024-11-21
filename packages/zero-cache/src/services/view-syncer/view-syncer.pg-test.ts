@@ -171,6 +171,7 @@ describe('view-syncer/service', () => {
         lc.withContext('component', 'pipeline-driver'),
         new Snapshotter(lc, replicaDbFile.path),
         operatorStorage,
+        undefined,
       ),
       stateChanges,
       drainCoordinator,
