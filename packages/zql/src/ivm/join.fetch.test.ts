@@ -1,21 +1,22 @@
 import {expect, suite, test} from 'vitest';
 import {assert} from '../../../shared/src/asserts.js';
+import type {JSONValue} from '../../../shared/src/json.js';
 import type {Ordering} from '../../../zero-protocol/src/ast.js';
 import type {Row} from '../../../zero-protocol/src/data.js';
 import type {PrimaryKey} from '../../../zero-protocol/src/primary-key.js';
 import type {SchemaValue} from '../../../zero-schema/src/table-schema.js';
 import {Catch} from './catch.js';
+import {SetOfConstraint} from './constraint.js';
 import type {Node} from './data.js';
 import {
   Join,
-  createPrimaryKeySetStorageKey,
-  createPrimaryKeySetStorageKeyPrefix,
+  makeStorageKey,
+  makeStorageKeyPrefix,
+  type CompoundKey,
 } from './join.js';
 import {MemoryStorage} from './memory-storage.js';
 import type {SourceSchema} from './schema.js';
 import {Snitch, type SnitchMessage} from './snitch.js';
-import type {JSONValue} from '../../../shared/src/json.js';
-import {SetOfConstraint} from './constraint.js';
 import {createSource} from './test/source-factory.js';
 
 suite('fetch one:many', () => {
@@ -27,8 +28,8 @@ suite('fetch one:many', () => {
     primaryKeys: [['id'], ['id']],
     joins: [
       {
-        parentKey: 'id',
-        childKey: 'issueID',
+        parentKey: ['id'],
+        childKey: ['issueID'],
         relationshipName: 'comments',
       },
     ],
@@ -393,8 +394,8 @@ suite('fetch many:one', () => {
     primaryKeys: [['id'], ['id']],
     joins: [
       {
-        parentKey: 'ownerID',
-        childKey: 'id',
+        parentKey: ['ownerID'],
+        childKey: ['id'],
         relationshipName: 'owner',
       },
     ],
@@ -726,13 +727,13 @@ suite('fetch one:many:many', () => {
     primaryKeys: [['id'], ['id'], ['id']],
     joins: [
       {
-        parentKey: 'id',
-        childKey: 'issueID',
+        parentKey: ['id'],
+        childKey: ['issueID'],
         relationshipName: 'comments',
       },
       {
-        parentKey: 'id',
-        childKey: 'commentID',
+        parentKey: ['id'],
+        childKey: ['commentID'],
         relationshipName: 'revisions',
       },
     ],
@@ -1167,13 +1168,13 @@ suite('fetch one:many:one', () => {
     primaryKeys: [['id'], ['issueID', 'labelID'], ['id']],
     joins: [
       {
-        parentKey: 'id',
-        childKey: 'issueID',
+        parentKey: ['id'],
+        childKey: ['issueID'],
         relationshipName: 'issuelabels',
       },
       {
-        parentKey: 'labelID',
-        childKey: 'id',
+        parentKey: ['labelID'],
+        childKey: ['id'],
         relationshipName: 'labels',
       },
     ],
@@ -1717,6 +1718,422 @@ suite('fetch one:many:one', () => {
   });
 });
 
+suite('compound join keys', () => {
+  const base = {
+    columns: [
+      {
+        id: {type: 'number'},
+        a1: {type: 'number'},
+        a2: {type: 'number'},
+        a3: {type: 'number'},
+      },
+      {
+        id: {type: 'number'},
+        b1: {type: 'number'},
+        b2: {type: 'number'},
+        b3: {type: 'number'},
+      },
+    ],
+    primaryKeys: [['id'], ['id']],
+    joins: [
+      {
+        parentKey: ['a1', 'a2'],
+        childKey: ['b2', 'b1'],
+        relationshipName: 'ab',
+      },
+    ],
+  } as const;
+
+  test('no data', () => {
+    const results = fetchTest({
+      ...base,
+      sources: [[], []],
+    });
+
+    expect(results.hydrate).toMatchInlineSnapshot(`[]`);
+    expect(results.fetchMessages).toMatchInlineSnapshot(`
+      [
+        [
+          "0",
+          "fetch",
+          {},
+        ],
+      ]
+    `);
+    expect(results.storage).toMatchInlineSnapshot(`
+      [
+        {},
+      ]
+    `);
+  });
+
+  test('no parent', () => {
+    const results = fetchTest({
+      ...base,
+      sources: [[], [{id: 0, b1: 1, b2: 2, b3: 3}]],
+    });
+
+    expect(results.hydrate).toMatchInlineSnapshot(`[]`);
+    expect(results.fetchMessages).toMatchInlineSnapshot(`
+      [
+        [
+          "0",
+          "fetch",
+          {},
+        ],
+      ]
+    `);
+    expect(results.storage).toMatchInlineSnapshot(`
+      [
+        {},
+      ]
+    `);
+  });
+
+  test('parent, no children', () => {
+    const results = fetchTest({
+      ...base,
+      sources: [[{id: 0, a1: 1, a2: 2, a3: 3}], []],
+    });
+
+    expect(results.hydrate).toMatchInlineSnapshot(`
+      [
+        {
+          "relationships": {
+            "ab": [],
+          },
+          "row": {
+            "a1": 1,
+            "a2": 2,
+            "a3": 3,
+            "id": 0,
+          },
+        },
+      ]
+    `);
+    expect(results.fetchMessages).toMatchInlineSnapshot(`
+      [
+        [
+          "0",
+          "fetch",
+          {},
+        ],
+        [
+          "1",
+          "fetch",
+          {
+            "constraint": {
+              "b1": 2,
+              "b2": 1,
+            },
+          },
+        ],
+      ]
+    `);
+    expect(results.storage).toMatchInlineSnapshot(`
+      [
+        {
+          ""pKeySet",1,2,0,": true,
+        },
+      ]
+    `);
+  });
+
+  test('one parent, one child', () => {
+    const results = fetchTest({
+      ...base,
+      sources: [[{id: 0, a1: 1, a2: 2, a3: 3}], [{id: 0, b1: 2, b2: 1, b3: 3}]],
+    });
+
+    expect(results.hydrate).toMatchInlineSnapshot(`
+      [
+        {
+          "relationships": {
+            "ab": [
+              {
+                "relationships": {},
+                "row": {
+                  "b1": 2,
+                  "b2": 1,
+                  "b3": 3,
+                  "id": 0,
+                },
+              },
+            ],
+          },
+          "row": {
+            "a1": 1,
+            "a2": 2,
+            "a3": 3,
+            "id": 0,
+          },
+        },
+      ]
+    `);
+    expect(results.fetchMessages).toMatchInlineSnapshot(`
+      [
+        [
+          "0",
+          "fetch",
+          {},
+        ],
+        [
+          "1",
+          "fetch",
+          {
+            "constraint": {
+              "b1": 2,
+              "b2": 1,
+            },
+          },
+        ],
+      ]
+    `);
+    expect(results.storage).toMatchInlineSnapshot(`
+      [
+        {
+          ""pKeySet",1,2,0,": true,
+        },
+      ]
+    `);
+  });
+
+  test('one parent, wrong child', () => {
+    const results = fetchTest({
+      ...base,
+      // join is on a1 = b2 and a2 = b1 so this will not match
+      sources: [[{id: 0, a1: 1, a2: 2, a3: 3}], [{id: 0, b1: 1, b2: 2, b3: 3}]],
+    });
+
+    expect(results.hydrate).toMatchInlineSnapshot(`
+      [
+        {
+          "relationships": {
+            "ab": [],
+          },
+          "row": {
+            "a1": 1,
+            "a2": 2,
+            "a3": 3,
+            "id": 0,
+          },
+        },
+      ]
+    `);
+    expect(results.fetchMessages).toMatchInlineSnapshot(`
+      [
+        [
+          "0",
+          "fetch",
+          {},
+        ],
+        [
+          "1",
+          "fetch",
+          {
+            "constraint": {
+              "b1": 2,
+              "b2": 1,
+            },
+          },
+        ],
+      ]
+    `);
+    expect(results.storage).toMatchInlineSnapshot(`
+      [
+        {
+          ""pKeySet",1,2,0,": true,
+        },
+      ]
+    `);
+  });
+
+  test('one parent, one child + one wrong child', () => {
+    const results = fetchTest({
+      ...base,
+      sources: [
+        [{id: 0, a1: 1, a2: 2, a3: 3}],
+        [
+          {id: 0, b1: 2, b2: 1, b3: 3},
+          {id: 1, b1: 4, b2: 5, b3: 6},
+        ],
+      ],
+    });
+
+    expect(results.hydrate).toMatchInlineSnapshot(`
+      [
+        {
+          "relationships": {
+            "ab": [
+              {
+                "relationships": {},
+                "row": {
+                  "b1": 2,
+                  "b2": 1,
+                  "b3": 3,
+                  "id": 0,
+                },
+              },
+            ],
+          },
+          "row": {
+            "a1": 1,
+            "a2": 2,
+            "a3": 3,
+            "id": 0,
+          },
+        },
+      ]
+    `);
+    expect(results.fetchMessages).toMatchInlineSnapshot(`
+      [
+        [
+          "0",
+          "fetch",
+          {},
+        ],
+        [
+          "1",
+          "fetch",
+          {
+            "constraint": {
+              "b1": 2,
+              "b2": 1,
+            },
+          },
+        ],
+      ]
+    `);
+    expect(results.storage).toMatchInlineSnapshot(`
+      [
+        {
+          ""pKeySet",1,2,0,": true,
+        },
+      ]
+    `);
+  });
+
+  test('two parents, each with two children', () => {
+    const results = fetchTest({
+      ...base,
+      sources: [
+        [
+          {id: 0, a1: 1, a2: 2, a3: 3},
+          {id: 1, a1: 4, a2: 5, a3: 6},
+        ],
+        [
+          {id: 0, b1: 2, b2: 1, b3: 3},
+          {id: 1, b1: 2, b2: 1, b3: 4},
+          {id: 2, b1: 5, b2: 4, b3: 6},
+          {id: 3, b1: 5, b2: 4, b3: 7},
+        ],
+      ],
+    });
+
+    expect(results.hydrate).toMatchInlineSnapshot(`
+      [
+        {
+          "relationships": {
+            "ab": [
+              {
+                "relationships": {},
+                "row": {
+                  "b1": 2,
+                  "b2": 1,
+                  "b3": 3,
+                  "id": 0,
+                },
+              },
+              {
+                "relationships": {},
+                "row": {
+                  "b1": 2,
+                  "b2": 1,
+                  "b3": 4,
+                  "id": 1,
+                },
+              },
+            ],
+          },
+          "row": {
+            "a1": 1,
+            "a2": 2,
+            "a3": 3,
+            "id": 0,
+          },
+        },
+        {
+          "relationships": {
+            "ab": [
+              {
+                "relationships": {},
+                "row": {
+                  "b1": 5,
+                  "b2": 4,
+                  "b3": 6,
+                  "id": 2,
+                },
+              },
+              {
+                "relationships": {},
+                "row": {
+                  "b1": 5,
+                  "b2": 4,
+                  "b3": 7,
+                  "id": 3,
+                },
+              },
+            ],
+          },
+          "row": {
+            "a1": 4,
+            "a2": 5,
+            "a3": 6,
+            "id": 1,
+          },
+        },
+      ]
+    `);
+    expect(results.fetchMessages).toMatchInlineSnapshot(`
+      [
+        [
+          "0",
+          "fetch",
+          {},
+        ],
+        [
+          "1",
+          "fetch",
+          {
+            "constraint": {
+              "b1": 2,
+              "b2": 1,
+            },
+          },
+        ],
+        [
+          "1",
+          "fetch",
+          {
+            "constraint": {
+              "b1": 5,
+              "b2": 4,
+            },
+          },
+        ],
+      ]
+    `);
+    expect(results.storage).toMatchInlineSnapshot(`
+      [
+        {
+          ""pKeySet",1,2,0,": true,
+          ""pKeySet",4,5,1,": true,
+        },
+      ]
+    `);
+  });
+});
+
 // Despite the name, this test runs the join through all three phases:
 // initial fetch, fetch, and cleanup.
 function fetchTest(t: FetchTest): FetchTestResults {
@@ -1850,8 +2267,8 @@ type FetchTest = {
   sources: Row[][];
   sorts?: (Ordering | undefined)[] | undefined;
   joins: readonly {
-    parentKey: string;
-    childKey: string;
+    parentKey: CompoundKey;
+    childKey: CompoundKey;
     relationshipName: string;
   }[];
 };
@@ -1863,12 +2280,39 @@ type FetchTestResults = {
 };
 
 test('createPrimaryKeySetStorageKey', () => {
-  const k123 = createPrimaryKeySetStorageKey([123, 'id1']);
-  const k1234 = createPrimaryKeySetStorageKey([1234, 'id1']);
+  const row123 = {a: 123, b: true, id: 'id1'};
+  const row1234 = {a: 1234, b: true, id: 'id1'};
+  const k123 = makeStorageKey(['a'], ['id'], row123);
+  const kp123 = makeStorageKeyPrefix(row123, ['a']);
+  const k1234 = makeStorageKey(['a'], ['id'], row1234);
+  const kp1234 = makeStorageKeyPrefix(row1234, ['a']);
 
-  expect(k123.startsWith(createPrimaryKeySetStorageKeyPrefix(123))).true;
-  expect(k123.startsWith(createPrimaryKeySetStorageKeyPrefix(124))).false;
+  expect(k123).toEqual('"pKeySet",123,"id1",');
+  expect(kp123).toEqual('"pKeySet",123,');
+  expect(k123.startsWith(kp123)).true;
 
-  expect(k1234.startsWith(createPrimaryKeySetStorageKeyPrefix(123))).false;
-  expect(k1234.startsWith(createPrimaryKeySetStorageKeyPrefix(1234))).true;
+  expect(k1234).toEqual('"pKeySet",1234,"id1",');
+  expect(kp1234).toEqual('"pKeySet",1234,');
+  expect(k1234.startsWith(kp1234)).true;
+
+  expect(k123.startsWith(kp1234)).false;
+  expect(k1234.startsWith(kp123)).false;
+
+  const row456 = {a: 456, b: true, id: 'id1', id2: 'id2'};
+  const row4567 = {a: 4567, b: true, id: 'id1', id2: 'id2'};
+  const k456 = makeStorageKey(['b', 'a'], ['id', 'id2'], row456);
+  const kp456 = makeStorageKeyPrefix(row456, ['b', 'a']);
+  const k4567 = makeStorageKey(['b', 'a'], ['id', 'id2'], row4567);
+  const kp4567 = makeStorageKeyPrefix(row4567, ['b', 'a']);
+
+  expect(k456).toEqual('"pKeySet",true,456,"id1","id2",');
+  expect(kp456).toEqual('"pKeySet",true,456,');
+  expect(k456.startsWith(kp456)).true;
+
+  expect(k4567).toEqual('"pKeySet",true,4567,"id1","id2",');
+  expect(kp4567).toEqual('"pKeySet",true,4567,');
+  expect(k4567.startsWith(kp4567)).true;
+
+  expect(k456.startsWith(kp4567)).false;
+  expect(k4567.startsWith(kp456)).false;
 });
