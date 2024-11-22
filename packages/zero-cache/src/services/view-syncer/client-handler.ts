@@ -33,6 +33,7 @@ import {
   versionToCookie,
   versionToNullableCookie,
 } from './schema/types.js';
+import type {TokenData} from './view-syncer.js';
 
 export type PutRowPatch = {
   type: 'row';
@@ -88,12 +89,14 @@ export class ClientHandler {
   readonly #pokes: Subscription<Downstream>;
   #baseVersion: NullableCVRVersion;
   readonly #schemaVersion: number;
+  readonly #tokenData: TokenData | undefined;
 
   constructor(
     lc: LogContext,
     clientGroupID: string,
     clientID: string,
     wsID: string,
+    tokenData: TokenData | undefined,
     shardID: string,
     baseCookie: string | null,
     schemaVersion: number,
@@ -107,6 +110,11 @@ export class ClientHandler {
     this.#pokes = pokes;
     this.#baseVersion = cookieToVersion(baseCookie);
     this.#schemaVersion = schemaVersion;
+    this.#tokenData = tokenData;
+  }
+
+  get tokenData() {
+    return this.#tokenData;
   }
 
   version(): NullableCVRVersion {

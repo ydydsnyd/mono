@@ -25,6 +25,7 @@ import {Subscription} from '../types/subscription.js';
 import {Connection, sendError} from './connection.js';
 import {createNotifierFrom, subscribeTo} from './replicator.js';
 import {ErrorKind} from '../../../zero-protocol/src/error.js';
+import {ErrorForClient} from '../types/error-for-client.js';
 
 export type SyncerWorkerData = {
   replicatorPort: MessagePort;
@@ -109,25 +110,39 @@ export class Syncer implements SingletonService {
       }
     }
 
-    const connection = new Connection(
-      this.#lc,
-      this.#config,
-      decodedToken,
-      this.#viewSyncers.getService(clientGroupID),
-      this.#mutagens.getService(clientGroupID),
-      params,
-      ws,
-      () => {
-        if (this.#connections.get(clientID) === connection) {
-          this.#connections.delete(clientID);
-        }
-      },
-    );
-    this.#connections.set(clientID, connection);
-    if (params.initConnectionMsg) {
-      await connection.handleInitConnection(
-        JSON.stringify(params.initConnectionMsg),
+    try {
+      const connection = new Connection(
+        this.#lc,
+        this.#config,
+        auth !== undefined && decodedToken !== undefined
+          ? {
+              raw: auth,
+              parsed: decodedToken,
+            }
+          : undefined,
+        this.#viewSyncers.getService(clientGroupID),
+        this.#mutagens.getService(clientGroupID),
+        params,
+        ws,
+        () => {
+          if (this.#connections.get(clientID) === connection) {
+            this.#connections.delete(clientID);
+          }
+        },
       );
+      this.#connections.set(clientID, connection);
+      if (params.initConnectionMsg) {
+        await connection.handleInitConnection(
+          JSON.stringify(params.initConnectionMsg),
+        );
+      }
+    } catch (e) {
+      if (e instanceof ErrorForClient) {
+        sendError(this.#lc, ws, e.errorMessage);
+        ws.close(3000, e.message);
+        return;
+      }
+      throw e;
     }
   };
 

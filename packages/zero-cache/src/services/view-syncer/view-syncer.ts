@@ -48,12 +48,18 @@ import {
   type RowID,
 } from './schema/types.js';
 import {SchemaChangeError} from './snapshotter.js';
+import type {JWTPayload} from 'jose';
 
+export type TokenData = {
+  raw: string;
+  parsed: JWTPayload;
+};
 export type SyncContext = {
   readonly clientID: string;
   readonly wsID: string;
   readonly baseCookie: string | null;
   readonly schemaVersion: number;
+  readonly tokenData: TokenData | undefined;
 };
 
 export interface ViewSyncer {
@@ -282,7 +288,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
     ctx: SyncContext,
     initConnectionMessage: InitConnectionMessage,
   ): Promise<Source<Downstream>> {
-    const {clientID, wsID, baseCookie, schemaVersion} = ctx;
+    const {clientID, wsID, baseCookie, schemaVersion, tokenData} = ctx;
     const lc = this.#lc
       .withContext('clientID', clientID)
       .withContext('wsID', wsID);
@@ -302,6 +308,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
       this.id,
       clientID,
       wsID,
+      tokenData,
       this.#shardID,
       baseCookie,
       schemaVersion,
@@ -360,6 +367,52 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
 
         if (newClient) {
           assert(newClient.wsID === wsID);
+
+          const someClient = this.#clients.values().next().value;
+
+          // All clients are forced to have the same token.
+          // If the new client's token does not match an existing client's token
+          // then we either need to:
+          // 1. Reject the new client
+          // 2. Fail all existing clients and take the new client.
+          if (someClient && someClient.tokenData?.raw !== ctx.tokenData?.raw) {
+            if (newClient.tokenData === undefined) {
+              throw new ErrorForClient([
+                'error',
+                ErrorKind.AuthInvalidated,
+                'new client has no auth token but existing clients for this group do have auth tokens',
+              ]);
+            }
+
+            assert(
+              someClient.tokenData !== undefined,
+              'Impossible. For TypeScript.',
+            );
+
+            const newIat = must(newClient.tokenData.parsed.iat);
+            const oldIat = must(someClient.tokenData.parsed.iat);
+
+            if (newIat < oldIat) {
+              throw new ErrorForClient([
+                'error',
+                ErrorKind.AuthInvalidated,
+                'new client has an older auth token than existing clients for this group',
+              ]);
+            } else if (newIat === oldIat) {
+              throw new ErrorForClient([
+                'error',
+                ErrorKind.AuthInvalidated,
+                'new client has a different auth token but same issue time. Cannot determine which token takes precedence.',
+              ]);
+            } else {
+              // The new client has a newer token.
+              // We can take the new client and fail all existing clients.
+              for (const existing of this.#clients.values()) {
+                existing.fail(ErrorKind.AuthInvalidated);
+              }
+            }
+          }
+
           this.#clients.get(clientID)?.close();
           this.#clients.set(clientID, newClient);
           client = newClient;

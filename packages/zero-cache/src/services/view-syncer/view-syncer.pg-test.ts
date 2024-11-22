@@ -81,11 +81,12 @@ describe('view-syncer/service', () => {
   let viewSyncerDone: Promise<void>;
   let replicator: FakeReplicator;
 
-  const SYNC_CONTEXT = {
+  const SYNC_CONTEXT: SyncContext = {
     clientID: 'foo',
     wsID: 'ws1',
     baseCookie: null,
     schemaVersion: 2,
+    tokenData: undefined,
   };
 
   const messages = new ReplicationMessages({issues: 'id', users: 'id'});
@@ -1833,6 +1834,7 @@ describe('view-syncer/service', () => {
         wsID: '9382',
         baseCookie: preAdvancement.cookie,
         schemaVersion: 2,
+        tokenData: undefined,
       },
       [{op: 'put', hash: 'query-hash1', ast: ISSUES_QUERY}],
     );
