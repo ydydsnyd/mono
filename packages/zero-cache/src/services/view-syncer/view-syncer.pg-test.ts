@@ -280,6 +280,52 @@ describe('view-syncer/service', () => {
     });
   });
 
+  describe.only('changing auth data', () => {
+    // and check that the correct error is thrown in each case.
+    test('old clients have no token, new client has a token', async () => {
+      await Promise.all([
+        connect(
+          {
+            ...SYNC_CONTEXT,
+            tokenData: {
+              parsed: {iat: 1},
+              raw: 'old-token',
+            },
+          },
+          [],
+        ),
+        connect(
+          {
+            ...SYNC_CONTEXT,
+            tokenData: {
+              parsed: {iat: 1},
+              raw: 'old-token',
+            },
+          },
+          [],
+        ),
+      ]);
+
+      // spy on client handlers to ensure they were failed?
+      console.log('FOO');
+      await connect(
+        {
+          ...SYNC_CONTEXT,
+          tokenData: {
+            parsed: {iat: 2},
+            raw: 'new-token',
+          },
+        },
+        [],
+      );
+      console.log('BAR');
+    });
+    test('old clients have an old token, new client has a new token', () => {});
+    test('old and new clients have the same token', () => {});
+    test('old clients have a token, new client has no token', () => {});
+    test('old clients have a token, new client has an old token', () => {});
+  });
+
   test('responds to changeQueriesPatch', async () => {
     await connect(SYNC_CONTEXT, [
       {op: 'put', hash: 'query-hash1', ast: ISSUES_QUERY},
