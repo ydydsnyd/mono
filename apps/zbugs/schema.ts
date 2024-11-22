@@ -32,6 +32,7 @@ const issueSchema = createTableSchema({
     creatorID: {type: 'string'},
     assigneeID: {type: 'string', optional: true},
     description: {type: 'string'},
+    private: {type: 'boolean'},
     labelIDs: {type: 'string'},
   },
   primaryKey: ['id'],
@@ -224,6 +225,11 @@ const authorization = defineAuthorization<AuthData, Schema>(schema, () => {
     {cmpLit}: ExpressionBuilder<TableSchema>,
   ) => cmpLit(authData.role, '=', 'crew');
 
+  const allowIfNotPrivate = (
+    _authData: AuthData,
+    {cmp}: ExpressionBuilder<typeof issueSchema>,
+  ) => cmp('private', false);
+
   const allowIfUserIDMatchesLoggedInUser = (
     authData: AuthData,
     {cmp}: ExpressionBuilder<typeof viewStateSchema>,
@@ -247,7 +253,7 @@ const authorization = defineAuthorization<AuthData, Schema>(schema, () => {
           preMutation: [allowIfIssueCreator, allowIfAdmin],
         },
         delete: [allowIfIssueCreator, allowIfAdmin],
-        // select: [allowIfAdmin],
+        select: [allowIfAdmin, allowIfNotPrivate],
       },
     },
     comment: {

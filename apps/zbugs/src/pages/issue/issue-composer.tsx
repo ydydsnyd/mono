@@ -54,6 +54,7 @@ export default function IssueComposer({isOpen, onDismiss}: Props) {
       created: Date.now(),
       creatorID: z.userID,
       modified: Date.now(),
+      private: false,
       open: true,
       labelIDs: '',
     });

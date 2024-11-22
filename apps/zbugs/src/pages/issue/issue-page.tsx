@@ -279,6 +279,29 @@ export default function IssuePage() {
           </div>
 
           <div className="sidebar-item">
+            <p className="issue-detail-label">Visibility</p>
+            <Selector
+              disabled={!canEdit}
+              items={[
+                {
+                  text: 'Public',
+                  value: false,
+                  icon: statusOpen,
+                },
+                {
+                  text: 'Private',
+                  value: true,
+                  icon: statusClosed,
+                },
+              ]}
+              selectedValue={issue.private}
+              onChange={value =>
+                z.mutate.issue.update({id: issue.id, private: value})
+              }
+            />
+          </div>
+
+          <div className="sidebar-item">
             <p className="issue-detail-label">Assignee</p>
             <UserPicker
               disabled={!canEdit}

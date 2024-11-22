@@ -37,7 +37,8 @@ CREATE TABLE issue (
     --
     -- NULL here represents no labels. Empty string represents a single label
     -- with value "".
-    "labelIDs" TEXT
+    "labelIDs" TEXT,
+    "private" BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE "viewState" (
@@ -297,7 +298,7 @@ COPY "label"
 FROM
     '/docker-entrypoint-initdb.d/labels.csv' WITH CSV HEADER;
 
-COPY "issue"
+COPY "issue" ("id","shortID","title","open","modified","created","creatorID","assigneeID","description","labelIDs")
 FROM
     '/docker-entrypoint-initdb.d/issues.csv' WITH CSV HEADER;
 
