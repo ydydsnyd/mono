@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732207277168,
+  "lastUpdate": 1732578808617,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50021,6 +50021,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/ca3621c00507b73f0e7defe37d87715b8c7fbcfe"
         },
         "date": 1732207260250,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 313434,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54702,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 115369,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32028,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c46d2501694e50364bc41eba4a323c8aff2887d5",
+          "message": "chore(replicache,zero): Zero doesnt need to use Replicache.getAuth (#3121)\n\nZero's API around Auth was leaking down into ReplicacheImpls here https://github.com/rocicorp/mono/pull/3066, with the addition of an optional error param.  \r\n\r\nIn thinking this through realized we don't need to be setting `replicache.getAuth` at all in Zero client.  `replicache.getAuth` is only called if pusher or puller returns an 4xx error code, which Zero's implementations never do.  We manage the websocket authentication independently of this.",
+          "timestamp": "2024-11-25T23:52:22Z",
+          "tree_id": "6a930ca519b9d332dee825c127bdfa15f951d223",
+          "url": "https://github.com/rocicorp/mono/commit/c46d2501694e50364bc41eba4a323c8aff2887d5"
+        },
+        "date": 1732578791620,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
