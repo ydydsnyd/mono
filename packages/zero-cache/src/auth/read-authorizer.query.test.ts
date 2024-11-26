@@ -9,7 +9,7 @@ import type {
   InsertOp,
   UpdateOp,
 } from '../../../zero-protocol/src/push.js';
-import {definePermissions} from '../../../zero-schema/src/permissions.js';
+import {defineAuthorization} from '../../../zero-schema/src/authorization.js';
 import type {
   TableSchema,
   TableSchemaToRow,
@@ -305,7 +305,7 @@ type AuthData = {
 
 // eslint-disable-next-line arrow-body-style
 const permissions = must(
-  await definePermissions<AuthData, typeof schema>(schema, () => {
+  await defineAuthorization<AuthData, typeof schema>(schema, () => {
     const isCommentCreator = (
       authData: AuthData,
       {cmp}: ExpressionBuilder<typeof schema.tables.comment>,

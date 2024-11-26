@@ -1,5 +1,5 @@
 import {describe, expect, test} from 'vitest';
-import {definePermissions} from '../../../zero-schema/src/permissions.js';
+import {defineAuthorization} from '../../../zero-schema/src/authorization.js';
 import {createSchema} from '../../../zero-schema/src/schema.js';
 import {
   astForTestingSymbol,
@@ -98,7 +98,7 @@ const authData: AuthData = {
   role: 'user',
 };
 const permissionRules = must(
-  await definePermissions<AuthData, typeof schema>(schema, () => ({
+  await defineAuthorization<AuthData, typeof schema>(schema, () => ({
     unreadable: {
       row: {
         select: [],
