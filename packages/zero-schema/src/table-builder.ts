@@ -3,7 +3,7 @@ import type {
   JunctionRelationship,
   SchemaValue,
   TableSchema,
-} from '../../../zero-schema/src/table-schema.js';
+} from './table-schema.js';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function table<TName extends string>(name: TName) {
@@ -30,6 +30,13 @@ export function boolean() {
 export function json() {
   return new ColumnBuilder({type: 'json', optional: false});
 }
+
+export const column = {
+  string,
+  number,
+  boolean,
+  json,
+};
 
 type Lazy<T> = () => T;
 

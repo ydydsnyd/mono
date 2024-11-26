@@ -21,10 +21,6 @@ export type TableSchema = SourceOrTableSchema & {
   readonly relationships: {readonly [name: string]: Relationship};
 };
 
-export function createTableSchema<const T extends TableSchema>(schema: T) {
-  return schema as T;
-}
-
 export type TableSchemaToRow<T extends TableSchema> = {
   [K in keyof T['columns']]: SchemaValueToTSType<T['columns'][K]>;
 };
