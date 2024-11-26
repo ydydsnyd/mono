@@ -9,10 +9,8 @@ import {
 } from '../../../zql/src/query/query-impl.js';
 import {transformQuery} from './read-authorizer.js';
 import type {Query, QueryType} from '../../../zql/src/query/query.js';
-import {
-  createTableSchema,
-  type TableSchema,
-} from '../../../zero-schema/src/table-schema.js';
+import {type TableSchema} from '../../../zero-schema/src/table-schema.js';
+import {table, column} from '../../../zero-schema/src/table-builder.js';
 import {must} from '../../../shared/src/must.js';
 import type {ExpressionBuilder} from '../../../zql/src/query/expression.js';
 
@@ -22,62 +20,36 @@ function ast(q: Query<TableSchema, QueryType>) {
   return (q as QueryImpl<TableSchema, QueryType>)[astForTestingSymbol];
 }
 
-const unreadable = createTableSchema({
-  tableName: 'unreadable',
-  columns: {
-    id: {type: 'string'},
-  },
-  primaryKey: ['id'],
-  relationships: {},
-});
-const readable = {
-  tableName: 'readable',
-  columns: {
-    id: {type: 'string'},
-    unreadableId: {type: 'string'},
-    readableId: {type: 'string'},
-  },
-  primaryKey: ['id'],
-  relationships: {
-    readable: {
-      dest: {
-        field: 'id',
-        schema: () => readable,
-      },
-      source: 'readableId',
-    },
-    unreadable: {
-      dest: {
-        field: 'id',
-        schema: unreadable,
-      },
-      source: 'unreadableId',
-    },
-  },
-} as const;
-const adminReadable = {
-  tableName: 'adminReadable',
-  columns: {
-    id: {type: 'string'},
-  },
-  primaryKey: ['id'],
-  relationships: {
-    self1: {
-      dest: {
-        field: 'id',
-        schema: () => adminReadable,
-      },
-      source: 'id',
-    },
-    self2: {
-      dest: {
-        field: 'id',
-        schema: () => adminReadable,
-      },
-      source: 'id',
-    },
-  },
-} as const;
+const unreadable = table('unreadable')
+  .columns({
+    id: column.string(),
+  })
+  .primaryKey('id')
+  .build();
+
+const readable = table('readable')
+  .columns({
+    id: column.string(),
+    unreadableId: column.string(),
+    readableId: column.string(),
+  })
+  .primaryKey('id')
+  .relationships(source => ({
+    readable: source('readableId').dest(() => readable, 'id'),
+    unreadable: source('unreadableId').dest(unreadable, 'id'),
+  }))
+  .build();
+
+const adminReadable = table('adminReadable')
+  .columns({
+    id: column.string(),
+  })
+  .primaryKey('id')
+  .relationships(source => ({
+    self1: source('id').dest(self => self, 'id'),
+    self2: source('id').dest(self => self, 'id'),
+  }))
+  .build();
 
 const schema = createSchema({
   version: 1,

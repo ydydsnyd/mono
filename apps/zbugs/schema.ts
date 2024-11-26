@@ -54,6 +54,9 @@ const viewState = table('viewState')
     viewed: number(),
   })
   .primaryKey('issueID', 'userID')
+  .relationships(source => ({
+    // issue: source('issueID').dest(issue, 'id'),
+  }))
   .build();
 
 const comment = table('comment')
