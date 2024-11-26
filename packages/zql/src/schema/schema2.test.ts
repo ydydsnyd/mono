@@ -25,4 +25,15 @@ test('basics', () => {
     })
     .primaryKey('id')
     .build();
+
+  table('issue')
+    .columns({
+      id: string(),
+      title: string(),
+      open: boolean(),
+      created: number(),
+      modified: number(),
+    })
+    // @ts-expect-error missing field as primary key
+    .primaryKey('foo');
 });

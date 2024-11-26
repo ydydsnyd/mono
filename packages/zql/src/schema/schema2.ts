@@ -6,7 +6,7 @@ export function table<TName extends string>(name: TName) {
     name,
     columns: {},
     primaryKey: [],
-    relationships: [],
+    relationships: {},
   });
 }
 
@@ -31,7 +31,7 @@ export function fieldRelationship<
   TSourceSchema extends TableSchema,
 >(string: TName) {
   return (schema: TSourceSchema) =>
-    new FieldRelationshipConfig({
+    new FieldRelationshipBuilder({
       name: string,
       sourceSchema: schema,
     });
@@ -42,7 +42,7 @@ export function junctionRelationship<
   TSourceSchema extends TableSchema,
 >(string: TName) {
   return (schema: TSourceSchema) =>
-    new JunctionRelationshipConfig({
+    new JunctionRelationshipBuilder({
       name: string,
       sourceSchema: schema,
     });
@@ -54,7 +54,7 @@ type TableSchema = {
   name: string;
   columns: Record<string, SchemaValue>;
   primaryKey: ColumnSchema[][number]['name'][];
-  relationships: RelationshipSchema[];
+  relationships: Record<string, RelationshipSchema>;
 };
 
 type StorageType = 'string' | 'number' | 'boolean' | 'null' | 'json';
@@ -95,7 +95,13 @@ class TableBuilder<TShape extends TableSchema> {
       columns: {[K in keyof TColumns]: TColumns[K]['schema']};
     }
   > {
-    return new TableBuilderWithColumns({...this.#schema, columns}) as any;
+    const columnSchemas = Object.fromEntries(
+      Object.entries(columns).map(([k, v]) => [k, v.schema]),
+    ) as {[K in keyof TColumns]: TColumns[K]['schema']};
+    return new TableBuilderWithColumns({
+      ...this.#schema,
+      columns: columnSchemas,
+    }) as any;
   }
 }
 
@@ -116,20 +122,24 @@ class TableBuilderWithColumns<TShape extends TableSchema> {
   }
 
   relationships<
-    TRelationships extends (
-      | FieldRelationshipConfig<RelationshipSchema>
-      | JunctionRelationshipConfig<RelationshipSchema>
-    )[],
+    TRelationships extends Record<
+      string,
+      | FieldRelationshipBuilder<RelationshipSchema>
+      | JunctionRelationshipBuilder<RelationshipSchema>
+    >,
   >(
-    ...relationships: TRelationships
+    relationships: TRelationships,
   ): TableBuilderWithColumns<
     Omit<TShape, 'relationships'> & {
-      relationships: TRelationships[number]['schema'][];
+      relationships: {[K in keyof TRelationships]: TRelationships[K]['schema']};
     }
   > {
+    const relationshipSchemas = Object.fromEntries(
+      Object.entries(relationships).map(([k, v]) => [k, v.schema]),
+    ) as {[K in keyof TRelationships]: TRelationships[K]['schema']};
     return new TableBuilderWithColumns({
       ...this.#schema,
-      relationships: relationships.map(r => r.schema),
+      relationships: relationshipSchemas,
     });
   }
 
@@ -153,7 +163,7 @@ class ColumnBuilder<TShape extends SchemaValue> {
   }
 }
 
-class FieldRelationshipConfig<TShape extends RelationshipSchema> {
+class FieldRelationshipBuilder<TShape extends RelationshipSchema> {
   readonly #schema: TShape;
   constructor(schema: TShape) {
     this.#schema = schema;
@@ -164,7 +174,7 @@ class FieldRelationshipConfig<TShape extends RelationshipSchema> {
   }
 }
 
-class JunctionRelationshipConfig<TShape extends RelationshipSchema> {
+class JunctionRelationshipBuilder<TShape extends RelationshipSchema> {
   readonly #schema: TShape;
   constructor(schema: TShape) {
     this.#schema = schema;
