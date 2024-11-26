@@ -31,6 +31,7 @@ export class ArrayView<V extends View> implements Output, TypedView<V> {
   onDestroy: (() => void) | undefined;
 
   #dirty = false;
+  #complete = false;
 
   constructor(
     input: Input,
@@ -49,11 +50,16 @@ export class ArrayView<V extends View> implements Output, TypedView<V> {
     return this.#root[''] as V;
   }
 
+  setComplete() {
+    this.#complete = true;
+    this.#fireListeners();
+  }
+
   addListener(listener: Listener<V>) {
     assert(!this.#listeners.has(listener), 'Listener already registered');
     this.#listeners.add(listener);
 
-    listener(this.data as Immutable<V>);
+    this.#fireListener(listener);
 
     return () => {
       this.#listeners.delete(listener);
@@ -62,8 +68,15 @@ export class ArrayView<V extends View> implements Output, TypedView<V> {
 
   #fireListeners() {
     for (const listener of this.#listeners) {
-      listener(this.data as Immutable<V>);
+      this.#fireListener(listener);
     }
+  }
+
+  #fireListener(listener: Listener<V>) {
+    listener(
+      this.data as Immutable<V>,
+      this.#complete ? 'complete' : 'unknown',
+    );
   }
 
   destroy() {

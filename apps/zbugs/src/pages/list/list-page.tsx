@@ -87,7 +87,7 @@ export default function ListPage() {
     q = q.whereExists('labels', q => q.where('name', label));
   }
 
-  const issues = useQuery(q);
+  const [issues] = useQuery(q);
 
   let title;
   if (creator || assignee || labels.length > 0 || textFilter) {

@@ -31,6 +31,7 @@ import {LRUCache} from '../../lru-cache.js';
 import {links, type ListContext, type ZbugsHistoryState} from '../../routes.js';
 import CommentComposer from './comment-composer.js';
 import Comment, {parsePermalink} from './comment.js';
+import {preload} from '../../zero-setup.js';
 
 export default function IssuePage() {
   const z = useZero();
@@ -51,8 +52,15 @@ export default function IssuePage() {
     .related('viewState', q => q.where('userID', z.userID).one())
     .related('comments', q => q.orderBy('created', 'asc'))
     .one();
-  const issue = useQuery(q);
+
   const login = useLogin();
+  const [issue, resultType] = useQuery(q);
+
+  useEffect(() => {
+    if (resultType === 'complete') {
+      preload(z);
+    }
+  }, [resultType, z]);
 
   useEffect(() => {
     // only push viewed forward if the issue has been modified since the last viewing
@@ -110,7 +118,7 @@ export default function IssuePage() {
   ) {
     setIssueSnapshot(issue);
   }
-  const next = useQuery(
+  const [next] = useQuery(
     buildListQuery(z, listContext, issue, 'next'),
     listContext !== undefined && issueSnapshot !== undefined,
   );
@@ -120,7 +128,7 @@ export default function IssuePage() {
     }
   });
 
-  const prev = useQuery(
+  const [prev] = useQuery(
     buildListQuery(z, listContext, issue, 'prev'),
     listContext !== undefined && issueSnapshot !== undefined,
   );

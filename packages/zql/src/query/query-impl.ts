@@ -45,7 +45,7 @@ import type {
   Row,
   Smash,
 } from './query.js';
-import type {TypedView} from './typed-view.js';
+import type {Completable, TypedView} from './typed-view.js';
 
 export function newQuery<
   TSchema extends TableSchema,
@@ -534,9 +534,15 @@ export class QueryImpl<
     return newQueryWithDetails(this.#delegate, schema, ast, format);
   }
 
-  materialize<T>(factory?: ViewFactory<TSchema, TReturn, T>): T {
+  materialize<T extends Completable>(
+    factory?: ViewFactory<TSchema, TReturn, T>,
+  ): T {
     const ast = this._completeAst();
-    const removeServerQuery = this.#delegate.addServerQuery(ast);
+    const removeServerQuery = this.#delegate.addServerQuery(ast, got => {
+      if (got) {
+        view.setComplete();
+      }
+    });
 
     const input = buildPipeline(ast, this.#delegate);
     let removeCommitObserver: (() => void) | undefined;
