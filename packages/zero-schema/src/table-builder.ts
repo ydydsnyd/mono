@@ -133,7 +133,7 @@ class UndeterminedRelationshipBuilder<TShape extends TableSchema> {
       source: this.#sourceField,
       dest: {
         field: destField,
-        schema: typeof destSchema === 'function' ? destSchema() : destSchema,
+        schema: destSchema,
       },
     });
   }
@@ -150,10 +150,7 @@ class UndeterminedRelationshipBuilder<TShape extends TableSchema> {
         source: sourceField,
         dest: {
           field: destField,
-          schema:
-            typeof junctionSchema === 'function'
-              ? junctionSchema()
-              : junctionSchema,
+          schema: junctionSchema,
         },
       },
     });
@@ -206,14 +203,14 @@ class JunctionRelationshipBuilder<TShape extends JunctionRelationship> {
     junction: TShape['junction'];
     dest: {
       field: typeof destField;
-      schema: TDestSchema;
+      schema: TDestSchema | Lazy<TDestSchema>;
     };
   }> {
     return new JunctionRelationshipBuilder({
       ...this.#schema,
       dest: {
         field: destField,
-        schema: typeof destSchema === 'function' ? destSchema() : destSchema,
+        schema: destSchema,
       },
     } as const);
   }
