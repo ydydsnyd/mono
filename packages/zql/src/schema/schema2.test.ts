@@ -10,5 +10,6 @@ test('basics', () => {
       number('created'),
       number('modified'),
     )
-    .primaryKey('id');
+    .primaryKey('id')
+    .build();
 });

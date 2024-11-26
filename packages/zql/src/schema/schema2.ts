@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function table<TName extends string>(name: TName) {
-  return new TableSchemaConfig({
+  return new TableBuilder({
     name,
     columns: [],
     primaryKey: [],
@@ -9,19 +9,19 @@ export function table<TName extends string>(name: TName) {
 }
 
 export function string<TName extends string>(name: TName) {
-  return new ColumnConfig({name, storageType: 'string'});
+  return new ColumnBuilder({name, storageType: 'string', optional: false});
 }
 
 export function number<TName extends string>(name: TName) {
-  return new ColumnConfig({name, storageType: 'number'});
+  return new ColumnBuilder({name, storageType: 'number', optional: false});
 }
 
 export function boolean<TName extends string>(name: TName) {
-  return new ColumnConfig({name, storageType: 'boolean'});
+  return new ColumnBuilder({name, storageType: 'boolean', optional: false});
 }
 
 export function json<TName extends string>(name: TName) {
-  return new ColumnConfig({name, storageType: 'json'});
+  return new ColumnBuilder({name, storageType: 'json', optional: false});
 }
 
 export function fieldRelationship<
@@ -60,6 +60,7 @@ type StorageType = 'string' | 'number' | 'boolean' | 'null' | 'json';
 type ColumnSchema = {
   name: string;
   storageType: StorageType;
+  optional: boolean;
 };
 
 type RelationshipSchema = {
@@ -79,24 +80,24 @@ type RelationshipSchema = {
   };
 };
 
-class TableSchemaConfig<TShape extends TableSchema> {
+class TableBuilder<TShape extends TableSchema> {
   readonly #schema: TShape;
   constructor(schema: TShape) {
     this.#schema = schema;
   }
 
-  columns<TColumns extends ColumnConfig<ColumnSchema>[]>(
+  columns<TColumns extends ColumnBuilder<ColumnSchema>[]>(
     ...columns: TColumns
-  ): TableSchemaConfigWithColumns<
+  ): TableBuilderWithColumns<
     Omit<TShape, 'columns'> & {
       columns: TColumns[number]['schema'][];
     }
   > {
-    return new TableSchemaConfigWithColumns({...this.#schema, columns}) as any;
+    return new TableBuilderWithColumns({...this.#schema, columns}) as any;
   }
 }
 
-class TableSchemaConfigWithColumns<TShape extends TableSchema> {
+class TableBuilderWithColumns<TShape extends TableSchema> {
   readonly #schema: TShape;
 
   constructor(schema: TShape) {
@@ -106,7 +107,7 @@ class TableSchemaConfigWithColumns<TShape extends TableSchema> {
   primaryKey<TPKColNames extends TShape['columns'][number]['name'][]>(
     ...pkColumnNames: TPKColNames
   ) {
-    return new TableSchemaConfigWithColumns({
+    return new TableBuilderWithColumns({
       ...this.#schema,
       primaryKey: pkColumnNames,
     });
@@ -117,15 +118,25 @@ class TableSchemaConfigWithColumns<TShape extends TableSchema> {
       | FieldRelationshipConfig<RelationshipSchema>
       | JunctionRelationshipConfig<RelationshipSchema>
     )[],
-  >(...relationships: TRelationships) {
-    return new TableSchemaConfigWithColumns({
+  >(
+    ...relationships: TRelationships
+  ): TableBuilderWithColumns<
+    Omit<TShape, 'relationships'> & {
+      relationships: TRelationships[number]['schema'][];
+    }
+  > {
+    return new TableBuilderWithColumns({
       ...this.#schema,
       relationships: relationships.map(r => r.schema),
     });
   }
+
+  build() {
+    return this.#schema;
+  }
 }
 
-class ColumnConfig<TShape extends ColumnSchema> {
+class ColumnBuilder<TShape extends ColumnSchema> {
   readonly #schema: TShape;
   constructor(schema: TShape) {
     this.#schema = schema;
