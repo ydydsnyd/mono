@@ -1,27 +1,29 @@
+import type {SchemaValue} from '../../../zero-schema/src/table-schema.js';
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function table<TName extends string>(name: TName) {
   return new TableBuilder({
     name,
-    columns: [],
+    columns: {},
     primaryKey: [],
     relationships: [],
   });
 }
 
-export function string<TName extends string>(name: TName) {
-  return new ColumnBuilder({name, storageType: 'string', optional: false});
+export function string() {
+  return new ColumnBuilder({type: 'string', optional: false});
 }
 
-export function number<TName extends string>(name: TName) {
-  return new ColumnBuilder({name, storageType: 'number', optional: false});
+export function number() {
+  return new ColumnBuilder({type: 'number', optional: false});
 }
 
-export function boolean<TName extends string>(name: TName) {
-  return new ColumnBuilder({name, storageType: 'boolean', optional: false});
+export function boolean() {
+  return new ColumnBuilder({type: 'boolean', optional: false});
 }
 
-export function json<TName extends string>(name: TName) {
-  return new ColumnBuilder({name, storageType: 'json', optional: false});
+export function json() {
+  return new ColumnBuilder({type: 'json', optional: false});
 }
 
 export function fieldRelationship<
@@ -50,7 +52,7 @@ type Lazy<T> = () => T;
 
 type TableSchema = {
   name: string;
-  columns: ColumnSchema[];
+  columns: Record<string, SchemaValue>;
   primaryKey: ColumnSchema[][number]['name'][];
   relationships: RelationshipSchema[];
 };
@@ -86,11 +88,11 @@ class TableBuilder<TShape extends TableSchema> {
     this.#schema = schema;
   }
 
-  columns<TColumns extends ColumnBuilder<ColumnSchema>[]>(
-    ...columns: TColumns
+  columns<TColumns extends Record<string, ColumnBuilder<SchemaValue>>>(
+    columns: TColumns,
   ): TableBuilderWithColumns<
     Omit<TShape, 'columns'> & {
-      columns: TColumns[number]['schema'][];
+      columns: {[K in keyof TColumns]: TColumns[K]['schema']};
     }
   > {
     return new TableBuilderWithColumns({...this.#schema, columns}) as any;
@@ -104,7 +106,7 @@ class TableBuilderWithColumns<TShape extends TableSchema> {
     this.#schema = schema;
   }
 
-  primaryKey<TPKColNames extends TShape['columns'][number]['name'][]>(
+  primaryKey<TPKColNames extends (keyof TShape['columns'])[]>(
     ...pkColumnNames: TPKColNames
   ) {
     return new TableBuilderWithColumns({
@@ -136,10 +138,14 @@ class TableBuilderWithColumns<TShape extends TableSchema> {
   }
 }
 
-class ColumnBuilder<TShape extends ColumnSchema> {
+class ColumnBuilder<TShape extends SchemaValue> {
   readonly #schema: TShape;
   constructor(schema: TShape) {
     this.#schema = schema;
+  }
+
+  optional() {
+    return new ColumnBuilder({...this.#schema, optional: true});
   }
 
   get schema() {
