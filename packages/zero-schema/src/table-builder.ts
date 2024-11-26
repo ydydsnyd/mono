@@ -111,7 +111,7 @@ class TableBuilderWithColumns<TShape extends TableSchema> {
   }
 }
 
-function source<TShape extends TableSchema>(
+export function source<TShape extends TableSchema>(
   sourceField: keyof TShape['columns'] & string,
 ) {
   return new UndeterminedRelationshipBuilder(sourceField);

@@ -20,36 +20,69 @@ function ast(q: Query<TableSchema, QueryType>) {
   return (q as QueryImpl<TableSchema, QueryType>)[astForTestingSymbol];
 }
 
+const {string} = column;
+
 const unreadable = table('unreadable')
   .columns({
-    id: column.string(),
+    id: string(),
   })
   .primaryKey('id')
   .build();
 
-const readable = table('readable')
+// Recursive relationships have to be encoded directly
+// in TypeScript due to TS limitations.
+// To use the builder at least partially, we define
+// the non-recursive part of the schema first.
+const readablePartial = table('readable')
   .columns({
-    id: column.string(),
-    unreadableId: column.string(),
-    readableId: column.string(),
+    id: string(),
+    unreadableId: string(),
+    readableId: string(),
   })
   .primaryKey('id')
   .relationships(source => ({
-    readable: source('readableId').dest(() => readable, 'id'),
     unreadable: source('unreadableId').dest(unreadable, 'id'),
   }))
   .build();
 
-const adminReadable = table('adminReadable')
-  .columns({
-    id: column.string(),
-  })
-  .primaryKey('id')
-  .relationships(source => ({
-    self1: source('id').dest(self => self, 'id'),
-    self2: source('id').dest(self => self, 'id'),
-  }))
-  .build();
+const readable = {
+  ...readablePartial,
+  relationships: {
+    ...readablePartial.relationships,
+    readable: {
+      source: 'readableId',
+      dest: {
+        field: 'id',
+        schema: () => readable,
+      },
+    },
+  },
+} as const;
+
+const adminReadable = {
+  ...table('adminReadable')
+    .columns({
+      id: string(),
+    })
+    .primaryKey('id')
+    .build(),
+  relationships: {
+    self1: {
+      dest: {
+        schema: () => adminReadable,
+        field: 'id',
+      },
+      source: 'id',
+    },
+    self2: {
+      dest: {
+        schema: () => adminReadable,
+        field: 'id',
+      },
+      source: 'id',
+    },
+  },
+} as const;
 
 const schema = createSchema({
   version: 1,
