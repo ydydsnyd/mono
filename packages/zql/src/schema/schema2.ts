@@ -1,16 +1,16 @@
 import type {
   FieldRelationship,
   JunctionRelationship,
-  Relationship,
   SchemaValue,
+  TableSchema,
 } from '../../../zero-schema/src/table-schema.js';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function table<TName extends string>(name: TName) {
   return new TableBuilder({
-    name,
+    tableName: name,
     columns: {},
-    primaryKey: [],
+    primaryKey: null as any,
     relationships: {},
   });
 }
@@ -32,21 +32,6 @@ export function json() {
 }
 
 type Lazy<T> = () => T;
-
-type TableSchema = {
-  name: string;
-  columns: Record<string, SchemaValue>;
-  primaryKey: ColumnSchema[][number]['name'][];
-  relationships: Record<string, Relationship>;
-};
-
-type StorageType = 'string' | 'number' | 'boolean' | 'null' | 'json';
-
-type ColumnSchema = {
-  name: string;
-  storageType: StorageType;
-  optional: boolean;
-};
 
 class TableBuilder<TShape extends TableSchema> {
   readonly #schema: TShape;
@@ -94,22 +79,24 @@ class TableBuilderWithColumns<TShape extends TableSchema> {
       | JunctionRelationshipBuilder<JunctionRelationship>
     >,
   >(
-    cb: (builder: RelationshipBuilder<TShape>) => TRelationships,
+    cb: (
+      source: (
+        field: keyof TShape['columns'] & string,
+      ) => UndeterminedRelationshipBuilder<TShape>,
+    ) => TRelationships,
   ): TableBuilderWithColumns<
     Omit<TShape, 'relationships'> & {
       relationships: {[K in keyof TRelationships]: TRelationships[K]['schema']};
     }
   > {
     const relationshipSchemas = Object.fromEntries(
-      Object.entries(cb(new RelationshipBuilderImpl<TShape>())).map(
-        ([k, v]) => [k, v.schema],
-      ),
+      Object.entries(cb(source)).map(([k, v]) => [k, v.schema]),
     ) as {[K in keyof TRelationships]: TRelationships[K]['schema']};
 
     return new TableBuilderWithColumns({
       ...this.#schema,
       relationships: relationshipSchemas,
-    });
+    }) as any;
   }
 
   build() {
@@ -117,23 +104,51 @@ class TableBuilderWithColumns<TShape extends TableSchema> {
   }
 }
 
-interface RelationshipBuilder<TShape extends TableSchema> {
-  field(
-    source: keyof TShape['columns'] & string,
-  ): FieldRelationshipBuilder<TShape, FieldRelationship>;
-  // junctionRelationship<TSourceSchema extends TableSchema>(): JunctionRelationshipBuilder<JunctionRelationship>;
+function source<TShape extends TableSchema>(
+  sourceField: keyof TShape['columns'] & string,
+) {
+  return new UndeterminedRelationshipBuilder(sourceField);
 }
 
-class RelationshipBuilderImpl<TShape extends TableSchema>
-  implements RelationshipBuilder<TShape>
-{
-  field = <TSourceSchema extends TableSchema>(
-    source: keyof TSourceSchema['columns'] & string,
-  ): FieldRelationshipBuilder<TShape, FieldRelationship> =>
-    new FieldRelationshipBuilder({
-      source,
-      dest: null as any,
+class UndeterminedRelationshipBuilder<TShape extends TableSchema> {
+  readonly #sourceField;
+  constructor(sourceField: keyof TShape['columns'] & string) {
+    this.#sourceField = sourceField;
+  }
+
+  dest<TDestSchema extends TableSchema>(
+    destSchema: TDestSchema | Lazy<TDestSchema>,
+    destField: keyof TDestSchema['columns'] & string,
+  ) {
+    return new FieldRelationshipBuilder({
+      source: this.#sourceField,
+      dest: {
+        field: destField,
+        schema: typeof destSchema === 'function' ? destSchema() : destSchema,
+      },
     });
+  }
+
+  junction<TJunctionSchema extends TableSchema>(
+    junctionSchema: TJunctionSchema | Lazy<TJunctionSchema>,
+    sourceField: keyof TJunctionSchema['columns'] & string,
+    destField: keyof TJunctionSchema['columns'] & string,
+  ) {
+    return new JunctionRelationshipBuilder({
+      source: this.#sourceField,
+      dest: null as any,
+      junction: {
+        source: sourceField,
+        dest: {
+          field: destField,
+          schema:
+            typeof junctionSchema === 'function'
+              ? junctionSchema()
+              : junctionSchema,
+        },
+      },
+    });
+  }
 }
 
 class ColumnBuilder<TShape extends SchemaValue> {
@@ -189,6 +204,19 @@ class JunctionRelationshipBuilder<TShape extends JunctionRelationship> {
   readonly #schema: TShape;
   constructor(schema: TShape) {
     this.#schema = schema;
+  }
+
+  dest<TDestSchema extends TableSchema>(
+    destSchema: TDestSchema | Lazy<TDestSchema>,
+    destField: keyof TDestSchema['columns'],
+  ) {
+    return new FieldRelationshipBuilder({
+      ...this.#schema,
+      dest: {
+        field: destField,
+        schema: destSchema,
+      },
+    });
   }
 
   get schema() {
