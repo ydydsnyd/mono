@@ -48,11 +48,12 @@ class TableBuilder<TShape extends TableSchema> {
 
   columns<TColumns extends Record<string, ColumnBuilder<SchemaValue>>>(
     columns: TColumns,
-  ): TableBuilderWithColumns<
-    Omit<TShape, 'columns'> & {
-      columns: {[K in keyof TColumns]: TColumns[K]['schema']};
-    }
-  > {
+  ): TableBuilderWithColumns<{
+    tableName: TShape['tableName'];
+    columns: {[K in keyof TColumns]: TColumns[K]['schema']};
+    primaryKey: TShape['primaryKey'];
+    relationships: TShape['relationships'];
+  }> {
     const columnSchemas = Object.fromEntries(
       Object.entries(columns).map(([k, v]) => [k, v.schema]),
     ) as {[K in keyof TColumns]: TColumns[K]['schema']};
@@ -82,7 +83,7 @@ class TableBuilderWithColumns<TShape extends TableSchema> {
   relationships<
     TRelationships extends Record<
       string,
-      | FieldRelationshipBuilder<TShape, FieldRelationship>
+      | FieldRelationshipBuilder<FieldRelationship>
       | JunctionRelationshipBuilder<JunctionRelationship>
     >,
   >(
@@ -91,11 +92,12 @@ class TableBuilderWithColumns<TShape extends TableSchema> {
         field: keyof TShape['columns'] & string,
       ) => UndeterminedRelationshipBuilder<TShape>,
     ) => TRelationships,
-  ): TableBuilderWithColumns<
-    Omit<TShape, 'relationships'> & {
-      relationships: {[K in keyof TRelationships]: TRelationships[K]['schema']};
-    }
-  > {
+  ): TableBuilderWithColumns<{
+    tableName: TShape['tableName'];
+    columns: TShape['columns'];
+    primaryKey: TShape['primaryKey'];
+    relationships: {[K in keyof TRelationships]: TRelationships[K]['schema']};
+  }> {
     const relationshipSchemas = Object.fromEntries(
       Object.entries(cb(source)).map(([k, v]) => [k, v.schema]),
     ) as {[K in keyof TRelationships]: TRelationships[K]['schema']};
@@ -164,8 +166,14 @@ class ColumnBuilder<TShape extends SchemaValue> {
     this.#schema = schema;
   }
 
-  optional() {
-    return new ColumnBuilder({...this.#schema, optional: true});
+  optional(): ColumnBuilder<{
+    type: TShape['type'];
+    optional: true;
+  }> {
+    return new ColumnBuilder({
+      ...this.#schema,
+      optional: true,
+    } as const);
   }
 
   get schema() {
@@ -173,33 +181,10 @@ class ColumnBuilder<TShape extends SchemaValue> {
   }
 }
 
-class FieldRelationshipBuilder<
-  TSource extends TableSchema,
-  TShape extends FieldRelationship,
-> {
+class FieldRelationshipBuilder<TShape extends FieldRelationship> {
   readonly #schema: TShape;
   constructor(schema: TShape) {
     this.#schema = schema;
-  }
-
-  source<TColName extends keyof TSource['columns']>(colName: TColName) {
-    return new FieldRelationshipBuilder({
-      ...this.#schema,
-      source: colName,
-    });
-  }
-
-  dest<TDestSchema extends TableSchema>(
-    destSchema: TDestSchema | Lazy<TDestSchema>,
-    destField: keyof TDestSchema['columns'],
-  ) {
-    return new FieldRelationshipBuilder({
-      ...this.#schema,
-      dest: {
-        field: destField,
-        schema: destSchema,
-      },
-    });
   }
 
   get schema() {
@@ -215,15 +200,22 @@ class JunctionRelationshipBuilder<TShape extends JunctionRelationship> {
 
   dest<TDestSchema extends TableSchema>(
     destSchema: TDestSchema | Lazy<TDestSchema>,
-    destField: keyof TDestSchema['columns'],
-  ) {
-    return new FieldRelationshipBuilder({
+    destField: keyof TDestSchema['columns'] & string,
+  ): JunctionRelationshipBuilder<{
+    source: TShape['source'];
+    junction: TShape['junction'];
+    dest: {
+      field: typeof destField;
+      schema: TDestSchema;
+    };
+  }> {
+    return new JunctionRelationshipBuilder({
       ...this.#schema,
       dest: {
         field: destField,
-        schema: destSchema,
+        schema: typeof destSchema === 'function' ? destSchema() : destSchema,
       },
-    });
+    } as const);
   }
 
   get schema() {

@@ -420,6 +420,7 @@ function buildListQuery(
 
   if (labels) {
     for (const label of labels) {
+      // q.whereExists('labels', q => q.where(''));
       q = q.whereExists('labels', q => q.where('name', label));
     }
   }
