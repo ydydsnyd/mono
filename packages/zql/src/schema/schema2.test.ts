@@ -1,5 +1,5 @@
 import {test} from 'vitest';
-import {boolean, number, string, table} from './schema2.js';
+import {boolean, fieldRelationship, number, string, table} from './schema2.js';
 
 // test('basics', () => {
 //   const issue = table('issue')
@@ -24,9 +24,12 @@ test('basics', () => {
       modified: number(),
     })
     .primaryKey('id')
+    .relationships(({field}) => ({
+      comments: field('id').dest('issueID'),
+    }))
     .build();
 
-  table('issue')
+  table('malformed')
     .columns({
       id: string(),
       title: string(),
