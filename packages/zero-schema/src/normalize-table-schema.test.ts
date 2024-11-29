@@ -327,3 +327,84 @@ test('Missing relationships should be normalized to empty object', () => {
     }
   `);
 });
+
+test('field names should be normalized to compound keys', () => {
+  const fooTableSchema: TableSchema = {
+    tableName: 'foo',
+    primaryKey: ['id'],
+    columns: {
+      id: {type: 'string'},
+    },
+    relationships: {
+      bar: {
+        sourceField: 'bar-source',
+        destField: ['field'],
+        destSchema: () => barTableSchema,
+      },
+    },
+  };
+
+  const barTableSchema: TableSchema = {
+    tableName: 'bar',
+    primaryKey: ['id'],
+    columns: {
+      id: {type: 'string'},
+    },
+    relationships: {
+      foo: {
+        sourceField: ['foo-source'],
+        destField: 'field',
+        destSchema: () => fooTableSchema,
+      },
+    },
+  };
+
+  const normalizedFooTableSchema = normalizeTableSchema(fooTableSchema);
+  expect(normalizedFooTableSchema).toMatchInlineSnapshot(`
+    NormalizedTableSchema {
+      "columns": {
+        "id": {
+          "optional": false,
+          "type": "string",
+        },
+      },
+      "primaryKey": [
+        "id",
+      ],
+      "relationships": {
+        "bar": {
+          "destField": [
+            "field",
+          ],
+          "destSchema": NormalizedTableSchema {
+            "columns": {
+              "id": {
+                "optional": false,
+                "type": "string",
+              },
+            },
+            "primaryKey": [
+              "id",
+            ],
+            "relationships": {
+              "foo": {
+                "destField": [
+                  "field",
+                ],
+                "destSchema": [Circular],
+                "sourceField": [
+                  "foo-source",
+                ],
+              },
+            },
+            "tableName": "bar",
+          },
+          "sourceField": [
+            "bar-source",
+          ],
+        },
+      },
+      "tableName": "foo",
+    }
+  `);
+});
