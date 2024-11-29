@@ -436,3 +436,76 @@ test('string primary key should be normalized to PrimaryKey', () => {
     }
   `);
 });
+
+test('column types should be normalized to SchemaValue', () => {
+  const fooTableSchema: TableSchema = {
+    tableName: 'foo',
+    primaryKey: ['string'],
+    columns: {
+      string: 'string',
+      number: 'number',
+      boolean: 'boolean',
+      null: 'null',
+      json: 'json',
+
+      stringOptional: {type: 'string', optional: true},
+      numberOptional: {type: 'number', optional: true},
+      booleanOptional: {type: 'boolean', optional: true},
+      nullOptional: {type: 'null', optional: true},
+      jsonOptional: {type: 'json', optional: true},
+    },
+  };
+
+  const normalizedFooTableSchema = normalizeTableSchema(fooTableSchema);
+  expect(normalizedFooTableSchema).toMatchInlineSnapshot(`
+    NormalizedTableSchema {
+      "columns": {
+        "boolean": {
+          "optional": false,
+          "type": "boolean",
+        },
+        "booleanOptional": {
+          "optional": true,
+          "type": "boolean",
+        },
+        "json": {
+          "optional": false,
+          "type": "json",
+        },
+        "jsonOptional": {
+          "optional": true,
+          "type": "json",
+        },
+        "null": {
+          "optional": false,
+          "type": "null",
+        },
+        "nullOptional": {
+          "optional": true,
+          "type": "null",
+        },
+        "number": {
+          "optional": false,
+          "type": "number",
+        },
+        "numberOptional": {
+          "optional": true,
+          "type": "number",
+        },
+        "string": {
+          "optional": false,
+          "type": "string",
+        },
+        "stringOptional": {
+          "optional": true,
+          "type": "string",
+        },
+      },
+      "primaryKey": [
+        "string",
+      ],
+      "relationships": {},
+      "tableName": "foo",
+    }
+  `);
+});
