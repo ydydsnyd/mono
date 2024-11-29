@@ -2,8 +2,10 @@ import {expect, test} from 'vitest';
 import {
   type JSONValue,
   assertJSONValue,
+  decycle,
   deepEqual,
   isJSONValue,
+  recycle,
 } from './json.js';
 
 test('JSON deep equal', () => {
@@ -123,4 +125,21 @@ test('isJSONValue', () => {
   t(123n, []);
   t([undefined], [0]);
   t({x: [undefined]}, ['x', 0]);
+});
+
+test.only('stringify cyclic json', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const a: any = {
+    b: null,
+  };
+  const b = {
+    a,
+  };
+  a.b = b;
+  const d = decycle({
+    a,
+    b,
+  });
+  console.log(d);
+  console.log(recycle(d));
 });

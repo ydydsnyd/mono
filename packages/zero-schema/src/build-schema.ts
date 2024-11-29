@@ -7,6 +7,7 @@ import * as v from '../../shared/src/valita.js';
 import {parseOptions} from '../../shared/src/options.js';
 import {normalizeSchema} from './normalized-schema.js';
 import {isSchemaConfig} from './schema-config.js';
+import {decycle} from '../../shared/src/json.js';
 
 export const schemaOptions = {
   path: {
@@ -63,7 +64,7 @@ async function main() {
       schema: normalizedSchema,
     };
 
-    await writeFile(config.output, JSON.stringify(output, undefined, 2));
+    await writeFile(config.output, JSON.stringify(decycle(output), null, 2));
   } catch (e) {
     console.error(`Failed to load zero schema from ${absoluteConfigPath}:`, e);
     process.exit(1);

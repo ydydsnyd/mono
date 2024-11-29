@@ -8,6 +8,7 @@ import {readFile} from 'node:fs/promises';
 import * as v from '../../../shared/src/valita.js';
 import type {ZeroConfig} from '../config/zero-config.js';
 import {normalizeSchema} from '../../../zero-schema/src/normalized-schema.js';
+import {recycle} from '../../../shared/src/json.js';
 
 let loadedSchema:
   | Promise<{
@@ -24,7 +25,8 @@ function parseAuthConfig(
   permissions: PermissionsConfig;
 } {
   try {
-    const config = JSON.parse(input);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const config = recycle(JSON.parse(input)) as any;
     const permissions = v.parse(config.permissions, permissionsConfigSchema);
     const normalizedSchema = normalizeSchema(config.schema);
     return {

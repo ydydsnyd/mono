@@ -243,3 +243,110 @@ export type DeepReadonly<T> = T extends
   | undefined
   ? T
   : {readonly [K in keyof T]: DeepReadonly<T[K]>};
+
+export function decycle(json: unknown): Record<string, unknown> {
+  let objectId = 0;
+  const table: Record<string, unknown> = {};
+  const seen = new Map<unknown, string>();
+  function decycle(value: unknown) {
+    if (seen.has(value)) {
+      return seen.get(value);
+    }
+    if (Array.isArray(value)) {
+      const id = nextId();
+      seen.set(value, id);
+
+      const newStructure = value.map(decycle);
+      table[id] = newStructure;
+
+      return id;
+    } else if (typeof value === 'object' && value !== null) {
+      const id = nextId();
+      seen.set(value, id);
+
+      const newStructure: Record<string, unknown> = {};
+      Object.keys(value).forEach(key => {
+        if (hasOwn(value, key)) {
+          newStructure[key] = decycle((value as Record<string, unknown>)[key]);
+        }
+      });
+      table[id] = newStructure;
+
+      return id;
+    }
+
+    return value;
+  }
+
+  function nextId() {
+    return '🕳️-' + ++objectId;
+  }
+
+  decycle(json);
+  return table;
+}
+export function recycle(table: Record<string, unknown>): unknown {
+  const recycled = new Map<string, unknown>();
+  function recycle(table: Record<string, unknown>, key: string) {
+    if (recycled.has(key)) {
+      return recycled.get(key);
+    }
+
+    const root = table[key];
+    if (Array.isArray(root)) {
+      const copied = [...root];
+      recycled.set(key, copied);
+      copied.forEach((value, i) => {
+        if (typeof value === 'string' && value.startsWith('🕳️-')) {
+          copied[i] = recycle(table, value);
+        } else {
+          copied[i] = value;
+        }
+      });
+      return copied;
+    } else if (typeof root === 'object' && root !== null) {
+      const copied = {...root};
+      recycled.set(key, copied);
+      visitObject(copied as Record<string, unknown>);
+      return copied;
+    }
+
+    return root;
+  }
+
+  function visitObject(obj: Record<string, unknown>) {
+    Object.entries(obj).forEach(([key, value]) => {
+      if (hasOwn(obj, key)) {
+        if (typeof value === 'string' && value.startsWith('🕳️-')) {
+          obj[key] = recycle(table, value);
+        } else {
+          obj[key] = value;
+        }
+      }
+    });
+  }
+
+  return recycle(table, '🕳️-1');
+}
+
+// export function recylce(table: Record<string, unknown>): unknown {
+//   const seen = new Map<string, unknown>();
+//   function recylce(value: unknown): unknown {
+//     if (typeof value === 'string' && value.startsWith('🕳️-')) {
+//       if (seen.has(value)) {
+//         return seen.get(value);
+//       }
+//       const id = value;
+//       const newStructure = table[id];
+//       seen.set(id, newStructure);
+//       Object.keys(newStructure).forEach(key => {
+//         if (hasOwn(newStructure, key)) {
+//           newStructure[key] = recylce(newStructure[key]);
+//         }
+//       });
+//       return newStructure;
+//     }
+//     return value;
+//   }
+//   return recylce(table);
+// }
