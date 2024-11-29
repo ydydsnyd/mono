@@ -1,16 +1,11 @@
-import type {
-  Relationship,
-  SchemaValue,
-  SourceOrTableSchema,
-} from './table-schema.js';
 import type * as v from '../../shared/src/valita.js';
 import type {
   relationshipSchema,
   schemaSchema,
   schemaValueSchema,
-  sourceOrTableSchemaSchema,
 } from './schema-config.js';
 import type {Schema} from './schema.js';
+import type {Relationship, SchemaValue} from './table-schema.js';
 
 type MakeAllFieldsRequired<T> = {
   [K in keyof T]-?: MakeAllFieldsRequired<T[K]>;
@@ -27,19 +22,6 @@ type MakeAllFieldsRequired<T> = {
 
   inferredTR satisfies MakeAllFieldsRequired<SchemaValue>;
   tR satisfies MakeAllFieldsRequired<v.Infer<typeof schemaValueSchema>>;
-};
-
-(
-  t: SourceOrTableSchema,
-  inferredT: v.Infer<typeof sourceOrTableSchemaSchema>,
-  tR: MakeAllFieldsRequired<SourceOrTableSchema>,
-  inferredTR: MakeAllFieldsRequired<v.Infer<typeof sourceOrTableSchemaSchema>>,
-) => {
-  t satisfies v.Infer<typeof sourceOrTableSchemaSchema>;
-  inferredT satisfies SourceOrTableSchema;
-
-  inferredTR satisfies MakeAllFieldsRequired<SourceOrTableSchema>;
-  tR satisfies MakeAllFieldsRequired<v.Infer<typeof sourceOrTableSchemaSchema>>;
 };
 
 (

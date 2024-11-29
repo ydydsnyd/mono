@@ -1,13 +1,13 @@
 import {beforeEach, expect, test} from 'vitest';
-import {Database} from './db.js';
 import {createSilentLogContext} from '../../shared/src/logging-test-utils.js';
-import type {Source} from '../../zql/src/ivm/source.js';
-import {TableSource, toSQLiteTypeName} from './table-source.js';
+import {must} from '../../shared/src/must.js';
+import {normalizeTableSchema} from '../../zero-schema/src/normalize-table-schema.js';
 import {MemoryStorage} from '../../zql/src/ivm/memory-storage.js';
+import type {Source} from '../../zql/src/ivm/source.js';
 import {newQuery, type QueryDelegate} from '../../zql/src/query/query-impl.js';
 import {schemas} from '../../zql/src/query/test/testSchemas.js';
-import type {TableSchema} from '../../zero-schema/src/table-schema.js';
-import {must} from '../../shared/src/must.js';
+import {Database} from './db.js';
+import {TableSource, toSQLiteTypeName} from './table-source.js';
 
 let queryDelegate: QueryDelegate;
 beforeEach(() => {
@@ -19,7 +19,9 @@ beforeEach(() => {
       if (source) {
         return source;
       }
-      const schema = (schemas as unknown as Record<string, TableSchema>)[name];
+      const schema = normalizeTableSchema(
+        schemas[name as keyof typeof schemas],
+      );
 
       // create the SQLite table
       db.exec(`

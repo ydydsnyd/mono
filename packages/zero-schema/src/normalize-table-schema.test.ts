@@ -408,3 +408,31 @@ test('field names should be normalized to compound keys', () => {
     }
   `);
 });
+
+test('string primary key should be normalized to PrimaryKey', () => {
+  const fooTableSchema: TableSchema = {
+    tableName: 'foo',
+    primaryKey: 'id',
+    columns: {
+      id: {type: 'string'},
+    },
+  };
+
+  const normalizedFooTableSchema = normalizeTableSchema(fooTableSchema);
+  expect(normalizedFooTableSchema.primaryKey).toEqual(['id']);
+  expect(normalizedFooTableSchema).toMatchInlineSnapshot(`
+    NormalizedTableSchema {
+      "columns": {
+        "id": {
+          "optional": false,
+          "type": "string",
+        },
+      },
+      "primaryKey": [
+        "id",
+      ],
+      "relationships": {},
+      "tableName": "foo",
+    }
+  `);
+});
