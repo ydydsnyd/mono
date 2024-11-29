@@ -300,3 +300,30 @@ test('Mutually resolving relationships should be supported', () => {
       .destSchema,
   ).toBe(normalizedFooTableSchema);
 });
+
+test('Missing relationships should be normalized to empty object', () => {
+  const fooTableSchema: TableSchema = {
+    tableName: 'foo',
+    primaryKey: ['id'],
+    columns: {
+      id: {type: 'string'},
+    },
+  };
+
+  const normalizedFooTableSchema = normalizeTableSchema(fooTableSchema);
+  expect(normalizedFooTableSchema).toMatchInlineSnapshot(`
+    NormalizedTableSchema {
+      "columns": {
+        "id": {
+          "optional": false,
+          "type": "string",
+        },
+      },
+      "primaryKey": [
+        "id",
+      ],
+      "relationships": {},
+      "tableName": "foo",
+    }
+  `);
+});
