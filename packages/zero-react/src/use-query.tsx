@@ -1,6 +1,7 @@
 import {useSyncExternalStore} from 'react';
 import {deepClone} from '../../shared/src/deep-clone.js';
 import type {Immutable} from '../../shared/src/immutable.js';
+import {deepEqual} from '../../shared/src/json.js';
 import type {
   Query,
   QueryType,
@@ -8,9 +9,9 @@ import type {
   Smash,
   TypedView,
 } from '../../zero-client/src/mod.js';
+import type {TableSchema} from '../../zero-schema/src/table-schema.js';
 import type {AdvancedQuery} from '../../zql/src/query/query-internal.js';
 import {useZero} from './use-zero.js';
-import type {TableSchema} from '../../zero-schema/src/table-schema.js';
 
 export function useQuery<
   TSchema extends TableSchema,
@@ -174,9 +175,11 @@ class ViewWrapper<TSchema extends TableSchema, TReturn extends QueryType> {
   }
 
   #onData = (snap: Immutable<Smash<TReturn>>) => {
-    this.#snapshot = (
-      snap === undefined ? snap : deepClone(snap as ReadonlyJSONValue)
-    ) as Smash<TReturn>;
+    if (!deepEqual(this.#snapshot, snap as ReadonlyJSONValue | undefined)) {
+      this.#snapshot = (
+        snap === undefined ? snap : deepClone(snap as ReadonlyJSONValue)
+      ) as Smash<TReturn>;
+    }
     for (const internals of this.#reactInternals) {
       internals();
     }
