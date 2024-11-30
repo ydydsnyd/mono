@@ -54,6 +54,9 @@ test('random with fast-check', () => {
       } else {
         expect(as).not.toBe(bs);
         if (!Number.isNaN(a) && !Number.isNaN(b)) {
+          if (Object.is(a, -0) && b === 0) {
+            expect(as < bs).toBe(true);
+          }
           expect(as < bs).toBe(a < b);
         }
       }
