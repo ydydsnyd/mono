@@ -1,6 +1,6 @@
 import type {Query} from '../../zql/src/query/query.js';
 import type {Schema} from './schema.js';
-import type {TableSchema} from './table-schema.js';
+import type {TableSchema, TableSchemaToRow} from './table-schema.js';
 import type {
   AssetPermissions as CompiledAssetPermissions,
   PermissionsConfig as CompiledPermissionsConfig,
@@ -18,6 +18,8 @@ export type Queries<TSchema extends Schema> = {
 type PermissionRule<TAuthDataShape, TSchema extends TableSchema> = (
   authData: TAuthDataShape,
   eb: ExpressionBuilder<TSchema>,
+  preMutationRow: TableSchemaToRow<TSchema>,
+  proposedMutationRow: TableSchemaToRow<TSchema>,
 ) => Condition;
 
 type AssetPermissions<TAuthDataShape, TSchema extends TableSchema> = {
@@ -119,7 +121,12 @@ function compileRules<TAuthDataShape, TSchema extends TableSchema>(
     rule =>
       [
         'allow',
-        rule(authDataRef as TAuthDataShape, expressionBuilder),
+        rule(
+          authDataRef as TAuthDataShape,
+          expressionBuilder,
+          preMutationRowRef as TableSchemaToRow<TSchema>,
+          proposedMutationRowRef as TableSchemaToRow<TSchema>,
+        ),
       ] as const,
   );
 }
@@ -167,6 +174,16 @@ export const preMutationRowRef = new Proxy(
     get(_target, prop, _receiver) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return staticParam<any, any>('preMutationRow', prop as string);
+    },
+  },
+);
+
+export const proposedMutationRowRef = new Proxy(
+  {},
+  {
+    get(_target, prop, _receiver) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return staticParam<any, any>('proposedMutationRow', prop as string);
     },
   },
 );

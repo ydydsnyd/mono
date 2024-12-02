@@ -32,6 +32,7 @@ import {createPredicate} from './filter.js';
 export type StaticQueryParameters = {
   authData: Record<string, JSONValue>;
   preMutationRow?: Row | undefined;
+  proposedMutationRow?: Row | undefined;
 };
 
 /**
@@ -85,17 +86,14 @@ export function bindStaticParameters(
   ast: AST,
   staticQueryParameters: StaticQueryParameters | undefined,
 ) {
-  const visit = (node: AST): AST => {
-    return {
-      ...node,
-      where: node.where ? bindCondition(node.where) : undefined,
-      related: node.related?.map(sq => ({
-        ...sq,
-        subquery: visit(sq.subquery),
-      })),
-    };
-    return node;
-  };
+  const visit = (node: AST): AST => ({
+    ...node,
+    where: node.where ? bindCondition(node.where) : undefined,
+    related: node.related?.map(sq => ({
+      ...sq,
+      subquery: visit(sq.subquery),
+    })),
+  });
 
   function bindCondition(condition: Condition): Condition {
     if (condition.type === 'simple') {

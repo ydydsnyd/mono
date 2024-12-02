@@ -274,6 +274,12 @@ const permissions = must(
       authData: AuthData,
       {cmp}: ExpressionBuilder<typeof schema.tables.viewState>,
     ) => cmp('userId', '=', authData.sub);
+    const authorIdNotChanged = (
+      _: AuthData,
+      {cmpLit}: ExpressionBuilder<typeof schema.tables.comment>,
+      oldRow: TableSchemaToRow<typeof schema.tables.comment>,
+      newRow: TableSchemaToRow<typeof schema.tables.comment>,
+    ) => cmpLit(oldRow.authorId, '=', newRow.authorId);
 
     const canWriteIssueLabelIfProjectMember = (
       authData: AuthData,
@@ -382,8 +388,18 @@ const permissions = must(
               ),
           ],
           update: {
-            preMutation: [isAdmin, isCommentCreator],
-            // TODO (mlaw): ensure that the authorId is not changed
+            preMutation: [
+              (
+                authData: AuthData,
+                eb: ExpressionBuilder<typeof schema.tables.comment>,
+                oldRow: TableSchemaToRow<typeof schema.tables.comment>,
+                newRow: TableSchemaToRow<typeof schema.tables.comment>,
+              ) =>
+                eb.and(
+                  authorIdNotChanged(authData, eb, oldRow, newRow),
+                  eb.or(isAdmin(authData, eb), isCommentCreator(authData, eb)),
+                ),
+            ],
           },
           delete: [isAdmin, isCommentCreator],
           select: [canSeeComment],
@@ -1057,6 +1073,34 @@ describe('comment & issueLabel permissions', () => {
       tableName: 'comment',
       primaryKey: ['id'],
       value: {id: '001'},
+    };
+    expect(
+      writeAuthorizer.canPreMutation(authData, [op]) &&
+        writeAuthorizer.canPostMutation(authData, [op]),
+    ).toBe(true);
+  });
+
+  test('cannot change authorId on update', () => {
+    let op: UpdateOp = {
+      op: 'update',
+      tableName: 'comment',
+      primaryKey: ['id'],
+      value: {id: '001', authorId: 'wrong-author'},
+    };
+
+    const authData = {sub: '001', role: 'user'};
+    // changing author id should fail.
+    expect(
+      writeAuthorizer.canPreMutation(authData, [op]) &&
+        writeAuthorizer.canPostMutation(authData, [op]),
+    ).toBe(false);
+
+    // changing text should succeed.
+    op = {
+      op: 'update',
+      tableName: 'comment',
+      primaryKey: ['id'],
+      value: {id: '001', text: 'some text'},
     };
     expect(
       writeAuthorizer.canPreMutation(authData, [op]) &&
