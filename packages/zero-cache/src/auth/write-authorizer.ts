@@ -327,16 +327,6 @@ export class WriteAuthorizerImpl implements WriteAuthorizer {
     }
   }
 
-  /**
-   * Evaluation order is from static to dynamic, broad to specific.
-   * table -> column -> row -> cell.
-   *
-   * If any step fails, the entire operation is denied.
-   *
-   * That is, table rules supersede column rules, which supersede row rules,
-   *
-   * All steps must allow for the operation to be allowed.
-   */
   #canDo<A extends keyof ActionOpMap>(
     phase: Phase,
     action: A,
@@ -346,7 +336,7 @@ export class WriteAuthorizerImpl implements WriteAuthorizer {
     proposedMutationRow: Row | undefined,
   ) {
     const rules = this.#permissionsConfig[op.tableName];
-    if (rules?.row === undefined && rules?.cell === undefined) {
+    if (rules?.row === undefined) {
       return true;
     }
 
@@ -385,55 +375,13 @@ export class WriteAuthorizerImpl implements WriteAuthorizer {
         break;
     }
 
-    const cellPolicies = rules.cell;
-    const applicableCellPolicies: Policy[] = [];
-    if (cellPolicies) {
-      for (const [column, policy] of Object.entries(cellPolicies)) {
-        if (action === 'update' && op.value[column] === undefined) {
-          // If the cell is not being updated, we do not need to check
-          // the cell rules.
-          continue;
-        }
-        switch (action) {
-          case 'insert':
-            if (policy.insert && phase === 'postMutation') {
-              applicableCellPolicies.push(policy.insert);
-            }
-            break;
-          case 'update':
-            if (phase === 'preMutation' && policy.update?.preMutation) {
-              applicableCellPolicies.push(policy.update.preMutation);
-            }
-            if (
-              phase === 'postMutation' &&
-              policy.update?.postProposedMutation
-            ) {
-              applicableCellPolicies.push(policy.update.postProposedMutation);
-            }
-            break;
-          case 'delete':
-            if (policy.delete && phase === 'preMutation') {
-              applicableCellPolicies.push(policy.delete);
-            }
-            break;
-        }
-      }
-    }
-
-    if (
-      !this.#passesPolicyGroup(
-        applicableRowPolicy,
-        applicableCellPolicies,
-        authData,
-        rowQuery,
-        preMutationRow,
-        proposedMutationRow,
-      )
-    ) {
-      return false;
-    }
-
-    return true;
+    return this.#passesPolicyGroup(
+      applicableRowPolicy,
+      authData,
+      rowQuery,
+      preMutationRow,
+      proposedMutationRow,
+    );
   }
 
   #getPreMutationRow(op: UpsertOp | UpdateOp | DeleteOp) {
@@ -458,46 +406,22 @@ export class WriteAuthorizerImpl implements WriteAuthorizer {
 
   #passesPolicyGroup(
     applicableRowPolicy: Policy | undefined,
-    applicableCellPolicies: Policy[],
     authData: JWTPayload | undefined,
     rowQuery: Query<TableSchema>,
     preMutationRow: Row | undefined,
     proposedMutationRow: Row | undefined,
   ) {
-    if (
-      applicableRowPolicy === undefined &&
-      applicableCellPolicies.length === 0
-    ) {
+    if (applicableRowPolicy === undefined) {
       return true;
     }
 
-    if (
-      !this.#passesPolicy(
-        applicableRowPolicy,
-        authData,
-        rowQuery,
-        preMutationRow,
-        proposedMutationRow,
-      )
-    ) {
-      return false;
-    }
-
-    for (const policy of applicableCellPolicies) {
-      if (
-        !this.#passesPolicy(
-          policy,
-          authData,
-          rowQuery,
-          preMutationRow,
-          proposedMutationRow,
-        )
-      ) {
-        return false;
-      }
-    }
-
-    return true;
+    return this.#passesPolicy(
+      applicableRowPolicy,
+      authData,
+      rowQuery,
+      preMutationRow,
+      proposedMutationRow,
+    );
   }
 
   #passesPolicy(

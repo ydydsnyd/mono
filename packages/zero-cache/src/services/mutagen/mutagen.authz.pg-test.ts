@@ -196,55 +196,44 @@ const permissionsConfig = await definePermissions<AuthData, typeof schema>(
 
     return {
       roCell: {
-        cell: {
-          a: {
-            insert: [],
-            update: {
-              preMutation: [],
-            },
-            delete: [],
-          },
+        update: {
+          preMutation: [
+            (_authData, eb, oldRow, newRow) =>
+              eb.cmpLit(oldRow.a, 'IS', newRow.a),
+          ],
         },
+        delete: [],
       },
       roRow: {
-        row: {
-          insert: [],
-          update: {
-            preMutation: [],
-          },
-          delete: [],
+        insert: [],
+        update: {
+          preMutation: [],
         },
+        delete: [],
       },
       adminOnlyCell: {
-        cell: {
-          a: {
-            // insert is always allow since it can't be admin locked on create.
-            // TODO (mlaw): this should raise a type error due to schema mismatch between rule and auth def
-            update: {
-              preMutation: [allowIfNotAdminLockedCell, allowIfAdmin],
-            },
-            delete: [allowIfNotAdminLockedCell, allowIfAdmin],
-          },
+        update: {
+          preMutation: [
+            allowIfNotAdminLockedCell,
+            allowIfAdmin,
+            (_authData, eb, oldRow, newRow) =>
+              eb.cmpLit(oldRow.a, 'IS', newRow.a),
+          ],
         },
+        delete: [],
       },
       adminOnlyRow: {
-        row: {
-          // insert is always allow since it can't be admin locked on create.
-          update: {preMutation: [allowIfNotAdminLockedRow, allowIfAdmin]},
-          delete: [allowIfNotAdminLockedRow, allowIfAdmin],
-        },
+        // insert is always allow since it can't be admin locked on create.
+        update: {preMutation: [allowIfNotAdminLockedRow, allowIfAdmin]},
+        delete: [allowIfNotAdminLockedRow, allowIfAdmin],
       },
       loggedInRow: {
-        row: {
-          insert: [allowIfLoggedIn],
-          update: {preMutation: [allowIfLoggedIn]},
-          delete: [allowIfLoggedIn],
-        },
+        insert: [allowIfLoggedIn],
+        update: {preMutation: [allowIfLoggedIn]},
+        delete: [allowIfLoggedIn],
       },
       userMatch: {
-        row: {
-          insert: [allowIfPostMutationIDMatchesLoggedInUser],
-        },
+        insert: [allowIfPostMutationIDMatchesLoggedInUser],
       },
     };
   },

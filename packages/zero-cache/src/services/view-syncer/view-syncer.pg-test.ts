@@ -131,12 +131,10 @@ const permissions: PermissionsConfig | undefined = await definePermissions<
   typeof schema
 >(schema, () => ({
   issues: {
-    row: {
-      select: [
-        (authData, eb: ExpressionBuilder<typeof schema.tables.issues>) =>
-          eb.cmpLit(authData.role, '=', 'admin'),
-      ],
-    },
+    select: [
+      (authData, eb: ExpressionBuilder<typeof schema.tables.issues>) =>
+        eb.cmpLit(authData.role, '=', 'admin'),
+    ],
   },
 }));
 

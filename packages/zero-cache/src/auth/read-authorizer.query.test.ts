@@ -340,99 +340,86 @@ const permissions = must(
 
     return {
       user: {
-        row: {
-          select: undefined,
-          insert: [],
-          update: {
-            preMutation: [],
-          },
-          delete: [],
+        select: undefined,
+        insert: [],
+        update: {
+          preMutation: [],
         },
+        delete: [],
       },
       issue: {
-        row: {
-          insert: [
-            (
-              authData: AuthData,
-              eb: ExpressionBuilder<typeof schema.tables.issue>,
-            ) =>
-              eb.and(
-                isIssueCreator(authData, eb),
-                eb.or(isAdmin(authData, eb), isMemberOfProject(authData, eb)),
-              ),
+        insert: [
+          (
+            authData: AuthData,
+            eb: ExpressionBuilder<typeof schema.tables.issue>,
+          ) =>
+            eb.and(
+              isIssueCreator(authData, eb),
+              eb.or(isAdmin(authData, eb), isMemberOfProject(authData, eb)),
+            ),
+        ],
+        update: {
+          preMutation: [
+            isAdmin,
+            isIssueCreator,
+            isIssueOwner,
+            isMemberOfProject,
           ],
-          update: {
-            preMutation: [
-              isAdmin,
-              isIssueCreator,
-              isIssueOwner,
-              isMemberOfProject,
-            ],
-            // TODO (mlaw): how can we ensure the creatorId is not changed?
-            // We need to pass the OLD row to the postMutation rule.
-          },
-          delete: [],
-          select: [canSeeIssue],
+          // TODO (mlaw): how can we ensure the creatorId is not changed?
+          // We need to pass the OLD row to the postMutation rule.
         },
+        delete: [],
+        select: [canSeeIssue],
       },
       comment: {
-        row: {
-          insert: [
+        insert: [
+          (
+            authData: AuthData,
+            eb: ExpressionBuilder<typeof schema.tables.comment>,
+          ) =>
+            eb.and(isCommentCreator(authData, eb), canSeeComment(authData, eb)),
+        ],
+        update: {
+          preMutation: [
             (
               authData: AuthData,
               eb: ExpressionBuilder<typeof schema.tables.comment>,
+              oldRow: TableSchemaToRow<typeof schema.tables.comment>,
+              newRow: TableSchemaToRow<typeof schema.tables.comment>,
             ) =>
               eb.and(
-                isCommentCreator(authData, eb),
-                canSeeComment(authData, eb),
+                authorIdNotChanged(authData, eb, oldRow, newRow),
+                eb.or(isAdmin(authData, eb), isCommentCreator(authData, eb)),
               ),
           ],
-          update: {
-            preMutation: [
-              (
-                authData: AuthData,
-                eb: ExpressionBuilder<typeof schema.tables.comment>,
-                oldRow: TableSchemaToRow<typeof schema.tables.comment>,
-                newRow: TableSchemaToRow<typeof schema.tables.comment>,
-              ) =>
-                eb.and(
-                  authorIdNotChanged(authData, eb, oldRow, newRow),
-                  eb.or(isAdmin(authData, eb), isCommentCreator(authData, eb)),
-                ),
-            ],
-          },
-          delete: [isAdmin, isCommentCreator],
-          select: [canSeeComment],
         },
+        delete: [isAdmin, isCommentCreator],
+        select: [canSeeComment],
       },
       issueLabel: {
-        row: {
-          insert: [
-            isAdmin,
-            canWriteIssueLabelIfProjectMember,
-            canWriteIssueLabelIfIssueCreator,
-            canWriteIssueLabelIfIssueOwner,
-          ],
-          update: {
-            preMutation: [],
-          },
-          delete: [
-            isAdmin,
-            canWriteIssueLabelIfProjectMember,
-            canWriteIssueLabelIfIssueCreator,
-            canWriteIssueLabelIfIssueOwner,
-          ],
+        insert: [
+          isAdmin,
+          canWriteIssueLabelIfProjectMember,
+          canWriteIssueLabelIfIssueCreator,
+          canWriteIssueLabelIfIssueOwner,
+        ],
+        update: {
+          preMutation: [],
         },
+        delete: [
+          isAdmin,
+          canWriteIssueLabelIfProjectMember,
+          canWriteIssueLabelIfIssueCreator,
+          canWriteIssueLabelIfIssueOwner,
+        ],
       },
       viewState: {
-        row: {
-          insert: [isViewStateOwner],
-          update: {
-            preMutation: [isViewStateOwner],
-            postProposedMutation: [isViewStateOwner],
-          },
-          delete: [isViewStateOwner],
+        insert: [isViewStateOwner],
+        update: {
+          preMutation: [isViewStateOwner],
+          postProposedMutation: [isViewStateOwner],
         },
+        delete: [isViewStateOwner],
       },
     };
   }),

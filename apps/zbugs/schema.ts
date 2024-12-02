@@ -245,91 +245,79 @@ export const permissions: ReturnType<typeof definePermissions> =
     return {
       user: {
         // Only the authentication system can write to the user table.
-        row: {
-          insert: [],
-          update: {
-            preMutation: [],
-          },
-          delete: [],
+        insert: [],
+        update: {
+          preMutation: [],
         },
+        delete: [],
       },
       issue: {
-        row: {
-          insert: [
-            (authData, eb) =>
+        insert: [
+          (authData, eb) =>
+            eb.and(
+              userIsLoggedIn(authData, eb),
+              // prevents setting the creatorID of an issue to someone
+              // other than the user doing the creating
+              loggedInUserIsIssueCreator(authData, eb),
+            ),
+        ],
+        update: {
+          preMutation: [
+            (authData, eb, oldRow, newRow) =>
               eb.and(
-                userIsLoggedIn(authData, eb),
-                // prevents setting the creatorID of an issue to someone
-                // other than the user doing the creating
-                loggedInUserIsIssueCreator(authData, eb),
+                issueCreatorDidNotChange(authData, eb, oldRow, newRow),
+                eb.or(
+                  loggedInUserIsIssueCreator(authData, eb),
+                  loggedInUserIsAdmin(authData, eb),
+                ),
               ),
           ],
-          update: {
-            preMutation: [
-              (authData, eb, oldRow, newRow) =>
-                eb.and(
-                  issueCreatorDidNotChange(authData, eb, oldRow, newRow),
-                  eb.or(
-                    loggedInUserIsIssueCreator(authData, eb),
-                    loggedInUserIsAdmin(authData, eb),
-                  ),
-                ),
-            ],
-          },
-          delete: [loggedInUserIsIssueCreator, loggedInUserIsAdmin],
         },
+        delete: [loggedInUserIsIssueCreator, loggedInUserIsAdmin],
       },
       comment: {
-        row: {
-          insert: [
-            (authData, eb) =>
+        insert: [
+          (authData, eb) =>
+            eb.and(
+              userIsLoggedIn(authData, eb),
+              loggedInUserIsCommentCreator(authData, eb),
+            ),
+        ],
+        update: {
+          preMutation: [
+            (authData, eb, oldRow, newRow) =>
               eb.and(
-                userIsLoggedIn(authData, eb),
-                loggedInUserIsCommentCreator(authData, eb),
+                commentCreatorDidNotChange(authData, eb, oldRow, newRow),
+                eb.or(
+                  loggedInUserIsCommentCreator(authData, eb),
+                  loggedInUserIsAdmin(authData, eb),
+                ),
               ),
           ],
-          update: {
-            preMutation: [
-              (authData, eb, oldRow, newRow) =>
-                eb.and(
-                  commentCreatorDidNotChange(authData, eb, oldRow, newRow),
-                  eb.or(
-                    loggedInUserIsCommentCreator(authData, eb),
-                    loggedInUserIsAdmin(authData, eb),
-                  ),
-                ),
-            ],
-          },
-          delete: [loggedInUserIsCommentCreator, loggedInUserIsAdmin],
         },
+        delete: [loggedInUserIsCommentCreator, loggedInUserIsAdmin],
       },
       label: {
-        row: {
-          insert: [loggedInUserIsAdmin],
-          update: {
-            preMutation: [loggedInUserIsAdmin],
-          },
-          delete: [loggedInUserIsAdmin],
+        insert: [loggedInUserIsAdmin],
+        update: {
+          preMutation: [loggedInUserIsAdmin],
         },
+        delete: [loggedInUserIsAdmin],
       },
       viewState: {
-        row: {
-          insert: [allowIfUserIDMatchesLoggedInUser],
-          update: {
-            preMutation: [allowIfUserIDMatchesLoggedInUser],
-            postProposedMutation: [allowIfUserIDMatchesLoggedInUser],
-          },
-          delete: [],
+        insert: [allowIfUserIDMatchesLoggedInUser],
+        update: {
+          preMutation: [allowIfUserIDMatchesLoggedInUser],
+          postProposedMutation: [allowIfUserIDMatchesLoggedInUser],
         },
+        delete: [],
       },
       issueLabel: {
-        row: {
-          insert: [allowIfAdminOrIssueCreator],
-          update: {
-            preMutation: [],
-          },
-          delete: [allowIfAdminOrIssueCreator],
+        insert: [allowIfAdminOrIssueCreator],
+        update: {
+          preMutation: [],
         },
+        delete: [allowIfAdminOrIssueCreator],
       },
     };
   });

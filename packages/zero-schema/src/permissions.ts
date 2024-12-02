@@ -35,17 +35,9 @@ type AssetPermissions<TAuthDataShape, TSchema extends TableSchema> = {
 };
 
 export type PermissionsConfig<TAuthDataShape, TSchema extends Schema> = {
-  [K in keyof TSchema['tables']]?: {
-    row?: AssetPermissions<TAuthDataShape, TSchema['tables'][K]> | undefined;
-    cell?:
-      | {
-          [C in keyof TSchema['tables'][K]['columns']]?: Omit<
-            AssetPermissions<TAuthDataShape, TSchema['tables'][K]>,
-            'cell'
-          >;
-        }
-      | undefined;
-  };
+  [K in keyof TSchema['tables']]?:
+    | AssetPermissions<TAuthDataShape, TSchema['tables'][K]>
+    | undefined;
 };
 
 export async function definePermissions<TAuthDataShape, TSchema extends Schema>(
@@ -78,7 +70,6 @@ function compilePermissions<TAuthDataShape, TSchema extends Schema>(
   for (const [tableName, tableConfig] of Object.entries(authz)) {
     ret[tableName] = {
       row: compileRowConfig(tableConfig.row, expressionBuilders[tableName]),
-      cell: compileCellConfig(tableConfig.cell, expressionBuilders[tableName]),
     };
   }
 
@@ -129,33 +120,6 @@ function compileRules<TAuthDataShape, TSchema extends TableSchema>(
         ),
       ] as const,
   );
-}
-
-function compileCellConfig<TAuthDataShape, TSchema extends TableSchema>(
-  cellRules:
-    | Record<string, AssetPermissions<TAuthDataShape, TSchema>>
-    | undefined,
-  expressionBuilder: ExpressionBuilder<TSchema>,
-): Record<string, CompiledAssetPermissions> | undefined {
-  if (!cellRules) {
-    return undefined;
-  }
-  const ret: Record<string, CompiledAssetPermissions> = {};
-  for (const [columnName, rules] of Object.entries(cellRules)) {
-    ret[columnName] = {
-      select: compileRules(rules.select, expressionBuilder),
-      insert: compileRules(rules.insert, expressionBuilder),
-      update: {
-        preMutation: compileRules(rules.update?.preMutation, expressionBuilder),
-        postProposedMutation: compileRules(
-          rules.update?.postProposedMutation,
-          expressionBuilder,
-        ),
-      },
-      delete: compileRules(rules.delete, expressionBuilder),
-    };
-  }
-  return ret;
 }
 
 export const authDataRef = new Proxy(

@@ -39,13 +39,11 @@ test('permission rules create query ASTs', async () => {
 
       return {
         user: {
-          row: {
-            insert: [allowIfAdmin],
-            update: {
-              preMutation: [allowIfAdmin],
-            },
-            delete: [allowIfAdmin],
+          insert: [allowIfAdmin],
+          update: {
+            preMutation: [allowIfAdmin],
           },
+          delete: [allowIfAdmin],
         },
       };
     },

@@ -98,9 +98,7 @@ test('round trip', async () => {
       baseSchema,
       () => ({
         circular: {
-          row: {
-            select: [(_, eb) => eb.exists('self')],
-          },
+          select: [(_, eb) => eb.exists('self')],
         },
       }),
     ),

@@ -23,7 +23,6 @@ export type AssetPermissions = v.Infer<typeof assetSchema>;
 export const permissionsConfigSchema = v.record(
   v.object({
     row: assetSchema.optional(),
-    cell: v.record(assetSchema).optional(),
   }),
 );
 

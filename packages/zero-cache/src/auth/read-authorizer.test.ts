@@ -92,19 +92,15 @@ const authData: AuthData = {
 const permissionRules = must(
   await definePermissions<AuthData, typeof schema>(schema, () => ({
     unreadable: {
-      row: {
-        select: [],
-      },
+      select: [],
     },
     adminReadable: {
-      row: {
-        select: [
-          (
-            authData: {role: string},
-            eb: ExpressionBuilder<typeof adminReadable>,
-          ) => eb.cmpLit(authData.role, '=', 'admin'),
-        ],
-      },
+      select: [
+        (
+          authData: {role: string},
+          eb: ExpressionBuilder<typeof adminReadable>,
+        ) => eb.cmpLit(authData.role, '=', 'admin'),
+      ],
     },
   })),
 );
