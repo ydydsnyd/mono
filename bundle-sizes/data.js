@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1732578808617,
+  "lastUpdate": 1733108001572,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50065,6 +50065,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/c46d2501694e50364bc41eba4a323c8aff2887d5"
         },
         "date": 1732578791620,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 313434,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54702,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 115369,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32028,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "a7ba447b3b5401faa3a826962551108d45db7f20",
+          "message": "chore(zero): Pin valita to 0.3.11.\n\nThere is a breaking change in 0.3.15. The func() method on\nOptionalType has been removed.",
+          "timestamp": "2024-12-01T18:52:04-08:00",
+          "tree_id": "2f90dafdf52ef4ffe04bd5896bc249cabd966278",
+          "url": "https://github.com/rocicorp/mono/commit/a7ba447b3b5401faa3a826962551108d45db7f20"
+        },
+        "date": 1733107984201,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
