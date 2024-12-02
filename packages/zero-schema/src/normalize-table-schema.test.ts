@@ -300,3 +300,212 @@ test('Mutually resolving relationships should be supported', () => {
       .destSchema,
   ).toBe(normalizedFooTableSchema);
 });
+
+test('Missing relationships should be normalized to empty object', () => {
+  const fooTableSchema: TableSchema = {
+    tableName: 'foo',
+    primaryKey: ['id'],
+    columns: {
+      id: {type: 'string'},
+    },
+  };
+
+  const normalizedFooTableSchema = normalizeTableSchema(fooTableSchema);
+  expect(normalizedFooTableSchema).toMatchInlineSnapshot(`
+    NormalizedTableSchema {
+      "columns": {
+        "id": {
+          "optional": false,
+          "type": "string",
+        },
+      },
+      "primaryKey": [
+        "id",
+      ],
+      "relationships": {},
+      "tableName": "foo",
+    }
+  `);
+});
+
+test('field names should be normalized to compound keys', () => {
+  const fooTableSchema: TableSchema = {
+    tableName: 'foo',
+    primaryKey: ['id'],
+    columns: {
+      id: {type: 'string'},
+    },
+    relationships: {
+      bar: {
+        sourceField: 'bar-source',
+        destField: ['field'],
+        destSchema: () => barTableSchema,
+      },
+    },
+  };
+
+  const barTableSchema: TableSchema = {
+    tableName: 'bar',
+    primaryKey: ['id'],
+    columns: {
+      id: {type: 'string'},
+    },
+    relationships: {
+      foo: {
+        sourceField: ['foo-source'],
+        destField: 'field',
+        destSchema: () => fooTableSchema,
+      },
+    },
+  };
+
+  const normalizedFooTableSchema = normalizeTableSchema(fooTableSchema);
+  expect(normalizedFooTableSchema).toMatchInlineSnapshot(`
+    NormalizedTableSchema {
+      "columns": {
+        "id": {
+          "optional": false,
+          "type": "string",
+        },
+      },
+      "primaryKey": [
+        "id",
+      ],
+      "relationships": {
+        "bar": {
+          "destField": [
+            "field",
+          ],
+          "destSchema": NormalizedTableSchema {
+            "columns": {
+              "id": {
+                "optional": false,
+                "type": "string",
+              },
+            },
+            "primaryKey": [
+              "id",
+            ],
+            "relationships": {
+              "foo": {
+                "destField": [
+                  "field",
+                ],
+                "destSchema": [Circular],
+                "sourceField": [
+                  "foo-source",
+                ],
+              },
+            },
+            "tableName": "bar",
+          },
+          "sourceField": [
+            "bar-source",
+          ],
+        },
+      },
+      "tableName": "foo",
+    }
+  `);
+});
+
+test('string primary key should be normalized to PrimaryKey', () => {
+  const fooTableSchema: TableSchema = {
+    tableName: 'foo',
+    primaryKey: 'id',
+    columns: {
+      id: {type: 'string'},
+    },
+  };
+
+  const normalizedFooTableSchema = normalizeTableSchema(fooTableSchema);
+  expect(normalizedFooTableSchema.primaryKey).toEqual(['id']);
+  expect(normalizedFooTableSchema).toMatchInlineSnapshot(`
+    NormalizedTableSchema {
+      "columns": {
+        "id": {
+          "optional": false,
+          "type": "string",
+        },
+      },
+      "primaryKey": [
+        "id",
+      ],
+      "relationships": {},
+      "tableName": "foo",
+    }
+  `);
+});
+
+test('column types should be normalized to SchemaValue', () => {
+  const fooTableSchema: TableSchema = {
+    tableName: 'foo',
+    primaryKey: ['string'],
+    columns: {
+      string: 'string',
+      number: 'number',
+      boolean: 'boolean',
+      null: 'null',
+      json: 'json',
+
+      stringOptional: {type: 'string', optional: true},
+      numberOptional: {type: 'number', optional: true},
+      booleanOptional: {type: 'boolean', optional: true},
+      nullOptional: {type: 'null', optional: true},
+      jsonOptional: {type: 'json', optional: true},
+    },
+  };
+
+  const normalizedFooTableSchema = normalizeTableSchema(fooTableSchema);
+  expect(normalizedFooTableSchema).toMatchInlineSnapshot(`
+    NormalizedTableSchema {
+      "columns": {
+        "boolean": {
+          "optional": false,
+          "type": "boolean",
+        },
+        "booleanOptional": {
+          "optional": true,
+          "type": "boolean",
+        },
+        "json": {
+          "optional": false,
+          "type": "json",
+        },
+        "jsonOptional": {
+          "optional": true,
+          "type": "json",
+        },
+        "null": {
+          "optional": false,
+          "type": "null",
+        },
+        "nullOptional": {
+          "optional": true,
+          "type": "null",
+        },
+        "number": {
+          "optional": false,
+          "type": "number",
+        },
+        "numberOptional": {
+          "optional": true,
+          "type": "number",
+        },
+        "string": {
+          "optional": false,
+          "type": "string",
+        },
+        "stringOptional": {
+          "optional": true,
+          "type": "string",
+        },
+      },
+      "primaryKey": [
+        "string",
+      ],
+      "relationships": {},
+      "tableName": "foo",
+    }
+  `);
+});

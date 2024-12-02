@@ -446,9 +446,7 @@ beforeEach(() => {
       if (source) {
         return source;
       }
-      const tableSchema = (
-        schema.tables as unknown as Record<string, TableSchema>
-      )[name];
+      const tableSchema = schema.tables[name as keyof typeof schema.tables];
       assert(tableSchema, `Table schema not found for ${name}`);
 
       // create the SQLite table
