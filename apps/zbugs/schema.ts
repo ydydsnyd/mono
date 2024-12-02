@@ -229,6 +229,19 @@ export const permissions: ReturnType<typeof definePermissions> =
         ),
       );
 
+    const issueCreatorDidNotChange = (
+      _authData: AuthData,
+      {cmpLit}: ExpressionBuilder<typeof issueSchema>,
+      oldRow: IssueRow,
+      newRow: IssueRow,
+    ) => cmpLit(oldRow.creatorID, '=', newRow.creatorID);
+    const commentCreatorDidNotChange = (
+      _authData: AuthData,
+      {cmpLit}: ExpressionBuilder<typeof commentSchema>,
+      oldRow: CommentRow,
+      newRow: CommentRow,
+    ) => cmpLit(oldRow.creatorID, '=', newRow.creatorID);
+
     return {
       user: {
         // Only the authentication system can write to the user table.
@@ -237,6 +250,7 @@ export const permissions: ReturnType<typeof definePermissions> =
           update: {
             preMutation: [],
           },
+          delete: [],
         },
       },
       issue: {
@@ -251,8 +265,16 @@ export const permissions: ReturnType<typeof definePermissions> =
               ),
           ],
           update: {
-            // TODO: add a check to prevent changing the creatorID
-            preMutation: [loggedInUserIsIssueCreator, loggedInUserIsAdmin],
+            preMutation: [
+              (authData, eb, oldRow, newRow) =>
+                eb.and(
+                  issueCreatorDidNotChange(authData, eb, oldRow, newRow),
+                  eb.or(
+                    loggedInUserIsIssueCreator(authData, eb),
+                    loggedInUserIsAdmin(authData, eb),
+                  ),
+                ),
+            ],
           },
           delete: [loggedInUserIsIssueCreator, loggedInUserIsAdmin],
         },
@@ -267,7 +289,16 @@ export const permissions: ReturnType<typeof definePermissions> =
               ),
           ],
           update: {
-            preMutation: [loggedInUserIsCommentCreator, loggedInUserIsAdmin],
+            preMutation: [
+              (authData, eb, oldRow, newRow) =>
+                eb.and(
+                  commentCreatorDidNotChange(authData, eb, oldRow, newRow),
+                  eb.or(
+                    loggedInUserIsCommentCreator(authData, eb),
+                    loggedInUserIsAdmin(authData, eb),
+                  ),
+                ),
+            ],
           },
           delete: [loggedInUserIsCommentCreator, loggedInUserIsAdmin],
         },
@@ -288,7 +319,6 @@ export const permissions: ReturnType<typeof definePermissions> =
             preMutation: [allowIfUserIDMatchesLoggedInUser],
             postProposedMutation: [allowIfUserIDMatchesLoggedInUser],
           },
-          // view state cannot be deleted
           delete: [],
         },
       },
