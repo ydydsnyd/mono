@@ -36,6 +36,7 @@ export class ArrayView<V extends View> implements Output, TypedView<V> {
   constructor(
     input: Input,
     format: Format = {singular: false, relationships: {}},
+    queryComplete: Promise<void>,
   ) {
     this.#input = input;
     this.#schema = input.getSchema();
@@ -44,13 +45,16 @@ export class ArrayView<V extends View> implements Output, TypedView<V> {
     input.setOutput(this);
 
     this.#hydrate();
+    void queryComplete.then(() => {
+      this.#setComplete();
+    });
   }
 
   get data() {
     return this.#root[''] as V;
   }
 
-  setComplete() {
+  #setComplete() {
     this.#complete = true;
     this.#fireListeners();
   }

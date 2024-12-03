@@ -180,7 +180,7 @@ class ViewWrapper<TSchema extends TableSchema, TReturn extends QueryType> {
       (query.format.singular
         ? undefined
         : emptyArray) as unknown as Smash<TReturn>,
-      'complete',
+      'unknown',
     ];
     this.#onMaterialized = onMaterialized;
     this.#onDematerialized = onDematerialized;

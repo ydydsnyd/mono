@@ -538,9 +538,10 @@ export class QueryImpl<
     factory?: ViewFactory<TSchema, TReturn, T>,
   ): T {
     const ast = this._completeAst();
+    const queryCompleteResolver = resolver();
     const removeServerQuery = this.#delegate.addServerQuery(ast, got => {
       if (got) {
-        view.setComplete();
+        queryCompleteResolver.resolve();
       }
     });
 
@@ -554,9 +555,16 @@ export class QueryImpl<
     };
 
     const view = this.#delegate.batchViewUpdates(() =>
-      (factory ?? arrayViewFactory)(this, input, this.format, onDestroy, cb => {
-        removeCommitObserver = this.#delegate.onTransactionCommit(cb);
-      }),
+      (factory ?? arrayViewFactory)(
+        this,
+        input,
+        this.format,
+        onDestroy,
+        cb => {
+          removeCommitObserver = this.#delegate.onTransactionCommit(cb);
+        },
+        queryCompleteResolver.promise,
+      ),
     );
 
     return view as T;
@@ -625,8 +633,9 @@ function arrayViewFactory<
   format: Format,
   onDestroy: () => void,
   onTransactionCommit: (cb: () => void) => void,
+  queryComplete: Promise<void>,
 ): TypedView<Smash<TReturn>> {
-  const v = new ArrayView<Smash<TReturn>>(input, format);
+  const v = new ArrayView<Smash<TReturn>>(input, format, queryComplete);
   v.onDestroy = onDestroy;
   onTransactionCommit(() => {
     v.flush();
