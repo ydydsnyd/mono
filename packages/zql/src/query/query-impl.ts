@@ -537,8 +537,10 @@ export class QueryImpl<
   materialize<T>(factory?: ViewFactory<TSchema, TReturn, T>): T {
     const ast = this._completeAst();
     const queryCompleteResolver = resolver<true>();
+    let queryGot = false;
     const removeServerQuery = this.#delegate.addServerQuery(ast, got => {
       if (got) {
+        queryGot = true;
         queryCompleteResolver.resolve(true);
       }
     });
@@ -561,7 +563,7 @@ export class QueryImpl<
         cb => {
           removeCommitObserver = this.#delegate.onTransactionCommit(cb);
         },
-        queryCompleteResolver.promise,
+        queryGot || queryCompleteResolver.promise,
       ),
     );
 
