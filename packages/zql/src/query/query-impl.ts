@@ -45,7 +45,7 @@ import type {
   Row,
   Smash,
 } from './query.js';
-import type {Completable, TypedView} from './typed-view.js';
+import type {TypedView} from './typed-view.js';
 
 export function newQuery<
   TSchema extends TableSchema,
@@ -534,14 +534,12 @@ export class QueryImpl<
     return newQueryWithDetails(this.#delegate, schema, ast, format);
   }
 
-  materialize<T extends Completable>(
-    factory?: ViewFactory<TSchema, TReturn, T>,
-  ): T {
+  materialize<T>(factory?: ViewFactory<TSchema, TReturn, T>): T {
     const ast = this._completeAst();
-    const queryCompleteResolver = resolver();
+    const queryCompleteResolver = resolver<true>();
     const removeServerQuery = this.#delegate.addServerQuery(ast, got => {
       if (got) {
-        queryCompleteResolver.resolve();
+        queryCompleteResolver.resolve(true);
       }
     });
 
@@ -633,7 +631,7 @@ function arrayViewFactory<
   format: Format,
   onDestroy: () => void,
   onTransactionCommit: (cb: () => void) => void,
-  queryComplete: Promise<void>,
+  queryComplete: true | Promise<true>,
 ): TypedView<Smash<TReturn>> {
   const v = new ArrayView<Smash<TReturn>>(input, format, queryComplete);
   v.onDestroy = onDestroy;
