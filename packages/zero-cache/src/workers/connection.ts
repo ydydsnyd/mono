@@ -24,6 +24,10 @@ import type {
 } from '../services/view-syncer/view-syncer.js';
 import {findErrorForClient} from '../types/error-for-client.js';
 import type {Source} from '../types/streams.js';
+import {trace} from '@opentelemetry/api';
+import {version} from '../../../otel/src/version.js';
+
+const tracer = trace.getTracer('syncer-ws-server', version);
 
 /**
  * Represents a connection between the client and server.
@@ -124,86 +128,106 @@ export class Connection {
     return this.#handleMessage({data: initConnectionMsg});
   }
 
-  #handleMessage = async (event: {data: Data}) => {
-    const lc = this.#lc;
-    const data = event.data.toString();
-    const viewSyncer = this.#viewSyncer;
-    if (this.#closed) {
-      this.#lc.debug?.('Ignoring message received after closed', data);
-      return;
-    }
+  #handleMessage = (event: {data: Data}) =>
+    tracer.startActiveSpan('handleMessage', async span => {
+      try {
+        const lc = this.#lc;
+        const data = event.data.toString();
+        const viewSyncer = this.#viewSyncer;
+        if (this.#closed) {
+          this.#lc.debug?.('Ignoring message received after closed', data);
+          return;
+        }
 
-    let msg;
-    try {
-      const value = JSON.parse(data);
-      msg = valita.parse(value, upstreamSchema);
-    } catch (e) {
-      this.#lc.warn?.(`failed to parse message "${data}": ${String(e)}`);
-      this.#closeWithError(['error', ErrorKind.InvalidMessage, String(e)], e);
-      return;
-    }
-    try {
-      const msgType = msg[0];
-      switch (msgType) {
-        case 'ping':
-          this.send(['pong', {}] satisfies PongMessage);
-          break;
-        case 'push': {
-          const {clientGroupID, mutations, schemaVersion} = msg[1];
-          if (clientGroupID !== this.#clientGroupID) {
-            this.#closeWithError([
-              'error',
-              ErrorKind.InvalidPush,
-              `clientGroupID in mutation "${clientGroupID}" does not match ` +
-                `clientGroupID of connection "${this.#clientGroupID}`,
-            ]);
-          }
-          // Hold a connection-level lock while processing mutations so that:
-          // 1. Mutations are processed in the order in which they are received and
-          // 2. A single view syncer connection cannot hog multiple upstream connections.
-          await this.#mutationLock.withLock(async () => {
-            for (const mutation of mutations) {
-              const maybeError = await this.#mutagen.processMutation(
-                mutation,
-                this.#authData,
-                schemaVersion,
-              );
-              if (maybeError !== undefined) {
-                this.sendError(['error', maybeError[0], maybeError[1]]);
-              }
-            }
-          });
-          break;
-        }
-        case 'pull':
-          lc.error?.('TODO: implement pull');
-          break;
-        case 'changeDesiredQueries':
-          await viewSyncer.changeDesiredQueries(this.#syncContext, msg);
-          break;
-        case 'deleteClients':
-          lc.error?.('TODO: implement deleteClients');
-          break;
-        case 'initConnection': {
-          // TODO (mlaw): tell mutagens about the new token too
-          this.#outboundStream = await viewSyncer.initConnection(
-            this.#syncContext,
-            msg,
+        let msg;
+        try {
+          const value = JSON.parse(data);
+          msg = valita.parse(value, upstreamSchema);
+        } catch (e) {
+          this.#lc.warn?.(`failed to parse message "${data}": ${String(e)}`);
+          this.#closeWithError(
+            ['error', ErrorKind.InvalidMessage, String(e)],
+            e,
           );
-          if (this.#closed) {
-            this.#outboundStream.cancel();
-          } else {
-            void this.#proxyOutbound(this.#outboundStream);
-          }
-          break;
+          return;
         }
-        default:
-          unreachable(msgType);
+        try {
+          const msgType = msg[0];
+          switch (msgType) {
+            case 'ping':
+              this.send(['pong', {}] satisfies PongMessage);
+              break;
+            case 'push': {
+              await tracer.startActiveSpan('push', async span => {
+                const {clientGroupID, mutations, schemaVersion} = msg[1];
+                if (clientGroupID !== this.#clientGroupID) {
+                  this.#closeWithError([
+                    'error',
+                    ErrorKind.InvalidPush,
+                    `clientGroupID in mutation "${clientGroupID}" does not match ` +
+                      `clientGroupID of connection "${this.#clientGroupID}`,
+                  ]);
+                }
+                // Hold a connection-level lock while processing mutations so that:
+                // 1. Mutations are processed in the order in which they are received and
+                // 2. A single view syncer connection cannot hog multiple upstream connections.
+                await this.#mutationLock.withLock(async () => {
+                  for (const mutation of mutations) {
+                    const maybeError = await this.#mutagen.processMutation(
+                      mutation,
+                      this.#authData,
+                      schemaVersion,
+                    );
+                    if (maybeError !== undefined) {
+                      this.sendError(['error', maybeError[0], maybeError[1]]);
+                    }
+                  }
+                });
+                span.end();
+              });
+              break;
+            }
+            case 'pull':
+              lc.error?.('TODO: implement pull');
+              break;
+            case 'changeDesiredQueries':
+              await tracer.startActiveSpan(
+                'changeDesiredQueries',
+                async span => {
+                  await viewSyncer.changeDesiredQueries(this.#syncContext, msg);
+                  span.end();
+                },
+              );
+              break;
+            case 'deleteClients':
+              lc.error?.('TODO: implement deleteClients');
+              break;
+            case 'initConnection': {
+              await tracer.startActiveSpan('initConnection', async span => {
+                // TODO (mlaw): tell mutagens about the new token too
+                this.#outboundStream = await viewSyncer.initConnection(
+                  this.#syncContext,
+                  msg,
+                );
+                if (this.#closed) {
+                  this.#outboundStream.cancel();
+                } else {
+                  void this.#proxyOutbound(this.#outboundStream);
+                }
+                span.end();
+              });
+              break;
+            }
+            default:
+              unreachable(msgType);
+          }
+        } catch (e) {
+          this.#closeWithThrown(e);
+        }
+      } finally {
+        span.end();
       }
-    } catch (e) {
-      this.#closeWithThrown(e);
-    }
-  };
+    });
 
   #handleClose = (e: CloseEvent) => {
     const {code, reason, wasClean} = e;

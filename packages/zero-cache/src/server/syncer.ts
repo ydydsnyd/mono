@@ -1,3 +1,32 @@
+import {OTLPTraceExporter} from '@opentelemetry/exporter-trace-otlp-proto';
+import {OTLPMetricExporter} from '@opentelemetry/exporter-metrics-otlp-proto';
+import {Resource} from '@opentelemetry/resources';
+import {NodeSDK} from '@opentelemetry/sdk-node';
+import {PeriodicExportingMetricReader} from '@opentelemetry/sdk-metrics';
+import {
+  ATTR_SERVICE_NAME,
+  ATTR_SERVICE_VERSION,
+} from '@opentelemetry/semantic-conventions';
+import {version} from '../../../otel/src/version.js';
+
+const sdk = new NodeSDK({
+  resource: new Resource({
+    [ATTR_SERVICE_NAME]: 'syncer',
+    [ATTR_SERVICE_VERSION]: version,
+  }),
+  traceExporter: new OTLPTraceExporter({
+    url: 'http://localhost:4318/v1/traces',
+  }),
+  metricReader: new PeriodicExportingMetricReader({
+    exporter: new OTLPMetricExporter({
+      url: 'http://localhost:4318/v1/metrics',
+    }),
+  }),
+  instrumentations: [],
+});
+
+sdk.start();
+
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {pid} from 'node:process';
