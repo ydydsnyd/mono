@@ -17,6 +17,9 @@ RUN npm install
 
 # Copy your Playwright test scripts (adjust to your actual directory structure)
 COPY *.spec.ts .
+COPY start.sh .
+RUN chmod +x ./start.sh
+
 
 # Run the Playwright tests
-CMD ["npx", "playwright", "test"]
+CMD ["./start.sh"]
