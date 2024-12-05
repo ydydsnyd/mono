@@ -54,7 +54,7 @@ export function newQuery<
   return new QueryImpl(delegate, normalizeTableSchema(tableSchema));
 }
 
-function newQueryWithDetails<
+export function newQueryWithDetails<
   TSchema extends TableSchema,
   TReturn extends QueryType,
 >(

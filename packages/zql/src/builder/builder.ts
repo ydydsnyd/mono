@@ -244,7 +244,7 @@ export function applyOr(
   if (otherConditions.length > 0) {
     branches.push(
       new Filter(
-        input,
+        fanOut,
         appliedFilters ? 'push-only' : 'all',
         createPredicate({
           type: 'or',
