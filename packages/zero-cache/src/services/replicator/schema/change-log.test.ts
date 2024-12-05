@@ -1,5 +1,4 @@
 import {beforeEach, describe, test} from 'vitest';
-import {createSilentLogContext} from '../../../../../shared/src/logging-test-utils.js';
 import {Database} from '../../../../../zqlite/src/db.js';
 import {StatementRunner} from '../../../db/statements.js';
 import {expectTables} from '../../../test/lite.js';
@@ -15,7 +14,7 @@ describe('replicator/schema/change-log', () => {
   let db: StatementRunner;
 
   beforeEach(() => {
-    const conn = new Database(createSilentLogContext(), ':memory:');
+    const conn = new Database(':memory:');
     initChangeLog(conn);
     db = new StatementRunner(conn);
   });

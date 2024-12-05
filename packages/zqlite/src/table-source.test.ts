@@ -1,5 +1,4 @@
 import {describe, expect, test} from 'vitest';
-import {createSilentLogContext} from '../../shared/src/logging-test-utils.js';
 import type {Row, Value} from '../../zero-protocol/src/data.js';
 import {Catch} from '../../zql/src/ivm/catch.js';
 import type {Change} from '../../zql/src/ivm/change.js';
@@ -29,7 +28,7 @@ describe('fetching from a table source', () => {
     ['id', 'asc'],
   ] as const;
   const compoundComparator = makeComparator(compoundOrder);
-  const db = new Database(createSilentLogContext(), ':memory:');
+  const db = new Database(':memory:');
   db.exec(
     /* sql */ `CREATE TABLE foo (id TEXT PRIMARY KEY, a, b, c, ignored, columns);`,
   );
@@ -265,7 +264,7 @@ describe('fetched value types', () => {
 
   for (const c of cases) {
     test(c.name, () => {
-      const db = new Database(createSilentLogContext(), ':memory:');
+      const db = new Database(':memory:');
       db.exec(
         /* sql */ `CREATE TABLE foo (id TEXT PRIMARY KEY, a, b, c, ignored, columns);`,
       );
@@ -286,8 +285,8 @@ describe('fetched value types', () => {
 });
 
 test('pushing values does the correct writes and outputs', () => {
-  const db1 = new Database(createSilentLogContext(), ':memory:');
-  const db2 = new Database(createSilentLogContext(), ':memory:');
+  const db1 = new Database(':memory:');
+  const db2 = new Database(':memory:');
   db1.exec(
     /* sql */ `CREATE TABLE foo (a, b, c, ignored, columns, PRIMARY KEY (a, b));`,
   );
@@ -509,7 +508,7 @@ test('pushing values does the correct writes and outputs', () => {
 });
 
 test('getByKey', () => {
-  const db = new Database(createSilentLogContext(), ':memory:');
+  const db = new Database(':memory:');
   db.exec(
     /* sql */ `CREATE TABLE foo (id TEXT, a INTEGER, b, c, ignored, columns, PRIMARY KEY(id, a));`,
   );

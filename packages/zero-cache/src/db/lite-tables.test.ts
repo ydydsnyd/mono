@@ -1,5 +1,4 @@
 import {describe, expect, test} from 'vitest';
-import {createSilentLogContext} from '../../../shared/src/logging-test-utils.js';
 import {Database} from '../../../zqlite/src/db.js';
 import {listIndexes, listTables} from './lite-tables.js';
 import type {LiteIndexSpec, LiteTableSpec} from './specs.js';
@@ -179,7 +178,7 @@ describe('lite/tables', () => {
 
   for (const c of cases) {
     test(c.name, () => {
-      const db = new Database(createSilentLogContext(), ':memory:');
+      const db = new Database(':memory:');
       db.exec(c.setupQuery);
 
       const tables = listTables(db);
@@ -256,7 +255,7 @@ describe('lite/indexes', () => {
 
   for (const c of cases) {
     test(c.name, () => {
-      const db = new Database(createSilentLogContext(), ':memory:');
+      const db = new Database(':memory:');
       db.exec(c.setupQuery);
 
       const tables = listIndexes(db);

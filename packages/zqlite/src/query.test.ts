@@ -1,5 +1,4 @@
 import {beforeEach, expect, test} from 'vitest';
-import {createSilentLogContext} from '../../shared/src/logging-test-utils.js';
 import {must} from '../../shared/src/must.js';
 import {normalizeTableSchema} from '../../zero-schema/src/normalize-table-schema.js';
 import {MemoryStorage} from '../../zql/src/ivm/memory-storage.js';
@@ -11,7 +10,7 @@ import {TableSource, toSQLiteTypeName} from './table-source.js';
 
 let queryDelegate: QueryDelegate;
 beforeEach(() => {
-  const db = new Database(createSilentLogContext(), ':memory:');
+  const db = new Database(':memory:');
   const sources = new Map<string, Source>();
   queryDelegate = {
     getSource: (name: string) => {

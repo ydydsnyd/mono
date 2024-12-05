@@ -27,7 +27,7 @@ describe('view-syncer/snapshotter', () => {
   beforeEach(() => {
     lc = createSilentLogContext();
     dbFile = new DbFile('snapshotter_test');
-    const db = dbFile.connect(lc);
+    const db = dbFile.connect();
     db.pragma('journal_mode = WAL2');
     db.exec(
       `

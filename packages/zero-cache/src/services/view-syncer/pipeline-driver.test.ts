@@ -26,9 +26,9 @@ describe('view-syncer/pipeline-driver', () => {
   beforeEach(() => {
     lc = createSilentLogContext();
     dbFile = new DbFile('pipelines_test');
-    dbFile.connect(lc).pragma('journal_mode = wal2');
+    dbFile.connect().pragma('journal_mode = wal2');
 
-    const storage = new Database(lc, ':memory:');
+    const storage = new Database(':memory:');
     storage.prepare(CREATE_STORAGE_TABLE).run();
 
     pipelines = new PipelineDriver(
@@ -37,7 +37,7 @@ describe('view-syncer/pipeline-driver', () => {
       new DatabaseStorage(storage).createClientGroupStorage('foo-client-group'),
     );
 
-    db = dbFile.connect(lc);
+    db = dbFile.connect();
     initReplicationState(db, ['zero_data'], '123');
     initChangeLog(db);
     db.exec(`

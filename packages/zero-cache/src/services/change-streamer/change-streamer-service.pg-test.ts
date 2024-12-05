@@ -61,7 +61,7 @@ describe('change-streamer/service', () => {
 
     changeDB = await testDBs.create('change_streamer_test_change_db');
 
-    const replica = new Database(lc, ':memory:');
+    const replica = new Database(':memory:');
     initReplicationState(replica, ['zero_data'], REPLICA_VERSION);
     replicaConfig = getSubscriptionState(new StatementRunner(replica));
 

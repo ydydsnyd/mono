@@ -258,7 +258,7 @@ const lc = createSilentLogContext();
 beforeEach(async () => {
   upstream = await testDBs.create('authz');
   await createUpstreamTables(upstream);
-  replica = new Database(lc, ':memory:');
+  replica = new Database(':memory:');
   createReplicaTables(replica);
   authorizer = new WriteAuthorizerImpl(
     lc,

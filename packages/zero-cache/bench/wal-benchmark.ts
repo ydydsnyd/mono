@@ -1,10 +1,7 @@
 import {statSync} from 'fs';
-import {createSilentLogContext} from '../../shared/src/logging-test-utils.js';
 import {randInt} from '../../shared/src/rand.js';
 import {Database, Statement} from '../../zqlite/src/db.js';
 import {bench} from './benchmark.js';
-
-const lc = createSilentLogContext();
 
 type Options = {
   dbFile: string;
@@ -19,7 +16,7 @@ class Reader {
   readonly #rollback: Statement;
 
   constructor(dbFile: string) {
-    this.#db = new Database(lc, dbFile, {readonly: true});
+    this.#db = new Database(dbFile, {readonly: true});
     this.#begin = this.#db.prepare('begin immediate');
     this.#rollback = this.#db.prepare('rollback');
   }
@@ -39,7 +36,7 @@ class Reader {
 
 export function walBenchmark(opts: Options) {
   const {dbFile, mode, runs, modify} = opts;
-  const db = new Database(lc, dbFile);
+  const db = new Database(dbFile);
   // Start from scratch.
   db.pragma(`journal_mode = delete`);
   db.pragma(`journal_mode = ${mode}`);

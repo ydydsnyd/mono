@@ -2,7 +2,6 @@ import {Database} from '../db.js';
 import type {SchemaValue} from '../../../zero-schema/src/table-schema.js';
 import type {Source} from '../../../zql/src/ivm/source.js';
 import type {SourceFactory} from '../../../zql/src/ivm/test/source-factory.js';
-import {createSilentLogContext} from '../../../shared/src/logging-test-utils.js';
 import {compile, sql} from '../internal/sql.js';
 import {TableSource} from '../table-source.js';
 import type {PrimaryKey} from '../../../zero-protocol/src/primary-key.js';
@@ -12,7 +11,7 @@ export const createSource: SourceFactory = (
   columns: Record<string, SchemaValue>,
   primaryKey: PrimaryKey,
 ): Source => {
-  const db = new Database(createSilentLogContext(), ':memory:');
+  const db = new Database(':memory:');
   // create a table with desired columns and primary keys
   const query = compile(
     sql`CREATE TABLE ${sql.ident(tableName)} (${sql.join(

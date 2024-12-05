@@ -239,11 +239,11 @@ const permissions: PermissionsConfig | undefined = await definePermissions<
 
 async function setup(permissions: PermissionsConfig = {}) {
   const lc = createSilentLogContext();
-  const storageDB = new Database(lc, ':memory:');
+  const storageDB = new Database(':memory:');
   storageDB.prepare(CREATE_STORAGE_TABLE).run();
 
   const replicaDbFile = new DbFile('view_syncer_service_test');
-  const replica = replicaDbFile.connect(lc);
+  const replica = replicaDbFile.connect();
   initChangeLog(replica);
   initReplicationState(replica, ['zero_data'], REPLICA_VERSION);
 

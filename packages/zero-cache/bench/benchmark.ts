@@ -1,7 +1,4 @@
-// create a zql query
-
 import {assert} from '../../shared/src/asserts.js';
-import {createSilentLogContext} from '../../shared/src/logging-test-utils.js';
 import {MemoryStorage} from '../../zql/src/ivm/memory-storage.js';
 import type {Source} from '../../zql/src/ivm/source.js';
 import {newQuery, type QueryDelegate} from '../../zql/src/query/query-impl.js';
@@ -18,7 +15,7 @@ type Options = {
 // load up some data!
 export function bench(opts: Options) {
   const {dbFile} = opts;
-  const db = new Database(createSilentLogContext(), dbFile);
+  const db = new Database(dbFile);
   const sources = new Map<string, Source>();
   const tableSpecs = new Map(listTables(db).map(spec => [spec.name, spec]));
   const host: QueryDelegate = {

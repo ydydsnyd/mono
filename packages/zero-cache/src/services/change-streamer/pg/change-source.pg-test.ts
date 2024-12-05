@@ -147,7 +147,7 @@ describe('change-source/pg', () => {
     async init => {
       await init();
       const {replicaVersion} = getSubscriptionState(
-        new StatementRunner(replicaDbFile.connect(lc)),
+        new StatementRunner(replicaDbFile.connect()),
       );
 
       const {initialWatermark, changes, acks} = await startStream('00');
@@ -313,7 +313,7 @@ describe('change-source/pg', () => {
     async init => {
       await init();
       const {replicaVersion} = getSubscriptionState(
-        new StatementRunner(replicaDbFile.connect(lc)),
+        new StatementRunner(replicaDbFile.connect()),
       );
 
       // Write three transactions, to experiment with different starting points.

@@ -1,4 +1,3 @@
-import {createSilentLogContext} from '../../../shared/src/logging-test-utils.js';
 import {beforeEach, describe, expect, test} from 'vitest';
 import {Database} from '../../../zqlite/src/db.js';
 import {expectTables} from '../test/lite.js';
@@ -8,7 +7,7 @@ describe('db/statements', () => {
   let db: StatementRunner;
 
   beforeEach(() => {
-    const conn = new Database(createSilentLogContext(), ':memory:');
+    const conn = new Database(':memory:');
     conn.exec('CREATE TABLE foo(id INT PRIMARY KEY)');
     db = new StatementRunner(conn);
   });

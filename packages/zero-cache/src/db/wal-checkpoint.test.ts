@@ -1,17 +1,14 @@
 import {resolver} from '@rocicorp/resolver';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {Worker} from 'worker_threads';
-import {createSilentLogContext} from '../../../shared/src/logging-test-utils.js';
 import {DbFile} from '../test/lite.js';
 
 describe('db/wal-checkpoint', () => {
   let dbFile: DbFile;
 
-  const lc = createSilentLogContext();
-
   beforeEach(() => {
     dbFile = new DbFile('wal-checkpoint');
-    const conn = dbFile.connect(lc);
+    const conn = dbFile.connect();
     conn.pragma('journal_mode = WAL');
     conn.pragma('synchronous = NORMAL');
     conn.exec(`
@@ -38,7 +35,7 @@ describe('db/wal-checkpoint', () => {
   test.each([['IMMEDIATE'], ['CONCURRENT']] satisfies [TransactionMode][])(
     'wal_checkpoint with BEGIN %s',
     async transaction => {
-      const writer = dbFile.connect(lc);
+      const writer = dbFile.connect();
       writer.pragma('wal_autocheckpoint = 0');
       writer.pragma('busy_timeout = 100');
 

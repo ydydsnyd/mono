@@ -101,7 +101,7 @@ export class Snapshotter {
    */
   init(): this {
     assert(this.#curr === undefined, 'Already initialized');
-    this.#curr = Snapshot.create(this.#lc, this.#dbFile);
+    this.#curr = Snapshot.create(this.#dbFile);
     this.#lc.debug?.(`Initial snapshot at version ${this.#curr.version}`);
     return this;
   }
@@ -162,7 +162,7 @@ export class Snapshotter {
     assert(this.#curr !== undefined, 'Snapshotter has not been initialized');
     const next = this.#prev
       ? this.#prev.resetToHead()
-      : Snapshot.create(this.#lc, this.#curr.db.db.name);
+      : Snapshot.create(this.#curr.db.db.name);
     this.#prev = this.#curr;
     this.#curr = next;
     return {prev: this.#prev, curr: this.#curr};
@@ -235,8 +235,8 @@ function getSchemaVersions(db: StatementRunner): SchemaVersions {
 }
 
 class Snapshot {
-  static create(lc: LogContext, dbFile: string) {
-    const conn = new Database(lc, dbFile);
+  static create(dbFile: string) {
+    const conn = new Database(dbFile);
     conn.pragma('synchronous = OFF'); // Applied changes are ephemeral; COMMIT is never called.
     const [{journal_mode: mode}] = conn.pragma('journal_mode') as [
       // eslint-disable-next-line @typescript-eslint/naming-convention

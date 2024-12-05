@@ -1,10 +1,9 @@
-import {createSilentLogContext} from '../../../shared/src/logging-test-utils.js';
 import {expect, test} from 'vitest';
 import {Database} from '../db.js';
 import {type CachedStatement, StatementCache} from './statement-cache.js';
 
 test('Same sql results in same statement instance. The same instance is not outstanding twice.', () => {
-  const db = new Database(createSilentLogContext(), ':memory:');
+  const db = new Database(':memory:');
   const cache = new StatementCache(db);
   const LOOP_COUNT = 100;
   const expected: CachedStatement[] = [];

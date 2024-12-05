@@ -112,13 +112,12 @@ describe('change-streamer/pg/sync-schema', () => {
     await testDBs.drop(upstream);
     replicaFile.delete();
   }, 10000);
-  const lc = createSilentLogContext();
 
   for (const c of cases) {
     test(
       c.name,
       async () => {
-        const replica = replicaFile.connect(lc);
+        const replica = replicaFile.connect();
         await initDB(upstream, c.upstreamSetup, c.upstreamPreState);
         initLiteDB(replica, c.replicaSetup, c.replicaPreState);
 

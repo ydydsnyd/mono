@@ -1,13 +1,11 @@
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
-import {createSilentLogContext} from '../../../shared/src/logging-test-utils.js';
 import {DbFile} from '../test/lite.js';
 
 describe('db/begin-concurrent', () => {
   let dbFile: DbFile;
-  const lc = createSilentLogContext();
   beforeEach(() => {
     dbFile = new DbFile('begin-concurrent');
-    const conn = dbFile.connect(lc);
+    const conn = dbFile.connect();
     conn.pragma('journal_mode = WAL');
     conn.pragma('synchronous = NORMAL');
     conn.exec('CREATE TABLE foo(id INTEGER PRIMARY KEY);');
@@ -19,11 +17,11 @@ describe('db/begin-concurrent', () => {
   });
 
   test('independent, concurrent actions before commit', () => {
-    const conn1 = dbFile.connect(lc);
+    const conn1 = dbFile.connect();
     conn1.pragma('journal_mode = WAL');
     conn1.prepare('BEGIN CONCURRENT').run();
 
-    const conn2 = dbFile.connect(lc);
+    const conn2 = dbFile.connect();
     conn2.pragma('journal_mode = WAL');
     conn2.prepare('BEGIN CONCURRENT').run();
 
@@ -41,11 +39,11 @@ describe('db/begin-concurrent', () => {
   });
 
   test('begin concurrent is deferred', () => {
-    const conn1 = dbFile.connect(lc);
+    const conn1 = dbFile.connect();
     conn1.pragma('journal_mode = WAL');
     conn1.prepare('BEGIN CONCURRENT').run();
 
-    const conn2 = dbFile.connect(lc);
+    const conn2 = dbFile.connect();
     conn2.pragma('journal_mode = WAL');
 
     // Note: Like BEGIN DEFERRED, the BEGIN CONCURRENT transaction does not actually start until
@@ -71,13 +69,13 @@ describe('db/begin-concurrent', () => {
   });
 
   test('simulate immediate', () => {
-    const conn1 = dbFile.connect(lc);
+    const conn1 = dbFile.connect();
     conn1.pragma('journal_mode = WAL');
     conn1.prepare('BEGIN CONCURRENT').run();
     // Force the transaction to start immediately by accessing the database.
     expect(conn1.prepare('SELECT * FROM foo').all()).toEqual([]);
 
-    const conn2 = dbFile.connect(lc);
+    const conn2 = dbFile.connect();
     conn2.pragma('journal_mode = WAL');
     conn2.prepare('BEGIN CONCURRENT').run();
     // Force the transaction to start immediately by accessing the database.
@@ -99,13 +97,13 @@ describe('db/begin-concurrent', () => {
   });
 
   test('begin concurrent with savepoints', () => {
-    const conn1 = dbFile.connect(lc);
+    const conn1 = dbFile.connect();
     conn1.pragma('journal_mode = WAL');
     conn1.prepare('BEGIN CONCURRENT').run();
     // Force the transaction to start immediately by accessing the database.
     expect(conn1.prepare('SELECT * FROM foo').all()).toEqual([]);
 
-    const conn2 = dbFile.connect(lc);
+    const conn2 = dbFile.connect();
     conn2.pragma('journal_mode = WAL');
     conn2.prepare('BEGIN CONCURRENT').run();
     // Force the transaction to start immediately by accessing the database.
