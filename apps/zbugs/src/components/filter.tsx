@@ -20,9 +20,9 @@ export default function Filter({onSelect}: Props) {
   const z = useZero();
   const [isOpen, setIsOpen] = useState(false);
 
-  const [labels] = useQuery(z.query.label);
+  const labels = useQuery(z.query.label);
   // TODO: Support case-insensitive sorting in ZQL.
-  labels.sort((a, b) => a.name.localeCompare(b.name));
+  labels.rows.sort((a, b) => a.name.localeCompare(b.name));
 
   const handleSelect = (selection: Selection) => {
     setIsOpen(!isOpen);
@@ -72,7 +72,7 @@ export default function Filter({onSelect}: Props) {
               <p className="filter-modal-label">Label</p>
               <Combobox
                 onChange={l => handleSelect({label: l.name})}
-                items={labels.map(c => ({
+                items={labels.rows.map(c => ({
                   text: c.name,
                   value: c,
                   icon: labelIcon,

@@ -32,6 +32,7 @@ import {links, type ListContext, type ZbugsHistoryState} from '../../routes.js';
 import CommentComposer from './comment-composer.js';
 import Comment, {parsePermalink} from './comment.js';
 import {preload} from '../../zero-setup.js';
+import {isNonEmpty} from 'zero-react/src/use-query.js';
 
 export default function IssuePage() {
   const z = useZero();
@@ -53,26 +54,27 @@ export default function IssuePage() {
     .related('comments', q => q.orderBy('created', 'asc'))
     .one();
 
+  const issue = useQuery(q);
   const login = useLogin();
-  const [issue, resultType] = useQuery(q);
 
   useEffect(() => {
-    if (resultType === 'complete') {
+    if (issue.resultType === 'complete') {
       preload(z);
     }
-  }, [resultType, z]);
+  }, [issue.resultType, z]);
 
   useEffect(() => {
     // only push viewed forward if the issue has been modified since the last viewing
     if (
       z.userID !== 'anon' &&
-      issue &&
-      issue.modified > (issue?.viewState?.viewed ?? 0)
+      isNonEmpty(issue) &&
+      issue.row.modified > (issue.row?.viewState?.viewed ?? 0)
     ) {
+      const issueID = issue.row.id;
       // only set to viewed if the user has looked at it for > 1 second
       const handle = setTimeout(() => {
         z.mutate.viewState.upsert({
-          issueID: issue.id,
+          issueID,
           userID: z.userID,
           viewed: Date.now(),
         });
@@ -82,11 +84,11 @@ export default function IssuePage() {
     return;
   }, [issue, z]);
 
-  const [editing, setEditing] = useState<typeof issue | null>(null);
-  const [edits, setEdits] = useState<Partial<typeof issue>>({});
+  const [editing, setEditing] = useState<typeof issue.row | null>(null);
+  const [edits, setEdits] = useState<Partial<typeof issue.row>>({});
   useEffect(() => {
-    if (issue?.shortID !== undefined && idField !== 'shortID') {
-      navigate(links.issue(issue), {
+    if (issue?.row?.shortID !== undefined && idField !== 'shortID') {
+      navigate(links.issue(issue.row), {
         replace: true,
         state: zbugsHistoryState,
       });
@@ -111,48 +113,48 @@ export default function IssuePage() {
   // used for finding the next/prev items so that a user can open an item
   // modify it and then navigate to the next/prev item in the list as it was
   // when they were viewing it.
-  const [issueSnapshot, setIssueSnapshot] = useState(issue);
+  const [issueSnapshot, setIssueSnapshot] = useState(issue.row);
   if (
-    issue !== undefined &&
-    (issueSnapshot === undefined || issueSnapshot.id !== issue.id)
+    isNonEmpty(issue) &&
+    (issueSnapshot === undefined || issueSnapshot.id !== issue.row.id)
   ) {
-    setIssueSnapshot(issue);
+    setIssueSnapshot(issue.row);
   }
-  const [next] = useQuery(
-    buildListQuery(z, listContext, issue, 'next'),
+  const next = useQuery(
+    buildListQuery(z, listContext, issue.row, 'next'),
     listContext !== undefined && issueSnapshot !== undefined,
   );
   useKeypress('j', () => {
-    if (next) {
-      navigate(links.issue(next), {state: zbugsHistoryState});
+    if (next.row) {
+      navigate(links.issue(next.row), {state: zbugsHistoryState});
     }
   });
 
-  const [prev] = useQuery(
-    buildListQuery(z, listContext, issue, 'prev'),
+  const prev = useQuery(
+    buildListQuery(z, listContext, issue.row, 'prev'),
     listContext !== undefined && issueSnapshot !== undefined,
   );
   useKeypress('k', () => {
-    if (prev) {
-      navigate(links.issue(prev), {state: zbugsHistoryState});
+    if (prev.row) {
+      navigate(links.issue(prev.row), {state: zbugsHistoryState});
     }
   });
 
   const labelSet = useMemo(
-    () => new Set(issue?.labels?.map(l => l.id)),
-    [issue?.labels],
+    () => new Set(issue?.row?.labels?.map(l => l.id)),
+    [issue?.row?.labels],
   );
 
-  const {listRef, virtualizer} = useVirtualComments(issue?.comments ?? []);
+  const {listRef, virtualizer} = useVirtualComments(issue?.row?.comments ?? []);
 
   const hash = useHash();
 
   // Permalink scrolling behavior
   useEffect(() => {
-    if (issue === undefined) {
+    if (!isNonEmpty(issue)) {
       return;
     }
-    const {comments} = issue;
+    const {comments} = issue.row;
     const commentID = parsePermalink(hash);
     const commentIndex = comments.findIndex(c => c.id === commentID);
     if (commentIndex !== -1) {
@@ -166,7 +168,7 @@ export default function IssuePage() {
 
   const [deleteConfirmationShown, setDeleteConfirmationShown] = useState(false);
 
-  const canEdit = useCanEdit(issue?.creatorID);
+  const canEdit = useCanEdit(issue?.row?.creatorID);
 
   const issueEmojiRef = useRef<HTMLDivElement>(null);
 
@@ -210,25 +212,26 @@ export default function IssuePage() {
   // TODO: We need the notion of the 'partial' result type to correctly render
   // a 404 here. We can't put the 404 here now because it would flash until we
   // get data.
-  if (!issue) {
+  if (!isNonEmpty(issue)) {
     return null;
   }
 
   const remove = () => {
     // TODO: Implement undo - https://github.com/rocicorp/undo
-    z.mutate.issue.delete({id: issue.id});
+    z.mutate.issue.delete({id: issue.row.id});
     navigate(listContext?.href ?? links.home());
   };
 
   // TODO: This check goes away once Zero's consistency model is implemented.
   // The query above should not be able to return an incomplete result.
-  if (!issue.creator) {
+  if (!issue.row.creator) {
     return null;
   }
 
-  const rendering = editing ? {...editing, ...edits} : issue;
+  const rendering = editing ? {...editing, ...edits} : issue.row;
 
   return (
+<<<<<<< HEAD
     <>
       <div className="issue-detail-container">
         <ToastContainer
@@ -248,6 +251,41 @@ export default function IssuePage() {
                     {listContext.title}
                   </Link>
                   <span className="breadcrumb-item">&rarr;</span>
+=======
+    <div className="issue-detail-container">
+      {/* Center column of info */}
+      <div className="issue-detail">
+        <div className="issue-topbar">
+          <div className="issue-breadcrumb">
+            {listContext ? (
+              <>
+                <Link className="breadcrumb-item" href={listContext.href}>
+                  {listContext.title}
+                </Link>
+                <span className="breadcrumb-item">&rarr;</span>
+              </>
+            ) : null}
+            <span className="breadcrumb-item">Issue {issue.row.shortID}</span>
+          </div>
+          <CanEdit ownerID={issue.row.creatorID}>
+            <div className="edit-buttons">
+              {!editing ? (
+                <>
+                  <Button
+                    className="edit-button"
+                    eventName="Edit issue"
+                    onAction={() => setEditing(issue.row)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    className="delete-button"
+                    eventName="Delete issue"
+                    onAction={() => setDeleteConfirmationShown(true)}
+                  >
+                    Delete
+                  </Button>
+>>>>>>> 6f5c474fa (row/rows)
                 </>
               ) : null}
               <span className="breadcrumb-item">Issue {issue.shortID}</span>
@@ -312,6 +350,7 @@ export default function IssuePage() {
           {/* These comments are actually github markdown which unfortunately has
          HTML mixed in. We need to find some way to render them, or convert to
          standard markdown? break-spaces makes it render a little better */}
+<<<<<<< HEAD
           {!editing ? (
             <div className="description-container markdown-container">
               <Markdown>{rendering.description}</Markdown>
@@ -332,6 +371,67 @@ export default function IssuePage() {
 
           {/* Right sidebar */}
           <div className="issue-sidebar">
+=======
+        {!editing ? (
+          <div className="description-container markdown-container">
+            <Markdown>{rendering.description}</Markdown>
+            <EmojiPanel issueID={issue.row.id} />
+          </div>
+        ) : (
+          <div className="edit-description-container">
+            <p className="issue-detail-label">Edit description</p>
+            <TextareaAutosize
+              className="edit-description"
+              value={rendering.description}
+              onChange={e => setEdits({...edits, description: e.target.value})}
+            />
+          </div>
+        )}
+
+        {/* Right sidebar */}
+        <div className="issue-sidebar">
+          <div className="sidebar-item">
+            <p className="issue-detail-label">Status</p>
+            <Combobox
+              editable={false}
+              disabled={!canEdit}
+              items={[
+                {
+                  text: 'Open',
+                  value: true,
+                  icon: statusOpen,
+                },
+                {
+                  text: 'Closed',
+                  value: false,
+                  icon: statusClosed,
+                },
+              ]}
+              selectedValue={issue.row.open}
+              onChange={value =>
+                z.mutate.issue.update({id: issue.row.id, open: value})
+              }
+            />
+          </div>
+
+          <div className="sidebar-item">
+            <p className="issue-detail-label">Assignee</p>
+            <UserPicker
+              disabled={!canEdit}
+              selected={{login: issue.row.assignee?.login}}
+              placeholder="Assign to..."
+              unselectedLabel="Nobody"
+              onSelect={user => {
+                z.mutate.issue.update({
+                  id: issue.row.id,
+                  assigneeID: user?.id ?? null,
+                });
+              }}
+            />
+          </div>
+
+          {login.loginState?.decoded.role === 'crew' ? (
+>>>>>>> 6f5c474fa (row/rows)
             <div className="sidebar-item">
               <p className="issue-detail-label">Status</p>
               <Combobox
@@ -349,13 +449,20 @@ export default function IssuePage() {
                     icon: statusClosed,
                   },
                 ]}
+<<<<<<< HEAD
                 selectedValue={issue.open}
                 onChange={value =>
                   z.mutate.issue.update({id: issue.id, open: value})
+=======
+                selectedValue={issue.row.visibility}
+                onChange={value =>
+                  z.mutate.issue.update({id: issue.row.id, visibility: value})
+>>>>>>> 6f5c474fa (row/rows)
                 }
               />
             </div>
 
+<<<<<<< HEAD
             <div className="sidebar-item">
               <p className="issue-detail-label">Assignee</p>
               <UserPicker
@@ -370,8 +477,59 @@ export default function IssuePage() {
                   });
                 }}
               />
+=======
+          <div className="sidebar-item">
+            <p className="issue-detail-label">Creator</p>
+            <div className="issue-creator">
+              <img
+                src={issue.row.creator?.avatar}
+                className="issue-creator-avatar"
+                alt={issue.row.creator?.name}
+              />
+              {issue.row.creator.login}
+            </div>
+          </div>
+
+          <div className="sidebar-item">
+            <p className="issue-detail-label">Labels</p>
+            <div className="issue-detail-label-container">
+              {issue.row.labels.map(label => (
+                <span className="pill label" key={label.id}>
+                  {label.name}
+                </span>
+              ))}
+            </div>
+            <CanEdit ownerID={issue.row.creatorID}>
+              <LabelPicker
+                selected={labelSet}
+                onAssociateLabel={labelID =>
+                  z.mutate.issueLabel.insert({
+                    issueID: issue.row.id,
+                    labelID,
+                  })
+                }
+                onDisassociateLabel={labelID =>
+                  z.mutate.issueLabel.delete({issueID: issue.row.id, labelID})
+                }
+                onCreateNewLabel={labelName => {
+                  const labelID = nanoid();
+                  z.mutateBatch(tx => {
+                    tx.label.insert({id: labelID, name: labelName});
+                    tx.issueLabel.insert({issueID: issue.row.id, labelID});
+                  });
+                }}
+              />
+            </CanEdit>
+          </div>
+
+          <div className="sidebar-item">
+            <p className="issue-detail-label">Last updated</p>
+            <div className="timestamp-container">
+              <RelativeTime timestamp={issue.row.modified} />
+>>>>>>> 6f5c474fa (row/rows)
             </div>
 
+<<<<<<< HEAD
             {login.loginState?.decoded.role === 'crew' ? (
               <div className="sidebar-item">
                 <p className="issue-detail-label">Visibility</p>
@@ -394,10 +552,35 @@ export default function IssuePage() {
                   onChange={value =>
                     z.mutate.issue.update({id: issue.id, visibility: value})
                   }
+=======
+        <h2 className="issue-detail-label">Comments</h2>
+
+        <div className="comments-container" ref={listRef}>
+          <div
+            className="virtual-list"
+            style={{height: virtualizer.getTotalSize()}}
+          >
+            {virtualizer.getVirtualItems().map(item => (
+              <div
+                key={item.key as string}
+                ref={virtualizer.measureElement}
+                data-index={item.index}
+                style={{
+                  transform: `translateY(${
+                    item.start - virtualizer.options.scrollMargin
+                  }px)`,
+                }}
+              >
+                <Comment
+                  id={issue.row.comments[item.index].id}
+                  issueID={issue.row.id}
+                  height={item.size}
+>>>>>>> 6f5c474fa (row/rows)
                 />
               </div>
             ) : null}
 
+<<<<<<< HEAD
             <div className="sidebar-item">
               <p className="issue-detail-label">Creator</p>
               <div className="issue-creator">
@@ -498,6 +681,15 @@ export default function IssuePage() {
             setDeleteConfirmationShown(false);
           }}
         />
+=======
+        {z.userID === 'anon' ? (
+          <a href="/api/login/github" className="login-to-comment">
+            Login to comment
+          </a>
+        ) : (
+          <CommentComposer issueID={issue.row.id} />
+        )}
+>>>>>>> 6f5c474fa (row/rows)
       </div>
     </>
   );

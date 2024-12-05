@@ -25,7 +25,7 @@ export default function LabelPicker({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const z = useZero();
-  const [labels] = useQuery(z.query.label.orderBy('name', 'asc'));
+  const labels = useQuery(z.query.label.orderBy('name', 'asc'));
   const ref = useRef<HTMLDivElement>(null);
 
   useClickOutside(
@@ -48,7 +48,7 @@ export default function LabelPicker({
           onAssociateLabel={onAssociateLabel}
           onDisassociateLabel={onDisassociateLabel}
           onCreateNewLabel={onCreateNewLabel}
-          labels={labels}
+          labels={labels.rows}
           selected={selected}
           inputRef={focusInput}
         />

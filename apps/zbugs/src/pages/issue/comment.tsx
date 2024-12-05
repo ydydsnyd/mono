@@ -36,19 +36,19 @@ const Comment = memo(({id, issueID, height}: Props) => {
     .where('id', id)
     .related('creator', creator => creator.one())
     .one();
-  const [comment] = useQuery(q);
+  const comment = useQuery(q);
   const [editing, setEditing] = useState(false);
   const login = useLogin();
   const [deleteConfirmationShown, setDeleteConfirmationShown] = useState(false);
 
   const hash = useHash();
-  const permalink = comment ? `comment-${comment.id}` : undefined;
+  const permalink = comment.row ? `comment-${comment.row.id}` : undefined;
   const isPermalinked = hash === permalink;
 
   const edit = () => setEditing(true);
   const remove = () => z.mutate.comment.delete({id});
 
-  if (!comment) {
+  if (!comment.row) {
     return <div style={{height}}></div>;
   }
   return (
@@ -56,13 +56,13 @@ const Comment = memo(({id, issueID, height}: Props) => {
       className={classNames({
         [style.commentItem]: true,
         [style.authorComment]:
-          comment.creatorID == login.loginState?.decoded.sub,
+          comment.row.creatorID == login.loginState?.decoded.sub,
         [style.permalinked]: isPermalinked,
       })}
     >
       <p className={style.commentAuthor}>
         <img
-          src={comment.creator?.avatar}
+          src={comment.row.creator?.avatar}
           style={{
             width: '2rem',
             height: '2rem',
@@ -70,30 +70,30 @@ const Comment = memo(({id, issueID, height}: Props) => {
             display: 'inline-block',
             marginRight: '0.3rem',
           }}
-          alt={comment.creator?.name}
+          alt={comment.row.creator?.name}
         />{' '}
-        {comment.creator?.login}
+        {comment.row.creator?.login}
       </p>
       <span id={permalink} className={style.commentTimestamp}>
         <Link href={`#${permalink}`}>
-          <RelativeTime timestamp={comment.created} />
+          <RelativeTime timestamp={comment.row.created} />
         </Link>
       </span>
       {editing ? (
         <CommentComposer
           id={id}
-          body={comment.body}
+          body={comment.row.body}
           issueID={issueID}
           onDone={() => setEditing(false)}
         />
       ) : (
         <div className="markdown-container">
-          <Markdown>{comment.body}</Markdown>
-          <EmojiPanel issueID={issueID} commentID={comment.id} />
+          <Markdown>{comment.row.body}</Markdown>
+          <EmojiPanel issueID={issueID} commentID={comment.row.id} />
         </div>
       )}
       {editing ? null : (
-        <CanEdit ownerID={comment.creatorID}>
+        <CanEdit ownerID={comment.row.creatorID}>
           <div className={style.commentActions}>
             <Button eventName="Edit comment" onAction={edit}>
               Edit

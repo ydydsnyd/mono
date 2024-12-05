@@ -13,13 +13,34 @@ import {useZero} from './use-zero.js';
 import type {TableSchema} from '../../zero-schema/src/table-schema.js';
 import type {ResultType} from '../../zql/src/query/typed-view.js';
 
+export type QueryResult<T extends QueryType> = T['singular'] extends true
+  ? {
+      readonly row: Smash<T>;
+      readonly data: Smash<T>;
+      readonly resultType: ResultType;
+    }
+  : {
+      readonly rows: Smash<T>;
+      readonly data: Smash<T>;
+      readonly resultType: ResultType;
+    };
+
+export function isNonEmpty<T>(result: {
+  readonly row: T;
+  readonly data: T;
+  readonly resultType: ResultType;
+}): result is {
+  readonly row: NonNullable<T>;
+  readonly data: NonNullable<T>;
+  readonly resultType: ResultType;
+} {
+  return result.row !== undefined;
+}
+
 export function useQuery<
   TSchema extends TableSchema,
   TReturn extends QueryType,
->(
-  q: Query<TSchema, TReturn>,
-  enable: boolean = true,
-): readonly [Smash<TReturn>, resultType: ResultType] {
+>(q: Query<TSchema, TReturn>, enable: boolean = true): QueryResult<TReturn> {
   const z = useZero();
   const view = viewStore.getView(
     z.clientID,
@@ -32,6 +53,23 @@ export function useQuery<
 
 const emptyArray: unknown[] = [];
 const disabledSubscriber = () => () => {};
+
+const defaultSnapshots = {
+  singular: {row: undefined, data: undefined, resultType: 'unknown'} as const,
+  plural: {
+    rows: emptyArray,
+    data: emptyArray,
+    resultType: 'unknown',
+  } as const,
+};
+
+function getDefaultSnapshot<TReturn extends QueryType>(
+  singular: boolean,
+): QueryResult<TReturn> {
+  return (
+    singular ? defaultSnapshots.singular : defaultSnapshots.plural
+  ) as QueryResult<TReturn>;
+}
 
 /**
  * A global store of all active views.
@@ -85,28 +123,17 @@ class ViewStore {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   #views = new Map<string, ViewWrapper<any, any>>();
 
-  readonly #disabledSnapshot = {
-    singular: [undefined, 'complete'] as const,
-    plural: [emptyArray, 'complete'] as const,
-  };
-
   getView<TSchema extends TableSchema, TReturn extends QueryType>(
     clientID: string,
     query: AdvancedQuery<TSchema, TReturn>,
     enabled: boolean,
   ): {
-    getSnapshot: () => readonly [Smash<TReturn>, ResultType];
+    getSnapshot: () => QueryResult<TReturn>;
     subscribeReactInternals: (internals: () => void) => () => void;
   } {
     if (!enabled) {
       return {
-        getSnapshot: () =>
-          (query.format.singular
-            ? this.#disabledSnapshot.singular
-            : this.#disabledSnapshot.plural) as readonly [
-            Smash<TReturn>,
-            ResultType,
-          ],
+        getSnapshot: () => getDefaultSnapshot(query.format.singular),
         subscribeReactInternals: disabledSubscriber,
       };
     }
@@ -168,7 +195,7 @@ class ViewWrapper<TSchema extends TableSchema, TReturn extends QueryType> {
   readonly #onDematerialized;
   readonly #onMaterialized;
   readonly #query: AdvancedQuery<TSchema, TReturn>;
-  #snapshot: [Smash<TReturn>, ResultType];
+  #snapshot: QueryResult<TReturn>;
   #reactInternals: Set<() => void>;
 
   constructor(
@@ -176,12 +203,7 @@ class ViewWrapper<TSchema extends TableSchema, TReturn extends QueryType> {
     onMaterialized: (view: ViewWrapper<TSchema, TReturn>) => void,
     onDematerialized: () => void,
   ) {
-    this.#snapshot = [
-      (query.format.singular
-        ? undefined
-        : emptyArray) as unknown as Smash<TReturn>,
-      'unknown',
-    ];
+    this.#snapshot = getDefaultSnapshot(query.format.singular);
     this.#onMaterialized = onMaterialized;
     this.#onDematerialized = onDematerialized;
     this.#reactInternals = new Set();
@@ -189,12 +211,23 @@ class ViewWrapper<TSchema extends TableSchema, TReturn extends QueryType> {
   }
 
   #onData = (snap: Immutable<Smash<TReturn>>, resultType: ResultType) => {
-    this.#snapshot = [
-      (snap === undefined
+    const data =
+      snap === undefined
         ? snap
-        : deepClone(snap as ReadonlyJSONValue)) as Smash<TReturn>,
-      resultType,
-    ];
+        : (deepClone(snap as ReadonlyJSONValue) as Smash<TReturn>);
+    this.#snapshot = (
+      this.#query.format.singular
+        ? {
+            row: data,
+            data,
+            resultType,
+          }
+        : {
+            rows: data,
+            data,
+            resultType,
+          }
+    ) as QueryResult<TReturn>;
     for (const internals of this.#reactInternals) {
       internals();
     }

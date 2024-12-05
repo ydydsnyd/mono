@@ -6,8 +6,8 @@ import {useZero} from './use-zero.js';
 export function useUserPref(key: string): string | undefined {
   const z = useZero();
   const q = z.query.userPref.where('key', key).where('userID', z.userID).one();
-  const [pref] = useQuery(q);
-  return pref?.value;
+  const pref = useQuery(q);
+  return pref?.row?.value;
 }
 
 export async function setUserPref(
