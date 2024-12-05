@@ -1,4 +1,3 @@
-import {LogContext} from '@rocicorp/logger';
 import {expect, test, vi} from 'vitest';
 import {TestLogSink} from '../../shared/src/logging-test-utils.js';
 import {Database} from './db.js';
@@ -6,10 +5,8 @@ import {Database} from './db.js';
 test('slow queries are logged', () => {
   vi.useFakeTimers();
   const sink = new TestLogSink();
-  const lc = new LogContext('debug', undefined, sink);
-
   // threshold is 0 so all queries will be logged
-  const db = new Database(lc, ':memory:', undefined, 0);
+  const db = new Database(':memory:', undefined, 0);
 
   db.exec('CREATE TABLE foo (id INTEGER PRIMARY KEY, name TEXT)');
   db.exec(/*sql*/ `INSERT INTO foo (name) VALUES ('Alice'), ('Bob')`);
@@ -111,11 +108,8 @@ test('slow queries are logged', () => {
 });
 
 test('sql errors are annotated with sql', () => {
-  const sink = new TestLogSink();
-  const lc = new LogContext('debug', undefined, sink);
-
   // threshold is 0 so all queries will be logged
-  const db = new Database(lc, ':memory:');
+  const db = new Database(':memory:');
 
   let result;
   try {

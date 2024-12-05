@@ -67,7 +67,7 @@ export async function runSchemaMigrations(
     'initSchema',
     randInt(0, Number.MAX_SAFE_INTEGER).toString(36),
   );
-  const db = new Database(log, dbPath);
+  const db = new Database(dbPath);
   db.pragma('foreign_keys = OFF');
 
   try {

@@ -55,7 +55,7 @@ const schema: Schema = {
 
 let replica: Database;
 beforeEach(() => {
-  replica = new Database(lc, ':memory:');
+  replica = new Database(':memory:');
   replica.exec(/*sql*/ `CREATE TABLE foo (id TEXT PRIMARY KEY, a TEXT);
       INSERT INTO foo VALUES ('1', 'a');`);
 });

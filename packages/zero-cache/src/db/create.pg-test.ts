@@ -1,6 +1,5 @@
 import type postgres from 'postgres';
 import {afterAll, afterEach, beforeEach, describe, expect, test} from 'vitest';
-import {createSilentLogContext} from '../../../shared/src/logging-test-utils.js';
 import {Database} from '../../../zqlite/src/db.js';
 import {getPublicationInfo} from '../services/change-streamer/pg/schema/published.js';
 import {testDBs} from '../test/db.js';
@@ -361,7 +360,7 @@ describe('tables/create', () => {
     let db: Database;
 
     beforeEach(() => {
-      db = new Database(createSilentLogContext(), ':memory:');
+      db = new Database(':memory:');
     });
 
     for (const c of cases) {

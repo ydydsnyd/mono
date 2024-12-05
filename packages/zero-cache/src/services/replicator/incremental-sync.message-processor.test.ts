@@ -18,7 +18,7 @@ describe('replicator/message-processor', () => {
 
   beforeEach(() => {
     lc = createSilentLogContext();
-    replica = new Database(lc, ':memory:');
+    replica = new Database(':memory:');
 
     replica.exec(`
     CREATE TABLE "foo" (

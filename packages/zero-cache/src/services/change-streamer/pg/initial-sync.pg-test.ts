@@ -884,7 +884,7 @@ describe('replicator/initial-sync', () => {
 
   beforeEach(async () => {
     upstream = await testDBs.create('initial_sync_upstream');
-    replica = new Database(createSilentLogContext(), ':memory:');
+    replica = new Database(':memory:');
   });
 
   afterEach(async () => {

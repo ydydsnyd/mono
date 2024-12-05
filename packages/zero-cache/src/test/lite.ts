@@ -1,4 +1,3 @@
-import {LogContext} from '@rocicorp/logger';
 import {tmpdir} from 'node:os';
 import {expect} from 'vitest';
 import {randInt} from '../../../shared/src/rand.js';
@@ -13,8 +12,8 @@ export class DbFile {
     this.path = `${tmpdir()}/${testName}-${randInt(1000000, 9999999)}.db`;
   }
 
-  connect(lc: LogContext): Database {
-    return new Database(lc, this.path);
+  connect(): Database {
+    return new Database(this.path);
   }
 
   delete() {

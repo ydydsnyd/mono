@@ -39,7 +39,7 @@ describe('change-source/pg/end-to-mid-test', () => {
     lc = createSilentLogContext();
     upstream = await testDBs.create('change_source_end_to_mid_test_upstream');
     replicaDbFile = new DbFile('change_source_end_to_mid_test_replica');
-    replica = replicaDbFile.connect(lc);
+    replica = replicaDbFile.connect();
 
     const upstreamURI = getConnectionURI(upstream);
     await upstream.unsafe(`

@@ -438,7 +438,7 @@ function toDbType(type: ValueType) {
 }
 let writeAuthorizer: WriteAuthorizerImpl;
 beforeEach(() => {
-  replica = new Database(lc, ':memory:');
+  replica = new Database(':memory:');
   const sources = new Map<string, Source>();
   queryDelegate = {
     getSource: (name: string) => {

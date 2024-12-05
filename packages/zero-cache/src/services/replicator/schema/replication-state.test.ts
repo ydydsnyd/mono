@@ -1,5 +1,4 @@
 import {beforeEach, describe, expect, test} from 'vitest';
-import {createSilentLogContext} from '../../../../../shared/src/logging-test-utils.js';
 import {Database} from '../../../../../zqlite/src/db.js';
 import {StatementRunner} from '../../../db/statements.js';
 import {expectTables} from '../../../test/lite.js';
@@ -14,9 +13,7 @@ describe('replicator/schema/replication-state', () => {
   let db: StatementRunner;
 
   beforeEach(() => {
-    db = new StatementRunner(
-      new Database(createSilentLogContext(), ':memory:'),
-    );
+    db = new StatementRunner(new Database(':memory:'));
     initReplicationState(db.db, ['zero_data', 'zero_metadata'], '0a');
   });
 

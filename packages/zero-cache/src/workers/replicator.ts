@@ -27,7 +27,7 @@ function connect(
   replicaDbFile: string,
   walMode: 'wal' | 'wal2',
 ): Database {
-  const replica = new Database(lc, replicaDbFile);
+  const replica = new Database(replicaDbFile);
 
   const [{journal_mode: mode}] = replica.pragma('journal_mode') as {
     // eslint-disable-next-line @typescript-eslint/naming-convention

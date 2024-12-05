@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import {createSilentLogContext} from '../../shared/src/logging-test-utils.js';
 import {Database} from '../../zqlite/src/db.js';
 
 type Options = {
@@ -8,7 +7,7 @@ type Options = {
 
 export function double(opts: Options) {
   const {dbFile} = opts;
-  const db = new Database(createSilentLogContext(), dbFile);
+  const db = new Database(dbFile);
 
   const insertIssue = db.prepare(
     `INSERT INTO issue (

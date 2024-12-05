@@ -191,7 +191,7 @@ describe('db/migration-lite', () => {
 
   beforeEach(() => {
     dbFile = new DbFile('migration-test');
-    db = dbFile.connect(createSilentLogContext());
+    db = dbFile.connect();
     db.pragma('journal_mode = WAL');
     db.pragma('synchronous = NORMAL');
     db.prepare(`CREATE TABLE "MigrationHistory" (event TEXT)`).run();

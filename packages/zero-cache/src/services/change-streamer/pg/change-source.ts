@@ -83,7 +83,7 @@ export async function initializeChangeSource(
     upstreamURI,
   );
 
-  const replica = new Database(lc, replicaDbFile);
+  const replica = new Database(replicaDbFile);
   const replicationConfig = getSubscriptionState(new StatementRunner(replica));
   replica.close();
 

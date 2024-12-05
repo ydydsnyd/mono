@@ -1,22 +1,23 @@
-import type {LogContext} from '@rocicorp/logger';
 import SQLite3Database, {
   type RunResult,
   type Statement as SQLite3Statement,
   SqliteError,
 } from '@rocicorp/zero-sqlite3';
+import {trace, type Attributes} from '@opentelemetry/api';
+import {version} from '../../otel/src/version.js';
+import {manualSpan} from '../../otel/src/span.js';
+
+const tracer = trace.getTracer('view-syncer', version);
 
 export class Database {
   readonly #db: SQLite3Database.Database;
-  readonly #lc: LogContext;
   readonly #threshold: number;
 
   constructor(
-    lc: LogContext,
     path: string,
     options?: SQLite3Database.Options,
     slowQueryThreshold = 100,
   ) {
-    this.#lc = lc.withContext('class', 'Database').withContext('path', path);
     this.#db = new SQLite3Database(path, options);
     this.#threshold = slowQueryThreshold;
   }
@@ -27,7 +28,7 @@ export class Database {
       sql,
       () =>
         new Statement(
-          this.#lc.withContext('class', 'Statement').withContext('sql', sql),
+          {class: 'Statement', sql},
           this.#db.prepare(sql),
           this.#threshold,
         ),
@@ -52,11 +53,7 @@ export class Database {
       }
       throw e;
     } finally {
-      logIfSlow(
-        performance.now() - start,
-        this.#lc.withContext('method', method),
-        this.#threshold,
-      );
+      logIfSlow(performance.now() - start, {method}, this.#threshold);
     }
   }
 
@@ -79,11 +76,11 @@ export class Database {
 
 export class Statement {
   readonly #stmt: SQLite3Statement;
-  readonly #lc: LogContext;
   readonly #threshold: number;
+  readonly #attrs: Attributes;
 
-  constructor(lc: LogContext, stmt: SQLite3Statement, threshold: number) {
-    this.#lc = lc;
+  constructor(attrs: Attributes, stmt: SQLite3Statement, threshold: number) {
+    this.#attrs = attrs;
     this.#stmt = stmt;
     this.#threshold = threshold;
   }
@@ -98,7 +95,7 @@ export class Statement {
     const ret = this.#stmt.run(...params);
     logIfSlow(
       performance.now() - start,
-      this.#lc.withContext('method', 'run'),
+      {...this.#attrs, method: 'run'},
       this.#threshold,
     );
     return ret;
@@ -109,7 +106,7 @@ export class Statement {
     const ret = this.#stmt.get(...params);
     logIfSlow(
       performance.now() - start,
-      this.#lc.withContext('method', 'get'),
+      {...this.#attrs, method: 'get'},
       this.#threshold,
     );
     return ret as T;
@@ -120,7 +117,7 @@ export class Statement {
     const ret = this.#stmt.all(...params);
     logIfSlow(
       performance.now() - start,
-      this.#lc.withContext('method', 'all'),
+      {...this.#attrs, method: 'all'},
       this.#threshold,
     );
     return ret as T[];
@@ -128,7 +125,7 @@ export class Statement {
 
   iterate<T>(...params: unknown[]): IterableIterator<T> {
     return new LoggingIterableIterator(
-      this.#lc.withContext('method', 'iterate'),
+      this.#attrs,
       this.#stmt.iterate(...params),
       this.#threshold,
     ) as IterableIterator<T>;
@@ -136,18 +133,18 @@ export class Statement {
 }
 
 class LoggingIterableIterator<T> implements IterableIterator<T> {
-  readonly #lc: LogContext;
   readonly #it: IterableIterator<T>;
   readonly #threshold: number;
+  readonly #attrs: Attributes;
   #start: number;
   #sqliteRowTimeSum: number;
 
   constructor(
-    lc: LogContext,
+    attrs: Attributes,
     it: IterableIterator<T>,
     slowQueryThreshold: number,
   ) {
-    this.#lc = lc;
+    this.#attrs = attrs;
     this.#it = it;
     this.#start = NaN;
     this.#threshold = slowQueryThreshold;
@@ -168,12 +165,12 @@ class LoggingIterableIterator<T> implements IterableIterator<T> {
   #log() {
     logIfSlow(
       performance.now() - this.#start,
-      this.#lc.withContext('type', 'total'),
+      {...this.#attrs, type: 'total', method: 'iterate'},
       this.#threshold,
     );
     logIfSlow(
       this.#sqliteRowTimeSum,
-      this.#lc.withContext('type', 'sqlite'),
+      {...this.#attrs, type: 'sqlite', method: 'iterate'},
       this.#threshold,
     );
   }
@@ -196,8 +193,12 @@ class LoggingIterableIterator<T> implements IterableIterator<T> {
   }
 }
 
-function logIfSlow(elapsed: number, lc: LogContext, threshold: number): void {
+function logIfSlow(
+  elapsed: number,
+  attrs: Attributes,
+  threshold: number,
+): void {
   if (elapsed >= threshold) {
-    lc.warn?.('Slow query', elapsed);
+    manualSpan(tracer, 'db.slow-query', elapsed, attrs);
   }
 }

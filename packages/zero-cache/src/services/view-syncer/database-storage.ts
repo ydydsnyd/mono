@@ -48,7 +48,7 @@ export class DatabaseStorage {
     // database (file) and acts as the single reader/writer of the DB, so
     // `locking_mode` is set to `EXCLUSIVE` for performance. Similarly, since
     // durability is not important, `synchronous` is set to `OFF` for performance.
-    const db = new Database(lc, path);
+    const db = new Database(path);
     db.pragma('journal_mode = WAL');
     db.pragma('synchronous = OFF');
     db.pragma('locking_mode = EXCLUSIVE');
