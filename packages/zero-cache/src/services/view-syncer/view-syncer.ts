@@ -53,7 +53,11 @@ import {
 import {SchemaChangeError} from './snapshotter.js';
 import {trace} from '@opentelemetry/api';
 import {version} from '../../../../otel/src/version.js';
-import {manualSpan} from '../../../../otel/src/span.js';
+import {
+  manualSpan,
+  startAsyncSpan,
+  startSpan,
+} from '../../../../otel/src/span.js';
 
 export type TokenData = {
   readonly raw: string;
@@ -316,7 +320,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
     ctx: SyncContext,
     initConnectionMessage: InitConnectionMessage,
   ): Promise<Source<Downstream>> {
-    return tracer.startActiveSpan('initConnection', async span => {
+    return startAsyncSpan(tracer, 'initConnection', async () => {
       this.#lastConnectTime = Date.now();
       const {clientID, wsID, baseCookie, schemaVersion, tokenData} = ctx;
       this.#authData = pickToken(this.#authData, tokenData?.decoded);
@@ -353,7 +357,6 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
         newClient,
       );
 
-      span.end();
       return downstream;
     });
   }
@@ -395,7 +398,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
 
     let client: ClientHandler | undefined;
     try {
-      await tracer.startActiveSpan('runInLockForClient', async span => {
+      await startAsyncSpan(tracer, 'runInLockForClient', async () => {
         await this.#runInLockWithCVR(cvr => {
           lc.debug?.(cmd, body);
 
@@ -417,7 +420,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
           }
 
           const ret = fn(lc, clientID, body, cvr);
-          span.end();
+
           return ret;
         });
       });
@@ -440,7 +443,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
     {desiredQueriesPatch}: ChangeDesiredQueriesBody,
     cvr: CVRSnapshot,
   ) =>
-    tracer.startActiveSpan('patchQueries', async span => {
+    startAsyncSpan(tracer, 'patchQueries', async () => {
       // Apply requested patches.
       if (desiredQueriesPatch.length) {
         lc.debug?.(`applying ${desiredQueriesPatch.length} query patches`);
@@ -498,7 +501,6 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
       if (this.#pipelinesSynced) {
         await this.#syncQueryPipelineSet(cvr);
       }
-      span.end();
     });
 
   /**
@@ -551,7 +553,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
       const start = Date.now();
       let count = 0;
 
-      tracer.startActiveSpan('vs.#hydrateUnchangedQueries.addQuery', span => {
+      startSpan(tracer, 'vs.#hydrateUnchangedQueries.addQuery', span => {
         span.setAttribute('queryHash', hash);
         span.setAttribute('transformationHash', transformationHash);
         span.setAttribute('table', ast.table);
@@ -561,7 +563,6 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
         )) {
           count++;
         }
-        span.end();
       });
 
       const elapsed = Date.now() - start;
@@ -578,7 +579,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
    * This must be called from within the #lock.
    */
   #syncQueryPipelineSet(cvr: CVRSnapshot) {
-    return tracer.startActiveSpan('syncQueryPipelineSet', async span => {
+    return startAsyncSpan(tracer, 'syncQueryPipelineSet', async () => {
       assert(this.#pipelines.initialized());
       const lc = this.#lc.withContext('cvrVersion', versionString(cvr.version));
 
@@ -646,7 +647,6 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
           `CVR@${versionString(cvrVersion)}" does not match DB@${dbVersion}`,
         );
       }
-      span.end();
     });
   }
 
@@ -659,7 +659,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
     unhydrateQueries: string[],
     transformationHashToHash: Map<string, string>,
   ) {
-    return tracer.startActiveSpan('#addAndRemoveQueries', async span => {
+    return startAsyncSpan(tracer, '#addAndRemoveQueries', async () => {
       assert(
         addQueries.length > 0 ||
           removeQueries.length > 0 ||
@@ -744,7 +744,6 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
       pokers.forEach(poker => poker.end());
 
       lc.info?.(`finished processing queries (${Date.now() - start} ms)`);
-      span.end();
     });
   }
 
@@ -765,7 +764,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
     excludeQueryHashes: string[] = [],
     usePokers?: PokeHandler[],
   ) {
-    return tracer.startActiveSpan('vs.#catchupClients', async span => {
+    return startAsyncSpan(tracer, 'vs.#catchupClients', async span => {
       const clients = [...this.#clients.values()];
       const pokers =
         usePokers ??
@@ -832,8 +831,6 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
       if (!usePokers) {
         pokers.forEach(poker => poker.end());
       }
-
-      span.end();
     });
   }
 
@@ -844,13 +841,13 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
     pokers: PokeHandler[],
     transformationHashToHash: Map<string, string>,
   ) {
-    return tracer.startActiveSpan('vs.#processChanges', async span => {
+    return startAsyncSpan(tracer, 'vs.#processChanges', async () => {
       const start = Date.now();
       const rows = new CustomKeyMap<RowID, RowUpdate>(rowIDString);
       let total = 0;
 
       const processBatch = () =>
-        tracer.startActiveSpan('processBatch', async span => {
+        startAsyncSpan(tracer, 'processBatch', async () => {
           const elapsed = Date.now() - start;
           total += rows.size;
           lc.debug?.(
@@ -861,10 +858,9 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
             pokers.forEach(poker => poker.addPatch(patch)),
           );
           rows.clear();
-          span.end();
         });
 
-      await tracer.startActiveSpan('loopingChanges', async span => {
+      await startAsyncSpan(tracer, 'loopingChanges', async span => {
         for (const change of changes) {
           const {
             type,
@@ -922,9 +918,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
           await processBatch();
         }
         span.setAttribute('totalRows', total);
-        span.end();
       });
-      span.end();
     });
   }
 
@@ -937,7 +931,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
    * Returns false if the advancement failed due to a schema change.
    */
   #advancePipelines(cvr: CVRSnapshot): Promise<'success' | SchemaChangeError> {
-    return tracer.startActiveSpan('vs.#advancePipelines', async span => {
+    return startAsyncSpan(tracer, 'vs.#advancePipelines', async () => {
       assert(this.#pipelines.initialized());
 
       const {version, numChanges, changes} = this.#pipelines.advance();
@@ -977,7 +971,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
       } catch (e) {
         if (e instanceof SchemaChangeError) {
           pokers.forEach(poker => poker.cancel());
-          span.end();
+
           return e;
         }
         throw e;
@@ -988,7 +982,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
 
       // Signal clients to commit.
       pokers.forEach(poker => poker.end());
-      span.end();
+
       return 'success';
     });
   }

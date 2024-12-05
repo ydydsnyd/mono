@@ -16,7 +16,7 @@ export class Database {
   constructor(
     path: string,
     options?: SQLite3Database.Options,
-    slowQueryThreshold = 300,
+    slowQueryThreshold = 100,
   ) {
     this.#db = new SQLite3Database(path, options);
     this.#threshold = slowQueryThreshold;
@@ -199,6 +199,6 @@ function logIfSlow(
   threshold: number,
 ): void {
   if (elapsed >= threshold) {
-    manualSpan(tracer, 'slow-query', elapsed, attrs);
+    manualSpan(tracer, 'db-slow-query', elapsed, attrs);
   }
 }

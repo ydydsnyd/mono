@@ -45,6 +45,7 @@ import {
 } from './schema/types.js';
 import {trace} from '@opentelemetry/api';
 import {version} from '../../../../otel/src/version.js';
+import {startAsyncSpan} from '../../../../otel/src/span.js';
 
 type NotNull<T> = T extends null ? never : T;
 
@@ -445,7 +446,7 @@ export class CVRStore {
   }
 
   load(lastConnectTime: number): Promise<CVR> {
-    return tracer.startActiveSpan('cvr::load', async span => {
+    return startAsyncSpan(tracer, 'cvr.load', async () => {
       let err: RowsVersionBehindError | undefined;
       for (let i = 0; i < this.#maxLoadAttempts; i++) {
         if (i > 0) {
@@ -457,10 +458,8 @@ export class CVRStore {
           err = result;
           continue;
         }
-        span.end();
         return result;
       }
-      span.end();
       assert(err);
       throw new ErrorForClient([
         'error',
