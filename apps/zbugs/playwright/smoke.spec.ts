@@ -21,8 +21,8 @@ test('loadtest', async ({page, browser, context}) => {
   await page.getByLabel('VISITOR PASSWORD').press('Enter');
 
   const DELAY_START = 120000;
-  const DELAY_PER_ITERATION = 10000;
-  const NUM_ITERATIONS = 30;
+  const DELAY_PER_ITERATION = 5000;
+  const NUM_ITERATIONS = 20;
 
   const delay = Math.random() * DELAY_START;
   await page.waitForTimeout(delay);
@@ -33,8 +33,10 @@ test('loadtest', async ({page, browser, context}) => {
 
 
   for (let i = 0; i < NUM_ITERATIONS; i++) {
+    const iterationStart = Date.now();
     console.log(cgID, `Iteration: ${i}`);
     await page.waitForSelector('.issue-list .row');
+    console.log(cgID, `Issues rendered in ${Date.now() - iterationStart}ms`);
     console.log(cgID, 'Filtering by open');
     await page.locator('.nav-item', {hasText: 'Open'}).click();
     console.log(cgID, 'Filtering by closed');
@@ -80,7 +82,7 @@ test('loadtest', async ({page, browser, context}) => {
       .click();
     await page
       .locator(
-        '.issue-sidebar .sidebar-item:first-child #options-listbox > li:nth-child(2)',
+        `.issue-sidebar .sidebar-item:first-child #options-listbox > li:nth-child(${Math.floor(Math.random() * 2) + 1})`,
       )
       .click();
     await page
@@ -88,9 +90,10 @@ test('loadtest', async ({page, browser, context}) => {
       .click();
     await page
       .locator(
-        '.issue-sidebar .sidebar-item:first-child #options-listbox > li:nth-child(2)',
+        `.issue-sidebar .sidebar-item:first-child #options-listbox > li:nth-child(${Math.floor(Math.random() * 2) + 1})`,
       )
       .click();
+    console.log(cgID, `Finished iteration in ${Date.now() - iterationStart}ms`);
     await page.goBack();
     await page.waitForTimeout(DELAY_PER_ITERATION);
 
