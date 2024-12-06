@@ -274,8 +274,12 @@ const permissions = must(
       authData: AuthData,
       {cmp}: ExpressionBuilder<typeof schema.tables.viewState>,
     ) => cmp('userId', '=', authData.sub);
+    const viewStateOwnerNotChanged = (
+      {cmpLit}: ExpressionBuilder<typeof schema.tables.viewState>,
+      oldRow: TableSchemaToRow<typeof schema.tables.viewState>,
+      newRow: TableSchemaToRow<typeof schema.tables.viewState>,
+    ) => cmpLit(oldRow.userId, '=', newRow.userId);
     const authorIdNotChanged = (
-      _: AuthData,
       {cmpLit}: ExpressionBuilder<typeof schema.tables.comment>,
       oldRow: TableSchemaToRow<typeof schema.tables.comment>,
       newRow: TableSchemaToRow<typeof schema.tables.comment>,
@@ -343,9 +347,7 @@ const permissions = must(
         row: {
           select: undefined,
           insert: [],
-          update: {
-            preMutation: [],
-          },
+          update: [],
           delete: [],
         },
       },
@@ -361,16 +363,8 @@ const permissions = must(
                 eb.or(isAdmin(authData, eb), isMemberOfProject(authData, eb)),
               ),
           ],
-          update: {
-            preMutation: [
-              isAdmin,
-              isIssueCreator,
-              isIssueOwner,
-              isMemberOfProject,
-            ],
-            // TODO (mlaw): how can we ensure the creatorId is not changed?
-            // We need to pass the OLD row to the postMutation rule.
-          },
+          // TODO (mlaw): Ensure the creatorId is not changed
+          update: [isAdmin, isIssueCreator, isIssueOwner, isMemberOfProject],
           delete: [],
           select: [canSeeIssue],
         },
@@ -387,20 +381,18 @@ const permissions = must(
                 canSeeComment(authData, eb),
               ),
           ],
-          update: {
-            preMutation: [
-              (
-                authData: AuthData,
-                eb: ExpressionBuilder<typeof schema.tables.comment>,
-                oldRow: TableSchemaToRow<typeof schema.tables.comment>,
-                newRow: TableSchemaToRow<typeof schema.tables.comment>,
-              ) =>
-                eb.and(
-                  authorIdNotChanged(authData, eb, oldRow, newRow),
-                  eb.or(isAdmin(authData, eb), isCommentCreator(authData, eb)),
-                ),
-            ],
-          },
+          update: [
+            (
+              authData: AuthData,
+              eb: ExpressionBuilder<typeof schema.tables.comment>,
+              oldRow: TableSchemaToRow<typeof schema.tables.comment>,
+              newRow: TableSchemaToRow<typeof schema.tables.comment>,
+            ) =>
+              eb.and(
+                authorIdNotChanged(eb, oldRow, newRow),
+                eb.or(isAdmin(authData, eb), isCommentCreator(authData, eb)),
+              ),
+          ],
           delete: [isAdmin, isCommentCreator],
           select: [canSeeComment],
         },
@@ -413,9 +405,7 @@ const permissions = must(
             canWriteIssueLabelIfIssueCreator,
             canWriteIssueLabelIfIssueOwner,
           ],
-          update: {
-            preMutation: [],
-          },
+          update: [],
           delete: [
             isAdmin,
             canWriteIssueLabelIfProjectMember,
@@ -427,10 +417,18 @@ const permissions = must(
       viewState: {
         row: {
           insert: [isViewStateOwner],
-          update: {
-            preMutation: [isViewStateOwner],
-            postMutation: [isViewStateOwner],
-          },
+          update: [
+            (
+              authData: AuthData,
+              eb: ExpressionBuilder<typeof schema.tables.viewState>,
+              oldRow: TableSchemaToRow<typeof schema.tables.viewState>,
+              newRow: TableSchemaToRow<typeof schema.tables.viewState>,
+            ) =>
+              eb.and(
+                isViewStateOwner(authData, eb),
+                viewStateOwnerNotChanged(eb, oldRow, newRow),
+              ),
+          ],
           delete: [isViewStateOwner],
         },
       },

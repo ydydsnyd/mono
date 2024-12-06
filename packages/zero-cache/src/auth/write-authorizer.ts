@@ -372,9 +372,7 @@ export class WriteAuthorizerImpl implements WriteAuthorizer {
       case 'update':
         if (rowPolicies && rowPolicies.update) {
           if (phase === 'preMutation') {
-            applicableRowPolicy = rowPolicies.update.preMutation;
-          } else if (phase === 'postMutation') {
-            applicableRowPolicy = rowPolicies.update.postMutation;
+            applicableRowPolicy = rowPolicies.update;
           }
         }
         break;
@@ -401,12 +399,6 @@ export class WriteAuthorizerImpl implements WriteAuthorizer {
             }
             break;
           case 'update':
-            if (phase === 'preMutation' && policy.update?.preMutation) {
-              applicableCellPolicies.push(policy.update.preMutation);
-            }
-            if (phase === 'postMutation' && policy.update?.postMutation) {
-              applicableCellPolicies.push(policy.update.postMutation);
-            }
             break;
           case 'delete':
             if (policy.delete && phase === 'preMutation') {

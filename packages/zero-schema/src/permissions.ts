@@ -26,12 +26,7 @@ type AssetPermissions<TAuthDataShape, TSchema extends TableSchema> = {
   // Why an array of rules?: https://github.com/rocicorp/mono/pull/3184/files#r1869680716
   select?: PermissionRule<TAuthDataShape, TSchema>[] | undefined;
   insert?: PermissionRule<TAuthDataShape, TSchema>[] | undefined;
-  update?:
-    | {
-        preMutation?: PermissionRule<TAuthDataShape, TSchema>[];
-        postMutation?: PermissionRule<TAuthDataShape, TSchema>[];
-      }
-    | undefined;
+  update?: PermissionRule<TAuthDataShape, TSchema>[] | undefined;
   delete?: PermissionRule<TAuthDataShape, TSchema>[] | undefined;
 };
 
@@ -96,16 +91,7 @@ function compileRowConfig<TAuthDataShape, TSchema extends TableSchema>(
   return {
     select: compileRules(rowRules.select, expressionBuilder),
     insert: compileRules(rowRules.insert, expressionBuilder),
-    update: {
-      preMutation: compileRules(
-        rowRules.update?.preMutation,
-        expressionBuilder,
-      ),
-      postMutation: compileRules(
-        rowRules.update?.postMutation,
-        expressionBuilder,
-      ),
-    },
+    update: compileRules(rowRules.update, expressionBuilder),
     delete: compileRules(rowRules.delete, expressionBuilder),
   };
 }
@@ -151,13 +137,7 @@ function compileCellConfig<TAuthDataShape, TSchema extends TableSchema>(
     ret[columnName] = {
       select: compileRules(rules.select, expressionBuilder),
       insert: compileRules(rules.insert, expressionBuilder),
-      update: {
-        preMutation: compileRules(rules.update?.preMutation, expressionBuilder),
-        postMutation: compileRules(
-          rules.update?.postMutation,
-          expressionBuilder,
-        ),
-      },
+      update: compileRules(rules.update, expressionBuilder),
       delete: compileRules(rules.delete, expressionBuilder),
     };
   }
