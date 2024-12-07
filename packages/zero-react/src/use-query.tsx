@@ -13,29 +13,14 @@ import {useZero} from './use-zero.js';
 import type {TableSchema} from '../../zero-schema/src/table-schema.js';
 import type {ResultType} from '../../zql/src/query/typed-view.js';
 
-export type QueryResult<T extends QueryType> = T['singular'] extends true
-  ? {
-      readonly row: Smash<T>;
-      readonly data: Smash<T>;
-      readonly resultType: ResultType;
-    }
-  : {
-      readonly rows: Smash<T>;
-      readonly data: Smash<T>;
-      readonly resultType: ResultType;
-    };
+export type QueryResultDetails = {
+  type: ResultType;
+};
 
-export function isNonEmpty<T>(result: {
-  readonly row: T;
-  readonly data: T;
-  readonly resultType: ResultType;
-}): result is {
-  readonly row: NonNullable<T>;
-  readonly data: NonNullable<T>;
-  readonly resultType: ResultType;
-} {
-  return result.row !== undefined;
-}
+export type QueryResult<TReturn extends QueryType> = [
+  Smash<TReturn>,
+  QueryResultDetails,
+];
 
 export function useQuery<
   TSchema extends TableSchema,
@@ -55,12 +40,8 @@ const emptyArray: unknown[] = [];
 const disabledSubscriber = () => () => {};
 
 const defaultSnapshots = {
-  singular: {row: undefined, data: undefined, resultType: 'unknown'} as const,
-  plural: {
-    rows: emptyArray,
-    data: emptyArray,
-    resultType: 'unknown',
-  } as const,
+  singular: [undefined, {type: 'unknown'}] as const,
+  plural: [emptyArray, {type: 'unknown'}] as const,
 };
 
 function getDefaultSnapshot<TReturn extends QueryType>(
@@ -215,19 +196,7 @@ class ViewWrapper<TSchema extends TableSchema, TReturn extends QueryType> {
       snap === undefined
         ? snap
         : (deepClone(snap as ReadonlyJSONValue) as Smash<TReturn>);
-    this.#snapshot = (
-      this.#query.format.singular
-        ? {
-            row: data,
-            data,
-            resultType,
-          }
-        : {
-            rows: data,
-            data,
-            resultType,
-          }
-    ) as QueryResult<TReturn>;
+    this.#snapshot = [data, {type: resultType}] as QueryResult<TReturn>;
     for (const internals of this.#reactInternals) {
       internals();
     }

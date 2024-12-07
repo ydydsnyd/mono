@@ -29,7 +29,7 @@ export function Nav() {
   const [isMobile, setIsMobile] = useState(false);
   const [showUserPanel, setShowUserPanel] = useState(false); // State to control visibility of user-panel-mobile
   const zero = useZero();
-  const user = useQuery(
+  const [user] = useQuery(
     zero.query.user.where('id', login.loginState?.decoded.sub ?? '').one(),
   );
 
@@ -124,10 +124,10 @@ export function Nav() {
                       onAction={handleClick}
                     >
                       <img
-                        src={user?.row?.avatar}
+                        src={user?.avatar}
                         className="issue-creator-avatar"
-                        alt={user?.row?.name}
-                        title={user?.row?.login}
+                        alt={user?.name}
+                        title={user?.login}
                       />
                     </Button>
                     <div
@@ -147,10 +147,10 @@ export function Nav() {
                   </div>
                 ) : (
                   <img
-                    src={user?.row?.avatar}
+                    src={user?.avatar}
                     className="issue-creator-avatar"
-                    alt={user?.row?.name}
-                    title={user?.row?.login}
+                    alt={user?.name}
+                    title={user?.login}
                   />
                 )}
                 <span className="logged-in-user-name">

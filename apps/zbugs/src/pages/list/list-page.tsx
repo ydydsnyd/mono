@@ -23,6 +23,7 @@ import {useLogin} from '../../hooks/use-login.js';
 import {useZero} from '../../hooks/use-zero.js';
 import {mark} from '../../perf-log.js';
 import type {ListContext} from '../../routes.js';
+import {preload} from '../../zero-setup.js';
 
 let firstRowRendered = false;
 const itemSize = 56;
@@ -87,7 +88,13 @@ export default function ListPage() {
     q = q.whereExists('labels', q => q.where('name', label));
   }
 
-  const issues = useQuery(q);
+  const [issues, issuesResult] = useQuery(q);
+
+  useEffect(() => {
+    if (issuesResult.type === 'complete') {
+      preload(z);
+    }
+  }, [issuesResult.type, z]);
 
   let title;
   if (creator || assignee || labels.length > 0 || textFilter) {
@@ -164,7 +171,7 @@ export default function ListPage() {
   };
 
   const Row = ({index, style}: {index: number; style: CSSProperties}) => {
-    const issue = issues.rows[index];
+    const issue = issues[index];
     if (firstRowRendered === false) {
       mark('first issue row rendered');
       firstRowRendered = true;
@@ -215,10 +222,10 @@ export default function ListPage() {
   const tableWrapperRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
-    count: issues.rows.length,
+    count: issues.length,
     estimateSize: () => itemSize,
     overscan: 5,
-    getItemKey: index => issues.rows[index].id,
+    getItemKey: index => issues[index].id,
     getScrollElement: () => tableWrapperRef.current,
   });
 
@@ -266,7 +273,7 @@ export default function ListPage() {
               {title}
             </span>
           )}
-          <span className="issue-count">{issues.rows.length}</span>
+          <span className="issue-count">{issues.length}</span>
         </h1>
       </div>
       <div className="list-view-filter-container">

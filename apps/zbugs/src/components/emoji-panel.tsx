@@ -53,11 +53,7 @@ export const EmojiPanel = memo(
         .where('subjectID', subjectID)
         .related('creator', creator => creator.one());
 
-<<<<<<< HEAD
-      const emojis: Emoji[] = useQuery(q);
-=======
-  const emojis = useQuery(q);
->>>>>>> 6f5c474fa (row/rows)
+      const [emojis] = useQuery(q);
 
       const addEmoji = useCallback(
         (unicode: string, annotation: string) => {
@@ -127,39 +123,8 @@ export const EmojiPanel = memo(
   ),
 );
 
-<<<<<<< HEAD
 const EmojiButton = memo(
   forwardRef((props: ButtonProps, ref: ForwardedRef<HTMLButtonElement>) => (
-=======
-  const removeEmoji = useCallback(
-    (id: string) => {
-      z.mutate.emoji.delete({id});
-    },
-    [z],
-  );
-
-  // The emojis is an array. We want to group them by value and count them.
-  const groups = groupAndSortEmojis(emojis.rows);
-
-  const addOrRemoveEmoji = useCallback(
-    (details: {unicode: string; annotation: string}) => {
-      const {unicode, annotation} = details;
-      const normalizedEmoji = normalizeEmoji(unicode);
-      const emojis = groups[normalizedEmoji] ?? [];
-      const existingEmojiID = findEmojiForCreator(emojis, z.userID);
-      if (existingEmojiID) {
-        removeEmoji(existingEmojiID);
-      } else {
-        addEmoji(unicode, annotation);
-      }
-    },
-    [addEmoji, groups, removeEmoji, z.userID],
-  );
-
-  const login = useLogin();
-
-  const button = (
->>>>>>> 6f5c474fa (row/rows)
     <ButtonWithLoginCheck
       ref={ref}
       {...props}

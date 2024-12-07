@@ -25,9 +25,9 @@ export default function UserPicker({
 }: Props) {
   const z = useZero();
 
-  const users = useQuery(z.query.user);
+  const [users] = useQuery(z.query.user);
   // TODO: Support case-insensitive sorting in ZQL.
-  users.rows.sort((a, b) => a.login.localeCompare(b.login));
+  users.sort((a, b) => a.login.localeCompare(b.login));
 
   // Preload the avatar icons so they show up instantly when opening the
   // dropdown.
@@ -35,7 +35,7 @@ export default function UserPicker({
   useEffect(() => {
     let canceled = false;
     async function preload() {
-      const avatars = await Promise.all(users.rows.map(c => preloadAvatar(c)));
+      const avatars = await Promise.all(users.map(c => preloadAvatar(c)));
       if (canceled) {
         return;
       }
@@ -51,8 +51,7 @@ export default function UserPicker({
     onSelect?.(user);
   };
 
-  const selectedUser =
-    selected && users.rows.find(u => u.login === selected.login);
+  const selectedUser = selected && users.find(u => u.login === selected.login);
 
   const unselectedItem = {
     text: unselectedLabel ?? 'Select',
@@ -71,7 +70,7 @@ export default function UserPicker({
       onChange={c => handleSelect(c)}
       items={[
         unselectedItem,
-        ...users.rows.map(u => ({
+        ...users.map(u => ({
           text: u.login,
           value: u,
           icon: avatars[u.id],
