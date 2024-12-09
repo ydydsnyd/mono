@@ -221,10 +221,8 @@ export function applyOr(
   appliedFilters: boolean,
   delegate: BuilderDelegate,
 ): Input {
-  console.log(condition);
   const [subqueryConditions, otherConditions] =
     groupSubqueryConditions(condition);
-
   // if there are no subquery conditions, no fan-in / fan-out is needed
   if (subqueryConditions.length === 0) {
     return otherConditions.length > 0
@@ -236,14 +234,13 @@ export function applyOr(
             conditions: otherConditions,
           }),
         )
-      : input;
+      : new FanIn(new FanOut(input), []);
   }
 
   const fanOut = new FanOut(input);
   const branches = subqueryConditions.map(subCondition =>
     applyWhere(fanOut, subCondition, appliedFilters, delegate),
   );
-
   if (otherConditions.length > 0) {
     branches.push(
       new Filter(
@@ -256,7 +253,6 @@ export function applyOr(
       ),
     );
   }
-
   return new FanIn(fanOut, branches);
 }
 
