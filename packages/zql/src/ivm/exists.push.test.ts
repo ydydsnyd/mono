@@ -8,6 +8,7 @@ import {
   type Sources,
 } from './test/join-push-tests.js';
 import type {Format} from './view.js';
+import {Take} from './take.js';
 
 const sources: Sources = {
   issue: {
@@ -74,6 +75,101 @@ const format: Format = {
     },
   },
 };
+
+suite('EXISTS 1 to many', () => {
+  const sources: Sources = {
+    comment: {
+      columns: {
+        id: {type: 'string'},
+        issueID: {type: 'string'},
+      },
+      primaryKeys: ['id'],
+      sorts: [['id', 'asc']],
+    },
+    issue: {
+      columns: {
+        id: {type: 'string'},
+        title: {type: 'string'},
+      },
+      primaryKeys: ['id'],
+      sorts: [['id', 'asc']],
+    },
+  };
+
+  const sourceContents: SourceContents = {
+    comment: [
+      {
+        id: 'c1',
+        issueID: 'i1',
+      },
+      {
+        id: 'c2',
+        issueID: 'i1',
+      },
+      {
+        id: 'c3',
+        issueID: 'i1',
+      },
+    ],
+    issue: [{id: 'i1', title: 'issue 1'}],
+  };
+
+  const joins: Joins = {
+    children: {
+      parentKey: ['issueID'],
+      parentSource: 'comment',
+      childKey: ['id'],
+      childSource: 'issue',
+      relationshipName: 'issue',
+    },
+  };
+
+  const format: Format = {
+    singular: false,
+    relationships: {
+      issue: {
+        singular: false,
+        relationships: {},
+      },
+    },
+  };
+
+  test.only('exists receives `child.remove` events for relationships with 0 size', () => {
+    /**
+     * The problem:
+     * 1. An issue is removed in a push
+     * 2. `take` fetches, bringing `c3` into scope of `exists`
+     * 3. `join` pushes a child remove for `c3`
+     * 4. `exists` receives the child remove for `c3` and throws because the size is 0 (line 147 in exists)
+     */
+    // const {log, data, actualStorage, pushes} =
+    runJoinTest({
+      sources,
+      sourceContents,
+      joins,
+      format,
+      pushes: [
+        [
+          'issue',
+          {
+            type: 'remove',
+            row: {id: 'i1', title: 'issue 1'},
+          },
+        ],
+      ],
+      addPostJoinsOperator: [
+        (i: Input, storage: Storage) => ({
+          name: 'exists',
+          op: new Exists(i, storage, 'issue', 'EXISTS'),
+        }),
+        (i: Input, storage: Storage) => ({
+          name: 'take',
+          op: new Take(i, storage, 2),
+        }),
+      ],
+    });
+  });
+});
 
 suite('EXISTS', () => {
   const existsType = 'EXISTS';
