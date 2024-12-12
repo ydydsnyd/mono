@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1733108001572,
+  "lastUpdate": 1734007149495,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50129,6 +50129,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32028,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "321114ddca0a0357ff10d39d5474dff2c1a1e756",
+          "message": "fix(shared): Make sure we do not start timers if already aborted (#3282)\n\nhttps://discord.com/channels/830183651022471199/1316313922160037930/1316313922160037930",
+          "timestamp": "2024-12-12T12:37:49Z",
+          "tree_id": "5354e02a7d8a95be450f94d2c22ed390d9bdacd3",
+          "url": "https://github.com/rocicorp/mono/commit/321114ddca0a0357ff10d39d5474dff2c1a1e756"
+        },
+        "date": 1734007131931,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 313652,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54797,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 115463,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32083,
             "unit": "bytes"
           }
         ]
