@@ -58,15 +58,16 @@ describe('integration', () => {
 
     process.env['SINGLE_PROCESS'] = '1';
 
-    env = {};
-    env['ZERO_PORT'] = String(port);
-    env['ZERO_LOG_LEVEL'] = 'error';
-    env['ZERO_UPSTREAM_DB'] = getConnectionURI(upDB);
-    env['ZERO_CVR_DB'] = getConnectionURI(cvrDB);
-    env['ZERO_CHANGE_DB'] = getConnectionURI(changeDB);
-    env['ZERO_REPLICA_FILE'] = replicaDbFile.path;
-    env['ZERO_SCHEMA_JSON'] = JSON.stringify(SCHEMA);
-    env['ZERO_NUM_SYNC_WORKERS'] = '1';
+    env = {
+      ['ZERO_PORT']: String(port),
+      ['ZERO_LOG_LEVEL']: 'error',
+      ['ZERO_UPSTREAM_DB']: getConnectionURI(upDB),
+      ['ZERO_CVR_DB']: getConnectionURI(cvrDB),
+      ['ZERO_CHANGE_DB']: getConnectionURI(changeDB),
+      ['ZERO_REPLICA_FILE']: replicaDbFile.path,
+      ['ZERO_SCHEMA_JSON']: JSON.stringify(SCHEMA),
+      ['ZERO_NUM_SYNC_WORKERS']: '1',
+    };
   });
 
   const FOO_QUERY: AST = {
@@ -75,11 +76,11 @@ describe('integration', () => {
   };
 
   async function startZero(module: string, env: NodeJS.ProcessEnv) {
-    const zeroReady = resolver<unknown>();
+    const {promise, resolve} = resolver<unknown>();
 
     const zero = childWorker(module, env);
-    zero.onMessageType('ready', zeroReady.resolve);
-    await zeroReady.promise;
+    zero.onMessageType('ready', resolve);
+    await promise;
   }
 
   afterEach(async () => {
@@ -87,102 +88,129 @@ describe('integration', () => {
     replicaDbFile.delete();
   });
 
-  test.each([['standalone', './server/main.ts', () => env]])(
-    '%s',
-    async (_name, module, makeEnv) => {
-      await startZero(module, makeEnv());
-
-      const downstream = new Queue<unknown>();
-      const ws = new WebSocket(
-        `ws://localhost:${port}/zero/sync/v${PROTOCOL_VERSION}/connect` +
-          `?clientGroupID=abc&clientID=def&wsid=123&schemaVersion=1&baseCookie=&ts=123456789&lmid=1`,
-        encodeURIComponent(btoa('{}')),
-      );
-      ws.on('message', data =>
-        downstream.enqueue(JSON.parse(data.toString('utf-8'))),
-      );
-      ws.on('open', () =>
-        ws.send(
-          JSON.stringify([
-            'initConnection',
+  test.each([
+    ['standalone', './server/multi/main.ts', () => env],
+    [
+      'multi-tenant, direct-dispatch',
+      './server/multi/main.ts',
+      () => ({
+        ['ZERO_PORT']: String(port - 3),
+        ['ZERO_LOG_LEVEL']: 'error',
+        ['ZERO_TENANTS_JSON']: JSON.stringify({
+          tenants: [{id: 'tenant', path: '/zero', env}],
+        }),
+      }),
+    ],
+    [
+      'multi-tenant, double-dispatch',
+      './server/multi/main.ts',
+      () => ({
+        ['ZERO_PORT']: String(port),
+        ['ZERO_LOG_LEVEL']: 'error',
+        ['ZERO_TENANTS_JSON']: JSON.stringify({
+          tenants: [
             {
-              desiredQueriesPatch: [
-                {op: 'put', hash: 'query-hash1', ast: FOO_QUERY},
-              ],
+              id: 'tenant',
+              path: '/zero',
+              env: {...env, ['ZERO_PORT']: String(port + 3)},
             },
-          ] satisfies InitConnectionMessage),
-        ),
-      );
+          ],
+        }),
+      }),
+    ],
+  ])('%s', async (_name, module, makeEnv) => {
+    await startZero(module, makeEnv());
 
-      expect(await downstream.dequeue()).toMatchObject([
-        'connected',
-        {wsid: '123'},
-      ]);
-      expect(await downstream.dequeue()).toMatchObject([
-        'pokeStart',
-        {pokeID: '00'},
-      ]);
-      expect(await downstream.dequeue()).toMatchObject([
-        'pokeEnd',
-        {pokeID: '00'},
-      ]);
-      expect(await downstream.dequeue()).toMatchObject([
-        'pokeStart',
-        {pokeID: '00:01'},
-      ]);
-      expect(await downstream.dequeue()).toMatchObject([
-        'pokePart',
-        {
-          pokeID: '00:01',
-          clientsPatch: [{op: 'put', clientID: 'def'}],
-          desiredQueriesPatches: {
-            def: [{op: 'put', hash: 'query-hash1', ast: FOO_QUERY}],
+    const downstream = new Queue<unknown>();
+    const ws = new WebSocket(
+      `ws://localhost:${port}/zero/sync/v${PROTOCOL_VERSION}/connect` +
+        `?clientGroupID=abc&clientID=def&wsid=123&schemaVersion=1&baseCookie=&ts=123456789&lmid=1`,
+      encodeURIComponent(btoa('{}')), // auth token
+    );
+    ws.on('message', data =>
+      downstream.enqueue(JSON.parse(data.toString('utf-8'))),
+    );
+    ws.on('open', () =>
+      ws.send(
+        JSON.stringify([
+          'initConnection',
+          {
+            desiredQueriesPatch: [
+              {op: 'put', hash: 'query-hash1', ast: FOO_QUERY},
+            ],
           },
-        },
-      ]);
-      expect(await downstream.dequeue()).toMatchObject([
-        'pokeEnd',
-        {pokeID: '00:01'},
-      ]);
-      expect(await downstream.dequeue()).toMatchObject([
-        'pokeStart',
-        {pokeID: '00:02'},
-      ]);
-      expect(await downstream.dequeue()).toMatchObject([
-        'pokePart',
-        {
-          pokeID: '00:02',
-          gotQueriesPatch: [{op: 'put', hash: 'query-hash1', ast: FOO_QUERY}],
-          rowsPatch: [
-            {op: 'put', tableName: 'foo', value: {id: 'bar', val: 'baz'}},
-          ],
-        },
-      ]);
-      expect(await downstream.dequeue()).toMatchObject([
-        'pokeEnd',
-        {pokeID: '00:02'},
-      ]);
+        ] satisfies InitConnectionMessage),
+      ),
+    );
 
-      // Trigger an upstream change and verify replication.
-      await upDB`INSERT INTO foo(id, val) VALUES ('voo', 'doo')`;
-
-      expect(await downstream.dequeue()).toMatchObject([
-        'pokeStart',
-        {pokeID: expect.any(String)},
-      ]);
-      expect(await downstream.dequeue()).toMatchObject([
-        'pokePart',
-        {
-          pokeID: expect.any(String),
-          rowsPatch: [
-            {op: 'put', tableName: 'foo', value: {id: 'voo', val: 'doo'}},
-          ],
+    expect(await downstream.dequeue()).toMatchObject([
+      'connected',
+      {wsid: '123'},
+    ]);
+    expect(await downstream.dequeue()).toMatchObject([
+      'pokeStart',
+      {pokeID: '00'},
+    ]);
+    expect(await downstream.dequeue()).toMatchObject([
+      'pokeEnd',
+      {pokeID: '00'},
+    ]);
+    expect(await downstream.dequeue()).toMatchObject([
+      'pokeStart',
+      {pokeID: '00:01'},
+    ]);
+    expect(await downstream.dequeue()).toMatchObject([
+      'pokePart',
+      {
+        pokeID: '00:01',
+        clientsPatch: [{op: 'put', clientID: 'def'}],
+        desiredQueriesPatches: {
+          def: [{op: 'put', hash: 'query-hash1', ast: FOO_QUERY}],
         },
-      ]);
-      expect(await downstream.dequeue()).toMatchObject([
-        'pokeEnd',
-        {pokeID: expect.any(String)},
-      ]);
-    },
-  );
+      },
+    ]);
+    expect(await downstream.dequeue()).toMatchObject([
+      'pokeEnd',
+      {pokeID: '00:01'},
+    ]);
+    expect(await downstream.dequeue()).toMatchObject([
+      'pokeStart',
+      {pokeID: '00:02'},
+    ]);
+    expect(await downstream.dequeue()).toMatchObject([
+      'pokePart',
+      {
+        pokeID: '00:02',
+        gotQueriesPatch: [{op: 'put', hash: 'query-hash1', ast: FOO_QUERY}],
+        rowsPatch: [
+          {op: 'put', tableName: 'foo', value: {id: 'bar', val: 'baz'}},
+        ],
+      },
+    ]);
+    expect(await downstream.dequeue()).toMatchObject([
+      'pokeEnd',
+      {pokeID: '00:02'},
+    ]);
+
+    // Trigger an upstream change and verify replication.
+    await upDB`INSERT INTO foo(id, val) VALUES ('voo', 'doo')`;
+
+    expect(await downstream.dequeue()).toMatchObject([
+      'pokeStart',
+      {pokeID: expect.any(String)},
+    ]);
+    expect(await downstream.dequeue()).toMatchObject([
+      'pokePart',
+      {
+        pokeID: expect.any(String),
+        rowsPatch: [
+          {op: 'put', tableName: 'foo', value: {id: 'voo', val: 'doo'}},
+        ],
+      },
+    ]);
+    expect(await downstream.dequeue()).toMatchObject([
+      'pokeEnd',
+      {pokeID: expect.any(String)},
+    ]);
+  });
 });
