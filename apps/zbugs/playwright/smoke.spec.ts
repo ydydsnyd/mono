@@ -7,6 +7,15 @@ const userCookies = [
   'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwRnczbjZFUVM4bXpFMTI2QUZKeDMiLCJpYXQiOjE3MzM5NzQwMDIsIm5hbWUiOiJyb2NpYm90MyIsInJvbGUiOiJjcmV3IiwiZXhwIjoxODIwMzc0MDA0fQ.dpXsIDlMzNUlQpWY0c3Vh1hrBo36hNDmsXHyy59NhaQ',
   'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwRnczbjZFUVM4bXpFMTI2QUZKeDQiLCJpYXQiOjE3MzM5NzM5NDUsIm5hbWUiOiJyb2NpYm90NCIsInJvbGUiOiJjcmV3IiwiZXhwIjoxODIwMzczOTQ1fQ.MDaVc59EXXDpiUbod2cJ3GwcJhAJ5KJa88CuuWT4P2o',
 ];
+
+const DELAY_START = parseInt(process.env.DELAY_START ?? '1000');
+const DELAY_PER_ITERATION = parseInt(process.env.DELAY_PER_ITERATION ?? '4800');
+const NUM_ITERATIONS = parseInt(process.env.NUM_ITERATIONS ?? '10');
+const URL = process.env.URL ?? 'https://bugs-sandbox.rocicorp.dev';
+const DIRECT_URL =
+  process.env.DIRECT_URL ?? 'https://bugs-sandbox.rocicorp.dev/issue/3015';
+const PERCENT_DIRECT = parseFloat(process.env.PERCENT_DIRECT ?? '0.75');
+
 test('loadtest', async ({page, browser, context}) => {
   test.setTimeout(700000);
   await page.context().addCookies([
@@ -20,35 +29,40 @@ test('loadtest', async ({page, browser, context}) => {
     },
   ]);
   const testID = Math.random().toString(36).substring(2, 8);
-  //const DELAY_START = 120000;
-  const DELAY_START = 1000;
-  const DELAY_PER_ITERATION = 4800;
-  const NUM_ITERATIONS = 10;
+
   const delay = Math.random() * DELAY_START;
   console.log(`Delaying for ${delay}ms to create jitter`);
   await page.waitForTimeout(delay);
-  await page.goto('https://bugs-sandbox.rocicorp.dev/');
+  const random = Math.random();
+  console.log(`Random: ${random}`);
+  const wentDirect = random < PERCENT_DIRECT;
+  if (wentDirect) {
+    await page.goto(DIRECT_URL);
+  } else {
+    await page.goto(URL);
+  }
   await page.getByLabel('VISITOR PASSWORD').click();
   await page.getByLabel('VISITOR PASSWORD').fill('zql');
   await page.getByLabel('VISITOR PASSWORD').press('Enter');
 
   const start = Date.now();
+  // if it went to direct url, do this branch of code
+  if (!wentDirect) {
+    await page.waitForSelector('.issue-list .row');
+    console.log(`Start rendered in: ${Date.now() - start}ms`);
+  } else {
+    await page.waitForSelector('[class^="_commentItem"]');
+    console.log(`Direct Issue Start rendered in: ${Date.now() - start}ms`);
+  }
 
-  await page.waitForSelector('.issue-list .row');
-  console.log(`First issue rendered in ${Date.now() - start}ms`);
   const cgID = await page.evaluate('window.z.clientGroupID');
 
   for (let i = 0; i < NUM_ITERATIONS; i++) {
     const iterationStart = Date.now();
     console.log(cgID, `Iteration: ${i}`);
-    await page.waitForSelector('.issue-list .row');
+    await openIssueByTitle(page, `Test Issue`);
     if (i % 2 === 0) {
-      await openAndCommentOnNewIssue(
-        page,
-        'Test Issue',
-        'This is a test comment',
-        i === 0,
-      );
+      await commentOnNewIssue(page, 'This is a test comment');
     }
     console.log(cgID, 'Filtering by open');
     await page.locator('.nav-item', {hasText: 'Open'}).click();
@@ -92,7 +106,6 @@ test('loadtest', async ({page, browser, context}) => {
       });
     });
 
-
     console.log(cgID, `Finished iteration in ${Date.now() - iterationStart}ms`);
     await page.goBack();
     await page.waitForTimeout(DELAY_PER_ITERATION);
@@ -124,18 +137,22 @@ async function checkIssueExists(page, title: string) {
       behavior: 'smooth',
     });
   });
-  return await page.locator('.issue-list .row', {
-    hasText: title
-  }).count() > 0;
+  return (
+    (await page
+      .locator('.issue-list .row', {
+        hasText: title,
+      })
+      .count()) > 0
+  );
 }
 
 async function navigateToAll(page) {
-  await page.locator('.nav-item', { hasText: 'All' }).click();
+  await page.locator('.nav-item', {hasText: 'All'}).click();
 }
 
 // async function createNewIssueIfNotExists(page, title: string, description: string) {
 //   await waitForIssueList(page);
-  
+
 //   if (!(await checkIssueExists(page, title))) {
 //     console.log(`Creating new issue: ${title}`);
 //     await page.getByRole('button', { name: 'New Issue' }).click();
@@ -146,55 +163,73 @@ async function navigateToAll(page) {
 //   } else {
 //     console.log(`Issue "${title}" already exists, skipping creation`);
 //   }
-  
+
 //   await navigateToAll(page);
 // }
 
 async function selectRandomEmoji(page) {
-  await page.waitForSelector('.emoji-menu');
-  const emojiButtons = page.locator('.emoji-menu .emoji');
+  // Wait for the emoji menu to be visible
+  await page.waitForSelector('div.emoji-menu button.emoji', {
+    state: 'visible',
+    timeout: 5000,
+  });
+
+  // Get all emoji buttons
+  const emojiButtons = page.locator('div.emoji-menu button.emoji');
   const count = await emojiButtons.count();
+  console.log('emoji count:', count);
+
+  // Select a random emoji
   const randomIndex = Math.floor(Math.random() * count);
   await emojiButtons.nth(randomIndex).click();
 }
 
-async function openAndCommentOnNewIssue(page, issueTitle: string, comment: string, isFirst: boolean) {
-  await page.locator('.nav-item', {hasText: 'All'}).click();
-  await waitForIssueList(page);
-  
-  if (!(await checkIssueExists(page, issueTitle))) {
-    console.log(`Issue "${issueTitle}" does not exist, skipping`);
-    return;
-  }
-
-  await page.locator('.issue-list .row', { hasText: issueTitle }).first().scrollIntoViewIfNeeded();
-  await page.locator('.issue-list .row', { hasText: issueTitle }).first().click();
-  // time how long this takes to show up 
-  if (isFirst) {
-    const start = Date.now();
-    await page.waitForSelector('[class^="_commentItem"]');
-    const elapsed = Date.now() - start;
-    console.log(`Issue "${issueTitle}" took ${elapsed}ms to load`);
-  } else {
-    await page.waitForSelector('[class^="_commentItem"]');
-  }
+async function commentOnNewIssue(page, comment: string) {
+  await page.waitForSelector('[class^="_commentItem"]');
   const comments = page.locator('[class^="_commentItem"]');
-  await page.locator('.comment-input').scrollIntoViewIfNeeded();
-  await page.locator('.comment-input').fill(comment);
-  
+  //add emoji first title
   await page.locator('.add-emoji-button').first().click();
   await selectRandomEmoji(page);
-  
-  await page.getByRole('button', { name: 'Add Comment' }).click();
-  
+
+  // Make sure comment input is visible and fill it
+  await page.locator('.comment-input').scrollIntoViewIfNeeded();
+  await page.locator('.comment-input').click(); // Add this line to ensure focus
+  await page.locator('.comment-input').fill(comment);
+
+  // Wait for button to be enabled before clicking
+  await page.getByRole('button', {name: 'Add comment'}).click();
 
   const commentCount = await comments.count();
   const randomCommentIndex = Math.floor(Math.random() * commentCount);
-  
-  console.log("comment count:", commentCount);
-  const randomComment = await comments.nth(randomCommentIndex).locator('.add-emoji-button');
-  await randomComment.scrollIntoViewIfNeeded();
-  await randomComment.first().click();
+
+  console.log('comment count:', commentCount);
+  await comments
+    .nth(randomCommentIndex)
+    .locator('.add-emoji-button')
+    .scrollIntoViewIfNeeded();
+
+  await await comments
+    .nth(randomCommentIndex)
+    .locator('.add-emoji-button')
+    .first()
+    .click();
   await selectRandomEmoji(page);
   await navigateToAll(page);
+}
+
+async function openIssueByTitle(page, issueTitle: string): Promise<boolean> {
+  await page.locator('.nav-item', {hasText: 'All'}).click();
+  await waitForIssueList(page);
+
+  if (!(await checkIssueExists(page, issueTitle))) {
+    console.log(`Issue "${issueTitle}" does not exist, skipping`);
+    return false;
+  }
+
+  await page
+    .locator('.issue-list .row', {hasText: issueTitle})
+    .first()
+    .scrollIntoViewIfNeeded();
+  await page.locator('.issue-list .row', {hasText: issueTitle}).first().click();
+  return true;
 }
