@@ -632,24 +632,18 @@ test('cannot create an issue unless you are a project member', () => {
   ).toBe(true);
 
   // user 2 is not a member of project 1
-  const op2 = {
-    ...op,
-    value: {...op.value, creatorId: '002'},
-  };
+  op.value.creatorId = '002';
   authData = {sub: '002', role: 'user'};
   expect(
-    writeAuthorizer.canPreMutation(authData, [op2]) &&
-      writeAuthorizer.canPostMutation(authData, [op2]),
+    writeAuthorizer.canPreMutation(authData, [op]) &&
+      writeAuthorizer.canPostMutation(authData, [op]),
   ).toBe(false);
 
   // user 2 is a member of project 2
-  const op3 = {
-    ...op2,
-    value: {...op2.value, projectId: '002'},
-  };
+  op.value.projectId = '002';
   expect(
-    writeAuthorizer.canPreMutation(authData, [op3]) &&
-      writeAuthorizer.canPostMutation(authData, [op3]),
+    writeAuthorizer.canPreMutation(authData, [op]) &&
+      writeAuthorizer.canPostMutation(authData, [op]),
   ).toBe(true);
 });
 

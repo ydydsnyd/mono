@@ -16,9 +16,9 @@ import type {Format} from '../view.js';
 import {createSource} from './source-factory.js';
 
 function makeSource(
-  rows: readonly Row[],
+  rows: Row[],
   ordering: Ordering,
-  columns: Readonly<Record<string, SchemaValue>>,
+  columns: Record<string, SchemaValue>,
   primaryKeys: PrimaryKey,
   snitchName: string,
   log: SnitchMessage[],
@@ -43,7 +43,7 @@ export type Sources = Record<
   }
 >;
 
-export type SourceContents = Readonly<Record<string, readonly Row[]>>;
+export type SourceContents = Record<string, Row[]>;
 
 export type Joins = Record<
   string,
