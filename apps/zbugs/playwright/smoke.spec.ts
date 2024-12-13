@@ -20,8 +20,8 @@ test('loadtest', async ({page, browser, context}) => {
     },
   ]);
   const testID = Math.random().toString(36).substring(2, 8);
-  const DELAY_START = 120000;
-  //const DELAY_START = 1000;
+  //const DELAY_START = 120000;
+  const DELAY_START = 1000;
   const DELAY_PER_ITERATION = 4800;
   const NUM_ITERATIONS = 10;
   const delay = Math.random() * DELAY_START;
@@ -47,6 +47,7 @@ test('loadtest', async ({page, browser, context}) => {
         page,
         'Test Issue',
         'This is a test comment',
+        i === 0,
       );
     }
     console.log(cgID, 'Filtering by open');
@@ -132,22 +133,22 @@ async function navigateToAll(page) {
   await page.locator('.nav-item', { hasText: 'All' }).click();
 }
 
-async function createNewIssueIfNotExists(page, title: string, description: string) {
-  await waitForIssueList(page);
+// async function createNewIssueIfNotExists(page, title: string, description: string) {
+//   await waitForIssueList(page);
   
-  if (!(await checkIssueExists(page, title))) {
-    console.log(`Creating new issue: ${title}`);
-    await page.getByRole('button', { name: 'New Issue' }).click();
-    await page.locator('.new-issue-title').fill(title);
-    await page.locator('.new-issue-description').fill(description);
-    await page.getByRole('button', { name: 'Save Issue' }).click();
-    await page.waitForSelector('.modal', { state: 'hidden' });
-  } else {
-    console.log(`Issue "${title}" already exists, skipping creation`);
-  }
+//   if (!(await checkIssueExists(page, title))) {
+//     console.log(`Creating new issue: ${title}`);
+//     await page.getByRole('button', { name: 'New Issue' }).click();
+//     await page.locator('.new-issue-title').fill(title);
+//     await page.locator('.new-issue-description').fill(description);
+//     await page.getByRole('button', { name: 'Save Issue' }).click();
+//     await page.waitForSelector('.modal', { state: 'hidden' });
+//   } else {
+//     console.log(`Issue "${title}" already exists, skipping creation`);
+//   }
   
-  await navigateToAll(page);
-}
+//   await navigateToAll(page);
+// }
 
 async function selectRandomEmoji(page) {
   await page.waitForSelector('.emoji-menu');
@@ -157,17 +158,26 @@ async function selectRandomEmoji(page) {
   await emojiButtons.nth(randomIndex).click();
 }
 
-async function openAndCommentOnNewIssue(page, issueTitle: string, comment: string) {
+async function openAndCommentOnNewIssue(page, issueTitle: string, comment: string, isFirst: boolean) {
   await page.locator('.nav-item', {hasText: 'All'}).click();
   await waitForIssueList(page);
   
   if (!(await checkIssueExists(page, issueTitle))) {
-    await createNewIssueIfNotExists(page, issueTitle, 'This is a test issue');
+    console.log(`Issue "${issueTitle}" does not exist, skipping`);
+    return;
   }
 
   await page.locator('.issue-list .row', { hasText: issueTitle }).first().scrollIntoViewIfNeeded();
   await page.locator('.issue-list .row', { hasText: issueTitle }).first().click();
-  await page.waitForSelector('[class^="_commentItem"]');
+  // time how long this takes to show up 
+  if (isFirst) {
+    const start = Date.now();
+    await page.waitForSelector('[class^="_commentItem"]');
+    const elapsed = Date.now() - start;
+    console.log(`Issue "${issueTitle}" took ${elapsed}ms to load`);
+  } else {
+    await page.waitForSelector('[class^="_commentItem"]');
+  }
   const comments = page.locator('[class^="_commentItem"]');
   await page.locator('.comment-input').scrollIntoViewIfNeeded();
   await page.locator('.comment-input').fill(comment);
