@@ -1,4 +1,5 @@
 import {test} from '@playwright/test';
+import { time } from 'console';
 
 const userCookies = [
   'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJPZVZucjF5NWJFTV9ZZzA2c1VGdEQiLCJpYXQiOjE3MzQxMzY3NDYsInJvbGUiOiJjcmV3IiwibmFtZSI6ImFib29kbWFuIiwiZXhwIjoxNzM2NzI4NzQ2fQ.muDyQMOsjYi--80bl3kxyxzIHmZbA1lCdsK6z3B58LI',
@@ -21,7 +22,7 @@ const DIRECT_URL = process.env.DIRECT_URL ?? `${SITE_URL}/issue/${ISSUE_ID}`;
 const PERCENT_DIRECT = parseFloat(process.env.PERCENT_DIRECT ?? '0.75');
 const AWS_BATCH_JOB_ARRAY_INDEX = process.env.AWS_BATCH_JOB_ARRAY_INDEX ?? '-1';
 const ENTER_PASSWORD = process.env.ENTER_PASSWORD === '1';
-
+const ADD_COMMENTS_AND_EMOJI = (process.env.ADD_COMMENTS_AND_EMOJI ?? '1') === '1';
 test('loadtest', async ({page, browser, context}) => {
   // print environment variables
   console.log(process.env);
@@ -86,12 +87,14 @@ test('loadtest', async ({page, browser, context}) => {
     if (i % 2 === 0) {
       const foundIssue = await openIssueByID(page, ISSUE_ID, cgID);
       if (foundIssue) {
-        await commentOnNewIssue(page, 'This is a test comment', cgID);
+        if (ADD_COMMENTS_AND_EMOJI) {
+          await commentOnNewIssue(page, 'This is a test comment', cgID);
+        }
       }
     } else {
       await openRandomIssue(page, cgID);
-      await page.locator('.nav-item', {hasText: 'All'}).click();
     }
+    await page.locator('.nav-item', {hasText: 'All'}).click();
 
     // do some filters
     console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Filtering by open');
@@ -210,7 +213,7 @@ async function selectRandomEmoji(page, cgID: string) {
 
     // Select a random emoji
     const randomIndex = Math.floor(Math.random() * count);
-    await emojiButtons.nth(randomIndex).click();
+    await emojiButtons.nth(randomIndex).click({timeout: 2000});
   } catch (error) {
     console.log(
       AWS_BATCH_JOB_ARRAY_INDEX,
@@ -232,10 +235,7 @@ async function commentOnNewIssue(page, comment: string, cgID: string) {
 
     try {
       //add emoji first title
-      await page.locator('.add-emoji-button',{
-        state: 'visible',
-        timeout: 5000,
-      }).first().click();
+      await page.locator('.add-emoji-button').first().click();
       await selectRandomEmoji(page, cgID);
     } catch (error) {
       console.log(
@@ -248,18 +248,12 @@ async function commentOnNewIssue(page, comment: string, cgID: string) {
 
     try {
       // Make sure comment input is visible and fill it
-      await page.locator('.comment-input', {
-        state: 'visible',
-        timeout: 5000,
-      }).scrollIntoViewIfNeeded();
-      await page.locator('.comment-input',{
-        state: 'visible',
-        timeout: 5000,
-      }).click();
+      await page.locator('.comment-input').scrollIntoViewIfNeeded();
+      await page.locator('.comment-input').click({timeout: 2000});
       await page.locator('.comment-input').fill(comment);
 
       // Wait for button to be enabled before clicking
-      await page.getByRole('button', {name: 'Add comment'}).click();
+      await page.getByRole('button', {name: 'Add comment'}).click({timeout: 2000});
     } catch (error) {
       console.log(
         AWS_BATCH_JOB_ARRAY_INDEX,
@@ -276,15 +270,13 @@ async function commentOnNewIssue(page, comment: string, cgID: string) {
       await comments
         .nth(randomCommentIndex)
         .locator('.add-emoji-button')
-        .timeout(5000)
         .scrollIntoViewIfNeeded();
 
       await comments
         .nth(randomCommentIndex)
         .locator('.add-emoji-button')
-        .timeout(5000)
         .first()
-        .click();
+        .click({timeout: 2000});
 
       await selectRandomEmoji(page, cgID);
     } catch (error) {
@@ -317,12 +309,10 @@ async function openIssueByID(
     try {
       await page
         .locator(`.issue-list .row a[href="/issue/${issueID}"]`)
-        .timeout(5000)
         .first()
         .scrollIntoViewIfNeeded();
       await page
         .locator(`.issue-list .row a[href="/issue/${issueID}"]`)
-        .timeout(5000)
         .first()
         .click();
 
@@ -368,7 +358,7 @@ async function openRandomIssue(page, cgID: string): Promise<boolean> {
 
       const randomIndex = Math.floor(Math.random() * count);
       await issues.nth(randomIndex).scrollIntoViewIfNeeded();
-      await issues.nth(randomIndex).click();
+      await issues.nth(randomIndex).click({timeout: 2000});
 
       console.log(
         AWS_BATCH_JOB_ARRAY_INDEX,
