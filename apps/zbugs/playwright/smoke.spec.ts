@@ -8,15 +8,17 @@ const userCookies = [
   'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwRnczbjZFUVM4bXpFMTI2QUZKeDQiLCJpYXQiOjE3MzM5NzM5NDUsIm5hbWUiOiJyb2NpYm90NCIsInJvbGUiOiJjcmV3IiwiZXhwIjoxODIwMzczOTQ1fQ.MDaVc59EXXDpiUbod2cJ3GwcJhAJ5KJa88CuuWT4P2o',
 ];
 
-const DELAY_START = parseInt(process.env.DELAY_START ?? '1000');
+const DELAY_START = parseInt(process.env.DELAY_START ?? '120000');
 const DELAY_PER_ITERATION = parseInt(process.env.DELAY_PER_ITERATION ?? '4800');
 const NUM_ITERATIONS = parseInt(process.env.NUM_ITERATIONS ?? '10');
 const URL = process.env.URL ?? 'https://bugs-sandbox.rocicorp.dev';
 const DIRECT_URL =
-  process.env.DIRECT_URL ?? 'https://bugs-sandbox.rocicorp.dev/issue/3015';
+  process.env.DIRECT_URL ?? 'https://bugs-sandbox.rocicorp.dev/issue/3017';
 const PERCENT_DIRECT = parseFloat(process.env.PERCENT_DIRECT ?? '0.75');
 
 test('loadtest', async ({page, browser, context}) => {
+  // print environment variables
+  console.log(process.env);
   test.setTimeout(700000);
   await page.context().addCookies([
     {
