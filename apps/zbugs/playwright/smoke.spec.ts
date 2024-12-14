@@ -1,5 +1,5 @@
 import {test} from '@playwright/test';
-import { time } from 'console';
+import {time} from 'console';
 
 const userCookies = [
   'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJPZVZucjF5NWJFTV9ZZzA2c1VGdEQiLCJpYXQiOjE3MzQxMzY3NDYsInJvbGUiOiJjcmV3IiwibmFtZSI6ImFib29kbWFuIiwiZXhwIjoxNzM2NzI4NzQ2fQ.muDyQMOsjYi--80bl3kxyxzIHmZbA1lCdsK6z3B58LI',
@@ -22,7 +22,8 @@ const DIRECT_URL = process.env.DIRECT_URL ?? `${SITE_URL}/issue/${ISSUE_ID}`;
 const PERCENT_DIRECT = parseFloat(process.env.PERCENT_DIRECT ?? '0.75');
 const AWS_BATCH_JOB_ARRAY_INDEX = process.env.AWS_BATCH_JOB_ARRAY_INDEX ?? '-1';
 const ENTER_PASSWORD = process.env.ENTER_PASSWORD === '1';
-const ADD_COMMENTS_AND_EMOJI = (process.env.ADD_COMMENTS_AND_EMOJI ?? '1') === '1';
+const ADD_COMMENTS_AND_EMOJI =
+  (process.env.ADD_COMMENTS_AND_EMOJI ?? '1') === '1';
 test('loadtest', async ({page, browser, context}) => {
   // print environment variables
   console.log(process.env);
@@ -227,7 +228,7 @@ async function selectRandomEmoji(page, cgID: string) {
 
 async function commentOnNewIssue(page, comment: string, cgID: string) {
   try {
-    await page.waitForSelector('[class^="_commentItem"]',{
+    await page.waitForSelector('[class^="_commentItem"]', {
       state: 'visible',
       timeout: 5000,
     });
@@ -253,7 +254,9 @@ async function commentOnNewIssue(page, comment: string, cgID: string) {
       await page.locator('.comment-input').fill(comment);
 
       // Wait for button to be enabled before clicking
-      await page.getByRole('button', {name: 'Add comment'}).click({timeout: 2000});
+      await page
+        .getByRole('button', {name: 'Add comment'})
+        .click({timeout: 2000});
     } catch (error) {
       console.log(
         AWS_BATCH_JOB_ARRAY_INDEX,
