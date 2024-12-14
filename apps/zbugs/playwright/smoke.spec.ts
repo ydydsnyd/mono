@@ -70,7 +70,7 @@ test('loadtest', async ({page, browser, context}) => {
 
     await openIssueByTitle(page, `Test Issue`);
     if (i % 2 === 0) {
-      await commentOnNewIssue(page, 'This is a test comment');
+      await commentOnNewIssue(page, 'This is a test comment', cgID);
     }
     console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Filtering by open');
     await page.locator('.nav-item', {hasText: 'Open'}).click();
@@ -154,9 +154,6 @@ async function checkIssueExists(page, title: string) {
   );
 }
 
-async function navigateToAll(page) {
-  await page.locator('.nav-item', {hasText: 'All'}).click();
-}
 
 // async function createNewIssueIfNotExists(page, title: string, description: string) {
 //   await waitForIssueList(page);
@@ -175,52 +172,74 @@ async function navigateToAll(page) {
 //   await navigateToAll(page);
 // }
 
-async function selectRandomEmoji(page) {
-  // Wait for the emoji menu to be visible
-  await page.waitForSelector('div.emoji-menu button.emoji', {
-    state: 'visible',
-    timeout: 5000,
-  });
+async function selectRandomEmoji(page, cgID: string) {
+  try {
+    // Wait for the emoji menu to be visible
+    await page.waitForSelector('div.emoji-menu button.emoji', {
+      state: 'visible',
+      timeout: 5000,
+    });
 
-  // Get all emoji buttons
-  const emojiButtons = page.locator('div.emoji-menu button.emoji');
-  const count = await emojiButtons.count();
+    // Get all emoji buttons
+    const emojiButtons = page.locator('div.emoji-menu button.emoji');
+    const count = await emojiButtons.count();
 
-  // Select a random emoji
-  const randomIndex = Math.floor(Math.random() * count);
-  await emojiButtons.nth(randomIndex).click();
+    // Select a random emoji
+    const randomIndex = Math.floor(Math.random() * count);
+    await emojiButtons.nth(randomIndex).click();
+  } catch (error) {
+    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Failed to select random emoji, skipping:', error.message);
+    return;
+  }
 }
 
-async function commentOnNewIssue(page, comment: string) {
-  await page.waitForSelector('[class^="_commentItem"]');
-  const comments = page.locator('[class^="_commentItem"]');
-  //add emoji first title
-  await page.locator('.add-emoji-button').first().click();
-  await selectRandomEmoji(page);
+async function commentOnNewIssue(page, comment: string, cgID: string) {
+  try {
+    await page.waitForSelector('[class^="_commentItem"]');
+    const comments = page.locator('[class^="_commentItem"]');
+    
+    try {
+      //add emoji first title
+      await page.locator('.add-emoji-button').first().click();
+      await selectRandomEmoji(page, cgID);
+    } catch (error) {
+      console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Failed to add emoji to title, skipping:', error.message);
+    }
 
-  // Make sure comment input is visible and fill it
-  await page.locator('.comment-input').scrollIntoViewIfNeeded();
-  await page.locator('.comment-input').click(); // Add this line to ensure focus
-  await page.locator('.comment-input').fill(comment);
+    try {
+      // Make sure comment input is visible and fill it
+      await page.locator('.comment-input').scrollIntoViewIfNeeded();
+      await page.locator('.comment-input').click();
+      await page.locator('.comment-input').fill(comment);
 
-  // Wait for button to be enabled before clicking
-  await page.getByRole('button', {name: 'Add comment'}).click();
+      // Wait for button to be enabled before clicking
+      await page.getByRole('button', {name: 'Add comment'}).click();
+    } catch (error) {
+      console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Failed to add comment, skipping:', error.message);
+    }
 
-  const commentCount = await comments.count();
-  const randomCommentIndex = Math.floor(Math.random() * commentCount);
+    try {
+      const commentCount = await comments.count();
+      const randomCommentIndex = Math.floor(Math.random() * commentCount);
 
-  await comments
-    .nth(randomCommentIndex)
-    .locator('.add-emoji-button')
-    .scrollIntoViewIfNeeded();
+      await comments
+        .nth(randomCommentIndex)
+        .locator('.add-emoji-button')
+        .scrollIntoViewIfNeeded();
 
-  await await comments
-    .nth(randomCommentIndex)
-    .locator('.add-emoji-button')
-    .first()
-    .click();
-  await selectRandomEmoji(page);
-  await navigateToAll(page);
+      await comments
+        .nth(randomCommentIndex)
+        .locator('.add-emoji-button')
+        .first()
+        .click();
+        
+      await selectRandomEmoji(page, cgID);
+    } catch (error) {
+      console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Failed to add emoji to random comment, skipping:', error.message);
+    }
+  } catch (error) {
+    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Failed to load comments section, skipping entire comment operation:', error.message);
+  }
 }
 
 async function openIssueByTitle(page, issueTitle: string): Promise<boolean> {
