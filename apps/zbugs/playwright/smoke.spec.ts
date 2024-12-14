@@ -55,7 +55,7 @@ test('loadtest', async ({page, browser, context}) => {
   // if it went to direct url, do this branch of code
   if (!wentDirect) {
     await page.waitForSelector('.issue-list .row');
-    await page.evaluate('window.z.clientGroupID');
+    cgID = await page.evaluate('window.z.clientGroupID');
     console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID,  `Start rendered in: ${Date.now() - start}ms`);
   } else {
     await page.waitForSelector('[class^="_commentItem"]');
