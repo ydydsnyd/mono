@@ -32,7 +32,7 @@ test('loadtest', async ({page, browser, context}) => {
     },
   ]);
   const testID = Math.random().toString(36).substring(2, 8);
-  if(DELAY_START > 0) {
+  if (DELAY_START > 0) {
     const delay = Math.random() * DELAY_START;
     console.log(`Delaying for ${delay}ms to create jitter`);
     await page.waitForTimeout(delay);
@@ -56,21 +56,32 @@ test('loadtest', async ({page, browser, context}) => {
   if (!wentDirect) {
     await page.waitForSelector('.issue-list .row');
     cgID = await page.evaluate('window.z.clientGroupID');
-    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID,  `Start rendered in: ${Date.now() - start}ms`);
+    console.log(
+      AWS_BATCH_JOB_ARRAY_INDEX,
+      cgID,
+      `Start rendered in: ${Date.now() - start}ms`,
+    );
   } else {
     await page.waitForSelector('[class^="_commentItem"]');
     cgID = await page.evaluate('window.z.clientGroupID');
-    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, `Direct Issue Start rendered in: ${Date.now() - start}ms`);
+    console.log(
+      AWS_BATCH_JOB_ARRAY_INDEX,
+      cgID,
+      `Direct Issue Start rendered in: ${Date.now() - start}ms`,
+    );
   }
-
-
 
   for (let i = 0; i < NUM_ITERATIONS; i++) {
     const iterationStart = Date.now();
 
-    await openIssueByTitle(page, `Test Issue`);
     if (i % 2 === 0) {
-      await commentOnNewIssue(page, 'This is a test comment', cgID);
+      const foundIssue = await openIssueByTitle(page, `Test Issue`, cgID);
+      if (foundIssue) {
+        await commentOnNewIssue(page, 'This is a test comment', cgID);
+      }
+    } else { 
+      await openRandomIssue(page, cgID);
+      await page.locator('.nav-item', {hasText: 'All'}).click();
     }
     console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Filtering by open');
     await page.locator('.nav-item', {hasText: 'Open'}).click();
@@ -88,7 +99,11 @@ test('loadtest', async ({page, browser, context}) => {
       `#options-listbox > li:nth-child(${Math.floor(Math.random() * 5) + 2})`,
     );
 
-    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, `Filtering by ${await elm.allTextContents()}`);
+    console.log(
+      AWS_BATCH_JOB_ARRAY_INDEX,
+      cgID,
+      `Filtering by ${await elm.allTextContents()}`,
+    );
     await elm.click();
     await page.getByRole('button', {name: '+ Filter'}).click();
     // select assignee
@@ -97,7 +112,11 @@ test('loadtest', async ({page, browser, context}) => {
       `#options-listbox > li:nth-child(${Math.floor(Math.random() * 5) + 2})`,
     );
 
-    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, `Filtering by ${await elm.allTextContents()}`);
+    console.log(
+      AWS_BATCH_JOB_ARRAY_INDEX,
+      cgID,
+      `Filtering by ${await elm.allTextContents()}`,
+    );
     await elm.click();
     console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Removing user filter');
     await page
@@ -114,7 +133,11 @@ test('loadtest', async ({page, browser, context}) => {
       });
     });
 
-    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, `Finished iteration in ${Date.now() - iterationStart}ms`);
+    console.log(
+      AWS_BATCH_JOB_ARRAY_INDEX,
+      cgID,
+      `Finished iteration in ${Date.now() - iterationStart}ms`,
+    );
     await page.goBack();
     await page.waitForTimeout(DELAY_PER_ITERATION);
   }
@@ -154,7 +177,6 @@ async function checkIssueExists(page, title: string) {
   );
 }
 
-
 // async function createNewIssueIfNotExists(page, title: string, description: string) {
 //   await waitForIssueList(page);
 
@@ -188,7 +210,12 @@ async function selectRandomEmoji(page, cgID: string) {
     const randomIndex = Math.floor(Math.random() * count);
     await emojiButtons.nth(randomIndex).click();
   } catch (error) {
-    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Failed to select random emoji, skipping:', error.message);
+    console.log(
+      AWS_BATCH_JOB_ARRAY_INDEX,
+      cgID,
+      'Failed to select random emoji, skipping:',
+      error.message,
+    );
     return;
   }
 }
@@ -197,13 +224,18 @@ async function commentOnNewIssue(page, comment: string, cgID: string) {
   try {
     await page.waitForSelector('[class^="_commentItem"]');
     const comments = page.locator('[class^="_commentItem"]');
-    
+
     try {
       //add emoji first title
       await page.locator('.add-emoji-button').first().click();
       await selectRandomEmoji(page, cgID);
     } catch (error) {
-      console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Failed to add emoji to title, skipping:', error.message);
+      console.log(
+        AWS_BATCH_JOB_ARRAY_INDEX,
+        cgID,
+        'Failed to add emoji to title, skipping:',
+        error.message,
+      );
     }
 
     try {
@@ -215,7 +247,12 @@ async function commentOnNewIssue(page, comment: string, cgID: string) {
       // Wait for button to be enabled before clicking
       await page.getByRole('button', {name: 'Add comment'}).click();
     } catch (error) {
-      console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Failed to add comment, skipping:', error.message);
+      console.log(
+        AWS_BATCH_JOB_ARRAY_INDEX,
+        cgID,
+        'Failed to add comment, skipping:',
+        error.message,
+      );
     }
 
     try {
@@ -232,29 +269,86 @@ async function commentOnNewIssue(page, comment: string, cgID: string) {
         .locator('.add-emoji-button')
         .first()
         .click();
-        
+
       await selectRandomEmoji(page, cgID);
     } catch (error) {
-      console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Failed to add emoji to random comment, skipping:', error.message);
+      console.log(
+        AWS_BATCH_JOB_ARRAY_INDEX,
+        cgID,
+        'Failed to add emoji to random comment, skipping:',
+        error.message,
+      );
     }
   } catch (error) {
-    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Failed to load comments section, skipping entire comment operation:', error.message);
+    console.log(
+      AWS_BATCH_JOB_ARRAY_INDEX,
+      cgID,
+      'Failed to load comments section, skipping entire comment operation:',
+      error.message,
+    );
   }
 }
 
-async function openIssueByTitle(page, issueTitle: string): Promise<boolean> {
-  await page.locator('.nav-item', {hasText: 'All'}).click();
-  await waitForIssueList(page);
+async function openIssueByTitle(page, issueTitle: string, cgID: string): Promise<boolean> {
+  try {
+    await page.locator('.nav-item', {hasText: 'All'}).click();
+    await waitForIssueList(page);
 
-  if (!(await checkIssueExists(page, issueTitle))) {
-    console.log(`Issue "${issueTitle}" does not exist, skipping`);
+    try {
+      if (!(await checkIssueExists(page, issueTitle))) {
+        console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, `Issue "${issueTitle}" does not exist, skipping`);
+        return false;
+      }
+
+      try {
+        await page
+          .locator('.issue-list .row', {hasText: issueTitle})
+          .first()
+          .scrollIntoViewIfNeeded();
+        await page.locator('.issue-list .row', {hasText: issueTitle}).first().click();
+        
+        console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, `Successfully opened issue: ${issueTitle}`);
+        return true;
+      } catch (error) {
+        console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Failed to click on issue:', error.message);
+        return false;
+      }
+    } catch (error) {
+      console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Failed to check if issue exists:', error.message);
+      return false;
+    }
+  } catch (error) {
+    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Failed to load issue list:', error.message);
     return false;
   }
+}
 
-  await page
-    .locator('.issue-list .row', {hasText: issueTitle})
-    .first()
-    .scrollIntoViewIfNeeded();
-  await page.locator('.issue-list .row', {hasText: issueTitle}).first().click();
-  return true;
+async function openRandomIssue(page, cgID: string): Promise<boolean> {
+  try {
+    await page.locator('.nav-item', {hasText: 'All'}).click();
+    await waitForIssueList(page);
+
+    try {
+      const issues = page.locator('.issue-list .row');
+      const count = await issues.count();
+      
+      if (count === 0) {
+        console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'No issues found to open');
+        return false;
+      }
+
+      const randomIndex = Math.floor(Math.random() * count);
+      await issues.nth(randomIndex).scrollIntoViewIfNeeded();
+      await issues.nth(randomIndex).click();
+      
+      console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, `Opened random issue #${randomIndex + 1} of ${count}`);
+      return true;
+    } catch (error) {
+      console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Failed to select random issue:', error.message);
+      return false;
+    }
+  } catch (error) {
+    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Failed to load issue list:', error.message);
+    return false;
+  }
 }
