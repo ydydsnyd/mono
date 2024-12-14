@@ -8,12 +8,12 @@ const userCookies = [
   'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwRnczbjZFUVM4bXpFMTI2QUZKeDQiLCJpYXQiOjE3MzM5NzM5NDUsIm5hbWUiOiJyb2NpYm90NCIsInJvbGUiOiJjcmV3IiwiZXhwIjoxODIwMzczOTQ1fQ.MDaVc59EXXDpiUbod2cJ3GwcJhAJ5KJa88CuuWT4P2o',
 ];
 
-const DELAY_START = parseInt(process.env.DELAY_START ?? '120000');
+const DELAY_START = parseInt(process.env.DELAY_START ?? '0');
 const DELAY_PER_ITERATION = parseInt(process.env.DELAY_PER_ITERATION ?? '4800');
 const NUM_ITERATIONS = parseInt(process.env.NUM_ITERATIONS ?? '10');
 const URL = process.env.URL ?? 'https://bugs-sandbox.rocicorp.dev';
 const DIRECT_URL =
-  process.env.DIRECT_URL ?? 'https://bugs-sandbox.rocicorp.dev/issue/3017';
+  process.env.DIRECT_URL ?? 'https://bugs-sandbox.rocicorp.dev/issue/3019';
 const PERCENT_DIRECT = parseFloat(process.env.PERCENT_DIRECT ?? '0.75');
 const AWS_BATCH_JOB_ARRAY_INDEX = process.env.AWS_BATCH_JOB_ARRAY_INDEX ?? '-1';
 
@@ -32,10 +32,11 @@ test('loadtest', async ({page, browser, context}) => {
     },
   ]);
   const testID = Math.random().toString(36).substring(2, 8);
-
-  const delay = Math.random() * DELAY_START;
-  console.log(`Delaying for ${delay}ms to create jitter`);
-  await page.waitForTimeout(delay);
+  if(DELAY_START > 0) {
+    const delay = Math.random() * DELAY_START;
+    console.log(`Delaying for ${delay}ms to create jitter`);
+    await page.waitForTimeout(delay);
+  }
   const random = Math.random();
   console.log(`Random: ${random}`);
   const wentDirect = random < PERCENT_DIRECT;
