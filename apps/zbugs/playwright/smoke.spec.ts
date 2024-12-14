@@ -15,6 +15,7 @@ const URL = process.env.URL ?? 'https://bugs-sandbox.rocicorp.dev';
 const DIRECT_URL =
   process.env.DIRECT_URL ?? 'https://bugs-sandbox.rocicorp.dev/issue/3017';
 const PERCENT_DIRECT = parseFloat(process.env.PERCENT_DIRECT ?? '0.75');
+const AWS_BATCH_JOB_ARRAY_INDEX = process.env.AWS_BATCH_JOB_ARRAY_INDEX ?? '-1';
 
 test('loadtest', async ({page, browser, context}) => {
   // print environment variables
@@ -39,38 +40,42 @@ test('loadtest', async ({page, browser, context}) => {
   console.log(`Random: ${random}`);
   const wentDirect = random < PERCENT_DIRECT;
   if (wentDirect) {
+    console.log('Opening direct issue:', DIRECT_URL);
     await page.goto(DIRECT_URL);
   } else {
+    console.log('Opening main page:', URL);
     await page.goto(URL);
   }
   await page.getByLabel('VISITOR PASSWORD').click();
   await page.getByLabel('VISITOR PASSWORD').fill('zql');
   await page.getByLabel('VISITOR PASSWORD').press('Enter');
-
+  let cgID = '';
   const start = Date.now();
   // if it went to direct url, do this branch of code
   if (!wentDirect) {
     await page.waitForSelector('.issue-list .row');
-    console.log(`Start rendered in: ${Date.now() - start}ms`);
+    await page.evaluate('window.z.clientGroupID');
+    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID,  `Start rendered in: ${Date.now() - start}ms`);
   } else {
     await page.waitForSelector('[class^="_commentItem"]');
-    console.log(`Direct Issue Start rendered in: ${Date.now() - start}ms`);
+    cgID = await page.evaluate('window.z.clientGroupID');
+    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, `Direct Issue Start rendered in: ${Date.now() - start}ms`);
   }
 
-  const cgID = await page.evaluate('window.z.clientGroupID');
+
 
   for (let i = 0; i < NUM_ITERATIONS; i++) {
     const iterationStart = Date.now();
-    console.log(cgID, `Iteration: ${i}`);
+
     await openIssueByTitle(page, `Test Issue`);
     if (i % 2 === 0) {
       await commentOnNewIssue(page, 'This is a test comment');
     }
-    console.log(cgID, 'Filtering by open');
+    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Filtering by open');
     await page.locator('.nav-item', {hasText: 'Open'}).click();
-    console.log(cgID, 'Filtering by closed');
+    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Filtering by closed');
     await page.locator('.nav-item', {hasText: 'Closed'}).click();
-    console.log(cgID, 'Filtering by all');
+    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Filtering by all');
     await page.locator('.nav-item', {hasText: 'All'}).click();
     await page.locator('.add-filter').click();
     await page.getByText('Filtered by:+ Filter').click();
@@ -82,7 +87,7 @@ test('loadtest', async ({page, browser, context}) => {
       `#options-listbox > li:nth-child(${Math.floor(Math.random() * 5) + 2})`,
     );
 
-    console.log(cgID, `Filtering by ${await elm.allTextContents()}`);
+    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, `Filtering by ${await elm.allTextContents()}`);
     await elm.click();
     await page.getByRole('button', {name: '+ Filter'}).click();
     // select assignee
@@ -91,14 +96,14 @@ test('loadtest', async ({page, browser, context}) => {
       `#options-listbox > li:nth-child(${Math.floor(Math.random() * 5) + 2})`,
     );
 
-    console.log(cgID, `Filtering by ${await elm.allTextContents()}`);
+    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, `Filtering by ${await elm.allTextContents()}`);
     await elm.click();
-    console.log(cgID, 'Removing user filter');
+    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Removing user filter');
     await page
       .locator('.list-view-filter-container .pill.user')
       .first()
       .click();
-    console.log(cgID, 'Removing label filter');
+    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, 'Removing label filter');
     await page.locator('.list-view-filter-container .pill.user').last().click();
     await page.locator('.nav-item', {hasText: 'All'}).click();
     await page.evaluate(() => {
@@ -108,7 +113,7 @@ test('loadtest', async ({page, browser, context}) => {
       });
     });
 
-    console.log(cgID, `Finished iteration in ${Date.now() - iterationStart}ms`);
+    console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, `Finished iteration in ${Date.now() - iterationStart}ms`);
     await page.goBack();
     await page.waitForTimeout(DELAY_PER_ITERATION);
   }
@@ -121,7 +126,7 @@ test('loadtest', async ({page, browser, context}) => {
     `${cgID} loadtest completed in ${(elapsed / 1000).toFixed(2)} secs`,
   );
   console.log(testID, `Ending Test`);
-  console.log(cgID, `Done`);
+  console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, `Done`);
 });
 
 async function waitForIssueList(page) {
@@ -179,7 +184,6 @@ async function selectRandomEmoji(page) {
   // Get all emoji buttons
   const emojiButtons = page.locator('div.emoji-menu button.emoji');
   const count = await emojiButtons.count();
-  console.log('emoji count:', count);
 
   // Select a random emoji
   const randomIndex = Math.floor(Math.random() * count);
@@ -204,7 +208,6 @@ async function commentOnNewIssue(page, comment: string) {
   const commentCount = await comments.count();
   const randomCommentIndex = Math.floor(Math.random() * commentCount);
 
-  console.log('comment count:', commentCount);
   await comments
     .nth(randomCommentIndex)
     .locator('.add-emoji-button')
