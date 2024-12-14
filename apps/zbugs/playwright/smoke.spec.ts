@@ -13,7 +13,7 @@ const DELAY_PER_ITERATION = parseInt(process.env.DELAY_PER_ITERATION ?? '4800');
 const NUM_ITERATIONS = parseInt(process.env.NUM_ITERATIONS ?? '10');
 const URL = process.env.URL ?? 'https://bugs-sandbox.rocicorp.dev';
 const DIRECT_URL =
-  process.env.DIRECT_URL ?? 'https://bugs-sandbox.rocicorp.dev/issue/3019';
+  process.env.DIRECT_URL ?? 'https://bugs-sandbox.rocicorp.dev/issue/3020';
 const PERCENT_DIRECT = parseFloat(process.env.PERCENT_DIRECT ?? '0.75');
 const AWS_BATCH_JOB_ARRAY_INDEX = process.env.AWS_BATCH_JOB_ARRAY_INDEX ?? '-1';
 
