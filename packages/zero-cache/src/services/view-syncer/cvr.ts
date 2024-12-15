@@ -1,3 +1,4 @@
+import {trace} from '@opentelemetry/api';
 import type {LogContext} from '@rocicorp/logger';
 import {compareUTF8} from 'compare-utf8';
 import {assert} from '../../../../shared/src/asserts.js';
@@ -26,6 +27,8 @@ import {
   type RowID,
   type RowRecord,
 } from './schema/types.js';
+import {startAsyncSpan} from '../../../../otel/src/span.js';
+import {version} from '../../../../otel/src/version.js';
 
 export type RowUpdate = {
   version?: string; // Undefined for an unref.
@@ -64,6 +67,8 @@ function assertNotInternal(
     throw new Error(`Query ID ${query.id} is reserved for internal use`);
   }
 }
+
+const tracer = trace.getTracer('cvr', version);
 
 /**
  * The base CVRUpdater contains logic common to the {@link CVRConfigDrivenUpdater} and
@@ -119,7 +124,7 @@ export class CVRUpdater {
     this._cvrStore.putInstance(this._cvr);
   }
 
-  async flush(
+  flush(
     lc: LogContext,
     lastConnectTime: number,
     lastActive = Date.now(),
@@ -127,24 +132,26 @@ export class CVRUpdater {
     cvr: CVRSnapshot;
     stats: CVRFlushStats;
   }> {
-    const start = Date.now();
+    return startAsyncSpan(tracer, 'cvr.flush', async () => {
+      const start = Date.now();
 
-    this.#setLastActive(lastActive);
-    const stats = await this._cvrStore.flush(
-      this._orig.version,
-      this._cvr.version,
-      lastConnectTime,
-    );
+      this.#setLastActive(lastActive);
+      const stats = await this._cvrStore.flush(
+        this._orig.version,
+        this._cvr.version,
+        lastConnectTime,
+      );
 
-    lc.debug?.(
-      `flushed cvr@${versionString(this._cvr.version)} ${JSON.stringify(
+      lc.debug?.(
+        `flushed cvr@${versionString(this._cvr.version)} ${JSON.stringify(
+          stats,
+        )} in (${Date.now() - start} ms)`,
+      );
+      return {
+        cvr: this._cvr,
         stats,
-      )} in (${Date.now() - start} ms)`,
-    );
-    return {
-      cvr: this._cvr,
-      stats,
-    };
+      };
+    });
   }
 }
 
