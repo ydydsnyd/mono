@@ -101,6 +101,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
   readonly #stateChanges: Subscription<ReplicaState>;
   readonly #drainCoordinator: DrainCoordinator;
   readonly #keepaliveMs: number;
+  #waitingLock: Set<string> = new Set();
 
   // Note: It is fine to update this variable outside of the lock.
   #lastConnectTime = 0;
@@ -156,28 +157,35 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
   #runInLockWithCVR(
     fn: (lc: LogContext, cvr: CVRSnapshot) => Promise<void> | void,
   ): Promise<void> {
-    return this.#lock.withLock(async () => {
-      const lc = this.#lc.withContext('lock', randomID());
-      if (!this.#stateChanges.active) {
-        return; // view-syncer has been shutdown
-      }
-      // If all clients have disconnected, cancel all pending work.
-      if (this.#checkForShutdownConditionsInLock()) {
-        this.#lc.info?.('shutting down');
-        this.#stateChanges.cancel(); // Note: #stateChanges.active becomes false.
-        return;
-      }
-      if (!this.#cvr) {
-        this.#cvr = await this.#cvrStore.load(lc, this.#lastConnectTime);
-      }
-      try {
-        await fn(lc, this.#cvr);
-      } catch (e) {
-        // Clear cached state if an error is encountered.
-        this.#cvr = undefined;
-        throw e;
-      }
-    });
+    const randID = randomID();
+    this.#waitingLock.add(randID);
+    return this.#lock.withLock(() =>
+      startAsyncSpan(tracer, 'vs.#runInLockWithCVR', async span => {
+        this.#waitingLock.delete(randID);
+        span.setAttribute('lockPendingSize', this.#waitingLock.size);
+        span.setAttribute('taskId', randID);
+        const lc = this.#lc.withContext('lock', randID);
+        if (!this.#stateChanges.active) {
+          return; // view-syncer has been shutdown
+        }
+        // If all clients have disconnected, cancel all pending work.
+        if (this.#checkForShutdownConditionsInLock()) {
+          this.#lc.info?.('shutting down');
+          this.#stateChanges.cancel(); // Note: #stateChanges.active becomes false.
+          return;
+        }
+        if (!this.#cvr) {
+          this.#cvr = await this.#cvrStore.load(lc, this.#lastConnectTime);
+        }
+        try {
+          await fn(lc, this.#cvr);
+        } catch (e) {
+          // Clear cached state if an error is encountered.
+          this.#cvr = undefined;
+          throw e;
+        }
+      }),
+    );
   }
 
   async run(): Promise<void> {
@@ -400,9 +408,10 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
     return startAsyncSpan(
       tracer,
       `vs.#runInLockForClient(${cmd})`,
-      async () => {
+      async span => {
         let client: ClientHandler | undefined;
         try {
+          span.setAttribute('waitingFor', [...this.#waitingLock]);
           await this.#runInLockWithCVR((lc, cvr) => {
             lc = lc
               .withContext('clientID', clientID)

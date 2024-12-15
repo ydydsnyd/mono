@@ -28,6 +28,7 @@ import {findErrorForClient} from '../types/error-for-client.js';
 import type {Source} from '../types/streams.js';
 
 const tracer = trace.getTracer('syncer-ws-server', version);
+let requestID = 0;
 
 /**
  * Represents a connection between the client and server.
@@ -172,7 +173,9 @@ export class Connection {
           this.send(['pong', {}] satisfies PongMessage);
           break;
         case 'push': {
-          await startAsyncSpan(tracer, 'connection.push', async () => {
+          await startAsyncSpan(tracer, 'connection.push', async span => {
+            span.setAttribute('cgid', this.#clientGroupID);
+            span.setAttribute('requestID', requestID++);
             const {clientGroupID, mutations, schemaVersion} = msg[1];
             if (clientGroupID !== this.#clientGroupID) {
               this.#closeWithError({
@@ -207,7 +210,13 @@ export class Connection {
           await startAsyncSpan(
             tracer,
             'connection.changeDesiredQueries',
-            async () => {
+            async span => {
+              span.setAttribute('cgid', this.#clientGroupID);
+              span.setAttribute('requestID', requestID++);
+              span.setAttribute(
+                'queryPatchSize',
+                msg[1].desiredQueriesPatch.length,
+              );
               await viewSyncer.changeDesiredQueries(this.#syncContext, msg);
             },
           );
@@ -220,7 +229,15 @@ export class Connection {
           this.#outboundStream = startSpan(
             tracer,
             'connection.initConnection',
-            () => viewSyncer.initConnection(this.#syncContext, msg),
+            span => {
+              span.setAttribute('cgid', this.#clientGroupID);
+              span.setAttribute('requestID', requestID++);
+              span.setAttribute(
+                'queryPatchSize',
+                msg[1].desiredQueriesPatch.length,
+              );
+              return viewSyncer.initConnection(this.#syncContext, msg);
+            },
           );
           void this.#proxyOutbound(this.#outboundStream);
           break;
