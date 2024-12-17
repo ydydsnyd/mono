@@ -1,5 +1,6 @@
 import {afterEach, beforeEach, expect, test, vi} from 'vitest';
 import {SlidingWindowLimiter} from './sliding-window-limiter.js';
+import {createSilentLogContext} from '../../../../shared/src/logging-test-utils.js';
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -12,7 +13,7 @@ afterEach(() => {
 test('all mutations occur at prior window start', () => {
   vi.setSystemTime(10);
 
-  const limiter = new SlidingWindowLimiter(10, 10);
+  const limiter = new SlidingWindowLimiter(createSilentLogContext(), 10, 10);
   for (let i = 0; i < 10; i++) {
     expect(limiter.canDo()).toBe(true);
   }
@@ -33,7 +34,7 @@ test('all mutations occur at prior window end', () => {
   // prior window end is start + windowSizeMs - 1
   vi.setSystemTime(9);
 
-  const limiter = new SlidingWindowLimiter(10, 10);
+  const limiter = new SlidingWindowLimiter(createSilentLogContext(), 10, 10);
   for (let i = 0; i < 10; i++) {
     expect(limiter.canDo()).toBe(true);
   }
@@ -45,7 +46,7 @@ test('all mutations occur at prior window end', () => {
 test('fill the window then slide the window', () => {
   vi.setSystemTime(9);
 
-  const limiter = new SlidingWindowLimiter(10, 10);
+  const limiter = new SlidingWindowLimiter(createSilentLogContext(), 10, 10);
   for (let i = 0; i < 10; i++) {
     expect(limiter.canDo()).toBe(true);
   }
@@ -68,7 +69,7 @@ test('fill the window then slide the window', () => {
 test('all mutations occur at next window start', () => {
   vi.setSystemTime(0);
 
-  const limiter = new SlidingWindowLimiter(10, 10);
+  const limiter = new SlidingWindowLimiter(createSilentLogContext(), 10, 10);
   vi.setSystemTime(10);
 
   for (let i = 0; i < 10; i++) {
@@ -81,7 +82,7 @@ test('all mutations occur at next window start', () => {
 test('all mutations occur at next window end', () => {
   vi.setSystemTime(0);
 
-  const limiter = new SlidingWindowLimiter(10, 10);
+  const limiter = new SlidingWindowLimiter(createSilentLogContext(), 10, 10);
   vi.setSystemTime(19);
 
   for (let i = 0; i < 10; i++) {

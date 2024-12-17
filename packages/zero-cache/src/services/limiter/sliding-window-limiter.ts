@@ -1,3 +1,4 @@
+import type {LogContext} from '@rocicorp/logger';
 import {assert} from '../../../../shared/src/asserts.js';
 
 type Window = {
@@ -51,11 +52,13 @@ type Window = {
 export class SlidingWindowLimiter {
   readonly #windowSizeMs: number;
   readonly #maxMutations: number;
+  readonly #lc: LogContext;
 
   #priorWindow: Window;
   #nextWindow: Window;
 
-  constructor(windowSizeMs: number, maxMutations: number) {
+  constructor(lc: LogContext, windowSizeMs: number, maxMutations: number) {
+    this.#lc = lc.withContext('SlidingWindowLimiter');
     this.#windowSizeMs = windowSizeMs;
     this.#maxMutations = maxMutations;
 
@@ -95,6 +98,10 @@ export class SlidingWindowLimiter {
       } else {
         this.#nextWindow.count++;
       }
+    }
+
+    if (!canDo) {
+      this.#lc.info?.('Throttling user', {totalCalls});
     }
 
     return canDo;

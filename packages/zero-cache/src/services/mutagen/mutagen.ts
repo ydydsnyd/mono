@@ -87,6 +87,7 @@ export class MutagenService implements Mutagen, Service {
 
     if (config.perUserMutationLimit.max !== undefined) {
       this.#limiter = new SlidingWindowLimiter(
+        lc.withContext('clientGroupID', clientGroupID),
         config.perUserMutationLimit.windowMs,
         config.perUserMutationLimit.max,
       );
