@@ -11,8 +11,10 @@ import type {
 import type {GotCallback} from '../../../zql/src/query/query-impl.js';
 import type {ReadTransaction} from '../mod.js';
 import {desiredQueriesPrefixForClient, GOT_QUERIES_KEY_PREFIX} from './keys.js';
+import {findCover} from '../../../zql/src/cover/find-cover.js';
 
 type QueryHash = string;
+type QueryEntry = {normalized: AST; count: number; gotCallbacks: GotCallback[]};
 
 /**
  * Tracks what queries the client is currently subscribed to on the server.
@@ -22,13 +24,11 @@ type QueryHash = string;
 export class QueryManager {
   readonly #clientID: ClientID;
   readonly #send: (change: ChangeDesiredQueriesMessage) => void;
-  readonly #queries: Map<
-    QueryHash,
-    {normalized: AST; count: number; gotCallbacks: GotCallback[]}
-  > = new Map();
+  readonly #queries: Map<QueryHash, QueryEntry> = new Map();
   readonly #recentQueriesMaxSize: number;
-  readonly #recentQueries: Set<string> = new Set();
-  readonly #gotQueries: Set<string> = new Set();
+  readonly #recentQueries: Set<QueryHash> = new Set();
+  readonly #gotQueries: Set<QueryHash> = new Set();
+  readonly #queriesByTable: Map<string, Map<QueryHash, QueryEntry>> = new Map();
 
   constructor(
     clientID: ClientID,
@@ -130,13 +130,30 @@ export class QueryManager {
     const astHash = hashOfAST(normalized);
     let entry = this.#queries.get(astHash);
     this.#recentQueries.delete(astHash);
+
     if (!entry) {
+      // TODO: would be nice if we could constrain the first arg to preload queries only
+      const covering = findCover(this.#queriesByTable, normalized);
+      if (covering !== undefined) {
+        if (gotCallback && this.#gotQueries.has(covering.hash)) {
+          this.#gotQueries.add(astHash);
+          gotCallback(true);
+        }
+
+        return () => {
+          // TODO: if our covering query is removed we need to mark this query as no longer `got`.
+          // This breaks our contract since queries should not go from `got` to `not got`.
+          // We would need to have the server track covering queries to prevent this.
+          this.#gotQueries.delete(astHash);
+        };
+      }
+
       entry = {
         normalized,
         count: 1,
         gotCallbacks: gotCallback === undefined ? [] : [gotCallback],
       };
-      this.#queries.set(astHash, entry);
+      this.#set(astHash, entry);
       this.#send([
         'changeDesiredQueries',
         {
@@ -164,6 +181,16 @@ export class QueryManager {
     };
   }
 
+  #set(astHash: string, entry: QueryEntry) {
+    this.#queries.set(astHash, entry);
+    let existing = this.#queriesByTable.get(entry.normalized.table);
+    if (!existing) {
+      existing = new Map();
+      this.#queriesByTable.set(entry.normalized.table, existing);
+    }
+    existing.set(astHash, entry);
+  }
+
   #remove(astHash: string, gotCallback: GotCallback | undefined) {
     const entry = must(this.#queries.get(astHash));
     if (gotCallback) {
@@ -177,7 +204,13 @@ export class QueryManager {
         const lruAstHash = this.#recentQueries.values().next().value;
         assert(lruAstHash);
         this.#queries.delete(lruAstHash);
+        this.#queriesByTable.get(entry.normalized.table)?.delete(lruAstHash);
         this.#recentQueries.delete(lruAstHash);
+
+        // TODO: find out if we uncovered any queries and add those to the patch.
+        // or.. if the server is tracking covering queries then we don't need to do this.
+        // The server probably does need to track covering queries as mentioned in the earlier TODO
+
         this.#send([
           'changeDesiredQueries',
           {
