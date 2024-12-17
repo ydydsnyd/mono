@@ -30,7 +30,7 @@ test.each([
     ],
   },
   {
-    name: 'constrained query cannot cover any queries',
+    name: 'constrained query cannot cover unconstrained queries',
     cover: newQuery(mockDelegate, issueSchema).where('title', '=', 'foo'),
     uncovered: [
       newQuery(mockDelegate, issueSchema),
@@ -43,7 +43,7 @@ test.each([
     uncovered: [newQuery(mockDelegate, labelSchema)],
   },
   {
-    name: 'limited query cannot cover any queries',
+    name: 'limited query cannot cover any queries (yet)',
     cover: newQuery(mockDelegate, issueSchema).limit(10),
     uncovered: [
       newQuery(mockDelegate, issueSchema),
@@ -110,3 +110,273 @@ test.each([
     expect(covers(ast(cover), ast(u))).toBe(false);
   }
 });
+
+test('debug', () => {
+  expect(
+    covers(
+      {
+        table: 'issue',
+        related: [
+          {
+            correlation: {
+              parentField: ['assigneeID'],
+              childField: ['id'],
+            },
+            subquery: {
+              table: 'user',
+              alias: 'assignee',
+              orderBy: [['id', 'asc']],
+            },
+            system: 'client',
+          },
+          {
+            correlation: {
+              parentField: ['id'],
+              childField: ['issueID'],
+            },
+            subquery: {
+              table: 'comment',
+              alias: 'comments',
+              related: [
+                {
+                  correlation: {
+                    parentField: ['creatorID'],
+                    childField: ['id'],
+                  },
+                  subquery: {
+                    table: 'user',
+                    alias: 'creator',
+                    limit: 1,
+                    orderBy: [['id', 'asc']],
+                  },
+                  system: 'client',
+                },
+                {
+                  correlation: {
+                    parentField: ['id'],
+                    childField: ['subjectID'],
+                  },
+                  subquery: {
+                    table: 'emoji',
+                    alias: 'emoji',
+                    related: [
+                      {
+                        correlation: {
+                          parentField: ['creatorID'],
+                          childField: ['id'],
+                        },
+                        subquery: {
+                          table: 'user',
+                          alias: 'creator',
+                          limit: 1,
+                          orderBy: [['id', 'asc']],
+                        },
+                        system: 'client',
+                      },
+                    ],
+                    orderBy: [['id', 'asc']],
+                  },
+                  system: 'client',
+                },
+              ],
+              limit: 101,
+              orderBy: [
+                ['created', 'desc'],
+                ['id', 'asc'],
+              ],
+            },
+            system: 'client',
+          },
+          {
+            correlation: {
+              parentField: ['creatorID'],
+              childField: ['id'],
+            },
+            subquery: {
+              table: 'user',
+              alias: 'creator',
+              orderBy: [['id', 'asc']],
+            },
+            system: 'client',
+          },
+          {
+            correlation: {
+              parentField: ['id'],
+              childField: ['subjectID'],
+            },
+            subquery: {
+              table: 'emoji',
+              alias: 'emoji',
+              related: [
+                {
+                  correlation: {
+                    parentField: ['creatorID'],
+                    childField: ['id'],
+                  },
+                  subquery: {
+                    table: 'user',
+                    alias: 'creator',
+                    limit: 1,
+                    orderBy: [['id', 'asc']],
+                  },
+                  system: 'client',
+                },
+              ],
+              orderBy: [['id', 'asc']],
+            },
+            system: 'client',
+          },
+          {
+            correlation: {
+              parentField: ['id'],
+              childField: ['issueID'],
+            },
+            subquery: {
+              table: 'issueLabel',
+              alias: 'labels',
+              related: [
+                {
+                  correlation: {
+                    parentField: ['labelID'],
+                    childField: ['id'],
+                  },
+                  hidden: true,
+                  subquery: {
+                    table: 'label',
+                    alias: 'labels',
+                    orderBy: [['id', 'asc']],
+                  },
+                  system: 'client',
+                },
+              ],
+              orderBy: [
+                ['issueID', 'asc'],
+                ['labelID', 'asc'],
+              ],
+            },
+            system: 'client',
+          },
+          {
+            correlation: {
+              parentField: ['id'],
+              childField: ['issueID'],
+            },
+            subquery: {
+              table: 'viewState',
+              alias: 'viewState',
+              where: {
+                type: 'simple',
+                left: {
+                  type: 'column',
+                  name: 'userID',
+                },
+                right: {
+                  type: 'literal',
+                  value: 'anon',
+                },
+                op: '=',
+              },
+              limit: 1,
+              orderBy: [
+                ['userID', 'asc'],
+                ['issueID', 'asc'],
+              ],
+            },
+            system: 'client',
+          },
+        ],
+        orderBy: [['id', 'asc']],
+      },
+
+      /// =============
+
+      {
+        table: 'issue',
+        where: {
+          type: 'simple',
+          left: {
+            type: 'column',
+            name: 'open',
+          },
+          right: {
+            type: 'literal',
+            value: true,
+          },
+          op: '=',
+        },
+        related: [
+          {
+            correlation: {
+              parentField: ['id'],
+              childField: ['issueID'],
+            },
+            subquery: {
+              table: 'issueLabel',
+              alias: 'labels',
+              related: [
+                {
+                  correlation: {
+                    parentField: ['labelID'],
+                    childField: ['id'],
+                  },
+                  hidden: true,
+                  subquery: {
+                    table: 'label',
+                    alias: 'labels',
+                    orderBy: [['id', 'asc']],
+                  },
+                  system: 'client',
+                },
+              ],
+              orderBy: [
+                ['issueID', 'asc'],
+                ['labelID', 'asc'],
+              ],
+            },
+            system: 'client',
+          },
+          {
+            correlation: {
+              parentField: ['id'],
+              childField: ['issueID'],
+            },
+            subquery: {
+              table: 'viewState',
+              alias: 'viewState',
+              where: {
+                type: 'simple',
+                left: {
+                  type: 'column',
+                  name: 'userID',
+                },
+                right: {
+                  type: 'literal',
+                  value: 'anon',
+                },
+                op: '=',
+              },
+              limit: 1,
+              orderBy: [
+                ['userID', 'asc'],
+                ['issueID', 'asc'],
+              ],
+            },
+            system: 'client',
+          },
+        ],
+        orderBy: [
+          ['modified', 'desc'],
+          ['id', 'desc'],
+        ],
+      },
+    ),
+  ).toBe(true);
+});
+
+/**
+ * 
+
+
+
+ * 
+ */

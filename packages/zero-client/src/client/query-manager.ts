@@ -280,10 +280,6 @@ export class QueryManager {
           ?.delete(lruAstHash);
         this.#recentQueries.delete(lruAstHash);
 
-        // TODO: find out if we uncovered any queries and add those to the patch.
-        // or.. if the server is tracking covering queries then we don't need to do this.
-        // The server probably does need to track covering queries as mentioned in the earlier TODO
-
         this.#send([
           'changeDesiredQueries',
           {
