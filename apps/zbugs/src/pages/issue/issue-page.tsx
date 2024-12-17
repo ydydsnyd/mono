@@ -20,10 +20,7 @@ import {assert} from 'shared/src/asserts.js';
 import {useParams} from 'wouter';
 import {navigate, useHistoryState} from 'wouter/use-browser-location';
 import {must} from '../../../../../packages/shared/src/must.js';
-import {
-  difference,
-  symmetricDifferences,
-} from '../../../../../packages/shared/src/set-utils.js';
+import {difference} from '../../../../../packages/shared/src/set-utils.js';
 import type {CommentRow, IssueRow, Schema, UserRow} from '../../../schema.js';
 import statusClosed from '../../assets/icons/issue-closed.svg';
 import statusOpen from '../../assets/icons/issue-open.svg';
