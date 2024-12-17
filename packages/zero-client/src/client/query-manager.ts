@@ -14,7 +14,12 @@ import {desiredQueriesPrefixForClient, GOT_QUERIES_KEY_PREFIX} from './keys.js';
 import {findCover} from '../../../zql/src/cover/find-cover.js';
 
 type QueryHash = string;
-type QueryEntry = {normalized: AST; count: number; gotCallbacks: GotCallback[]};
+type QueryEntry = {
+  normalized: AST;
+  count: number;
+  gotCallbacks: GotCallback[];
+  coveredBy: QueryHash | undefined;
+};
 
 /**
  * Tracks what queries the client is currently subscribed to on the server.
@@ -28,7 +33,14 @@ export class QueryManager {
   readonly #recentQueriesMaxSize: number;
   readonly #recentQueries: Set<QueryHash> = new Set();
   readonly #gotQueries: Set<QueryHash> = new Set();
-  readonly #queriesByTable: Map<string, Map<QueryHash, QueryEntry>> = new Map();
+
+  // Queries that may cover other queries because they are registered with
+  // the server.
+  readonly #queriesThatCanCover: Map<string, Map<QueryHash, QueryEntry>> =
+    new Map();
+  // Queries that are covered by other queries.
+  readonly #coverToCovered: Map<QueryHash, Set<QueryHash>> = new Map();
+  readonly #coveredToCover: Map<QueryHash, QueryHash> = new Map();
 
   constructor(
     clientID: ClientID,
@@ -46,10 +58,12 @@ export class QueryManager {
           switch (diffOp.op) {
             case 'add':
               this.#gotQueries.add(queryHash);
+              this.#updateCoverGots(queryHash, true);
               this.#fireGotCallbacks(queryHash, true);
               break;
             case 'del':
               this.#gotQueries.delete(queryHash);
+              this.#updateCoverGots(queryHash, true);
               this.#fireGotCallbacks(queryHash, false);
               break;
           }
@@ -60,6 +74,31 @@ export class QueryManager {
         initialValuesInFirstDiff: true,
       },
     );
+  }
+
+  /**
+   * If a cover becomes got (or not), then all queries that are covered by that query
+   * should also be considered got (or not).
+   */
+  #updateCoverGots(queryHash: string, got: boolean) {
+    const covered = this.#coverToCovered.get(queryHash);
+    if (covered) {
+      for (const hash of covered) {
+        if (got) {
+          this.#gotQueries.add(hash);
+        } else {
+          this.#gotQueries.delete(hash);
+        }
+      }
+    }
+
+    if (!got && covered) {
+      // remove the query from the coveredToCover map
+      for (const hash of covered) {
+        this.#coveredToCover.delete(hash);
+      }
+      this.#coverToCovered.delete(queryHash);
+    }
   }
 
   #fireGotCallbacks(queryHash: string, got: boolean) {
@@ -88,6 +127,8 @@ export class QueryManager {
     tx: ReadTransaction,
     lastPatch?: Map<string, QueriesPatchOp> | undefined,
   ): Promise<Map<string, QueriesPatchOp>> {
+    // TODO: this needs to handle covering.
+
     const existingQueryHashes = new Set<string>();
     const prefix = desiredQueriesPrefixForClient(this.#clientID);
     for await (const key of tx.scan({prefix}).keys()) {
@@ -133,33 +174,28 @@ export class QueryManager {
 
     if (!entry) {
       // TODO: would be nice if we could constrain the first arg to preload queries only
-      const covering = findCover(this.#queriesByTable, normalized);
-      if (covering !== undefined) {
-        if (gotCallback && this.#gotQueries.has(covering.hash)) {
-          this.#gotQueries.add(astHash);
-          gotCallback(true);
-        }
-
-        return () => {
-          // TODO: if our covering query is removed we need to mark this query as no longer `got`.
-          // This breaks our contract since queries should not go from `got` to `not got`.
-          // We would need to have the server track covering queries to prevent this.
-          this.#gotQueries.delete(astHash);
-        };
-      }
+      const covering = findCover(this.#queriesThatCanCover, normalized);
 
       entry = {
         normalized,
         count: 1,
         gotCallbacks: gotCallback === undefined ? [] : [gotCallback],
+        coveredBy: covering?.hash,
       };
       this.#set(astHash, entry);
-      this.#send([
-        'changeDesiredQueries',
-        {
-          desiredQueriesPatch: [{op: 'put', hash: astHash, ast: normalized}],
-        },
-      ]);
+
+      if (covering !== undefined) {
+        if (gotCallback && this.#gotQueries.has(covering.hash)) {
+          this.#gotQueries.add(astHash);
+        }
+      } else {
+        this.#send([
+          'changeDesiredQueries',
+          {
+            desiredQueriesPatch: [{op: 'put', hash: astHash, ast: normalized}],
+          },
+        ]);
+      }
     } else {
       ++entry.count;
       if (gotCallback) {
@@ -183,12 +219,23 @@ export class QueryManager {
 
   #set(astHash: string, entry: QueryEntry) {
     this.#queries.set(astHash, entry);
-    let existing = this.#queriesByTable.get(entry.normalized.table);
-    if (!existing) {
-      existing = new Map();
-      this.#queriesByTable.set(entry.normalized.table, existing);
+
+    if (entry.coveredBy === undefined) {
+      let existing = this.#queriesThatCanCover.get(entry.normalized.table);
+      if (!existing) {
+        existing = new Map();
+        this.#queriesThatCanCover.set(entry.normalized.table, existing);
+      }
+      existing.set(astHash, entry);
+    } else {
+      let existing = this.#coverToCovered.get(entry.coveredBy);
+      if (!existing) {
+        existing = new Set();
+        this.#coverToCovered.set(entry.coveredBy, existing);
+      }
+      existing.add(astHash);
+      this.#coveredToCover.set(astHash, entry.coveredBy);
     }
-    existing.set(astHash, entry);
   }
 
   #remove(astHash: string, gotCallback: GotCallback | undefined) {
@@ -198,13 +245,39 @@ export class QueryManager {
       entry.gotCallbacks.splice(index, 1);
     }
     --entry.count;
+
     if (entry.count === 0) {
+      if (entry.coveredBy !== undefined) {
+        const covering = must(this.#coverToCovered.get(entry.coveredBy));
+        covering.delete(astHash);
+        this.#coveredToCover.delete(astHash);
+        if (covering.size === 0) {
+          this.#coverToCovered.delete(entry.coveredBy);
+          const coverEntry = must(this.#queries.get(entry.coveredBy));
+          if (coverEntry.count === 0) {
+            this.#remove(entry.coveredBy, undefined);
+          }
+        }
+      }
+    }
+
+    if (entry.count === 0) {
+      // If we're covering a query, don't remove this query.
+      if (entry.coveredBy === undefined) {
+        const covering = this.#coverToCovered.get(astHash);
+        if (covering && covering.size > 0) {
+          return;
+        }
+      }
+
       this.#recentQueries.add(astHash);
       if (this.#recentQueries.size > this.#recentQueriesMaxSize) {
         const lruAstHash = this.#recentQueries.values().next().value;
         assert(lruAstHash);
         this.#queries.delete(lruAstHash);
-        this.#queriesByTable.get(entry.normalized.table)?.delete(lruAstHash);
+        this.#queriesThatCanCover
+          .get(entry.normalized.table)
+          ?.delete(lruAstHash);
         this.#recentQueries.delete(lruAstHash);
 
         // TODO: find out if we uncovered any queries and add those to the patch.

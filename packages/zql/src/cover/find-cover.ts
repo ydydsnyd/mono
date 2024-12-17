@@ -1,4 +1,3 @@
-import {assert} from '../../../shared/src/asserts.js';
 import {must} from '../../../shared/src/must.js';
 import type {AST} from '../../../zero-protocol/src/ast.js';
 import {gatherCorrelatedSubqueryQueriesFromCondition} from '../builder/builder.js';

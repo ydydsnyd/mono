@@ -89,13 +89,13 @@ test.each([
       .related('comments'),
     covered: [
       newQuery(mockDelegate, issueSchema).whereExists('labels'),
-      // newQuery(mockDelegate, issueSchema)
-      //   .whereExists('labels')
-      //   .whereExists('comments'),
-      // newQuery(mockDelegate, issueSchema)
-      //   .whereExists('labels')
-      //   .related('comments')
-      //   .related('labels'),
+      newQuery(mockDelegate, issueSchema)
+        .whereExists('labels')
+        .whereExists('comments'),
+      newQuery(mockDelegate, issueSchema)
+        .whereExists('labels')
+        .related('comments')
+        .related('labels'),
     ],
   },
   // recursive relationships
