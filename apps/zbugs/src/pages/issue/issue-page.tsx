@@ -889,6 +889,25 @@ function useShowToastForNewComment(
       currentCommentIDs,
     );
 
+    // Some comments were removed. We need to adjust the scroll position up
+    // by that number of pixels so that visually the user doesn't see the
+    // comments jump.
+    // TODO: Only do if not at top or bottom of list
+    // At bottom of list we don't want to lose the comment box while typing into it
+    // At top we don't want the page moving while reading issue content
+    // Perhaps the heuristic could be that if either:
+    // - first comment is below top of content area
+    // - within ~20px of bottom of scroll
+    // don't adjust scroll position
+    const removedCommentHeight = Array.from(removedCommentIDs).reduce(
+      (total, id) => {
+        const height = commentSizeCache.get(id) ?? 0;
+        return total + height + virtualizer.options.gap;
+      },
+      0,
+    );
+    virtualizer.scrollBy(-removedCommentHeight);
+
     const lCommentIds = lastCommentIDs.current;
     const newCommentIDs = [];
     for (let i = comments.length - 1; i >= 0; i--) {
