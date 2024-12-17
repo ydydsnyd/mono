@@ -1,17 +1,20 @@
 import {test} from '@playwright/test';
-import {time} from 'console';
 
-const userCookies = [
-  'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJPZVZucjF5NWJFTV9ZZzA2c1VGdEQiLCJpYXQiOjE3MzQxMzY3NDYsInJvbGUiOiJjcmV3IiwibmFtZSI6ImFib29kbWFuIiwiZXhwIjoxNzM2NzI4NzQ2fQ.muDyQMOsjYi--80bl3kxyxzIHmZbA1lCdsK6z3B58LI',
-];
+const userCookies = process.env.USER_COOKIES
+  ? JSON.parse(process.env.USER_COOKIES)
+  : [
+      'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJPZVZucjF5NWJFTV9ZZzA2c1VGdEQiLCJpYXQiOjE3MzQxMzY3NDYsInJvbGUiOiJjcmV3IiwibmFtZSI6ImFib29kbWFuIiwiZXhwIjoxNzM2NzI4NzQ2fQ.muDyQMOsjYi--80bl3kxyxzIHmZbA1lCdsK6z3B58LI',
+    ];
 
-const sandboxCookies = [
-  'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwRnczbjZFUVM4bXpFMTI2QUZKeDEiLCJpYXQiOjE3MzM5NTkyMDksIm5hbWUiOiJyb2NpYm90MSIsInJvbGUiOiJjcmV3IiwiZXhwIjoxODIwMzU5MjEwfQ._KK8Zyf5qV6ICCR2qrPyh_-G15hTm_XKnXrzUKOlB28',
-  'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwRnczbjZFUVM4bXpFMTI2QUZKeDAiLCJpYXQiOjE3MzMyOTc5MTUsInJvbGUiOiJjcmV3IiwibmFtZSI6InJvY2lib3QiLCJleHAiOjE4MTk2OTc5MTV9.mmBeGC_r6y1p3YFqnMN5fRmwm5dBAOHBJVPVHIfOSNA',
-  'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwRnczbjZFUVM4bXpFMTI2QUZKeDIiLCJpYXQiOjE3MzM5NTkyNzUsIm5hbWUiOiJyb2NpYm90MiIsInJvbGUiOiJjcmV3IiwiZXhwIjoxODIwMzU5Mjc1fQ.qGQTHFmnPyfAu3xGlWyEuSREcnwcZCKwyiW9ckRrPZY',
-  'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwRnczbjZFUVM4bXpFMTI2QUZKeDMiLCJpYXQiOjE3MzM5NzQwMDIsIm5hbWUiOiJyb2NpYm90MyIsInJvbGUiOiJjcmV3IiwiZXhwIjoxODIwMzc0MDA0fQ.dpXsIDlMzNUlQpWY0c3Vh1hrBo36hNDmsXHyy59NhaQ',
-  'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwRnczbjZFUVM4bXpFMTI2QUZKeDQiLCJpYXQiOjE3MzM5NzM5NDUsIm5hbWUiOiJyb2NpYm90NCIsInJvbGUiOiJjcmV3IiwiZXhwIjoxODIwMzczOTQ1fQ.MDaVc59EXXDpiUbod2cJ3GwcJhAJ5KJa88CuuWT4P2o',
-];
+const sandboxCookies = process.env.SANDBOX_COOKIES
+  ? JSON.parse(process.env.SANDBOX_COOKIES)
+  : [
+      'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwRnczbjZFUVM4bXpFMTI2QUZKeDEiLCJpYXQiOjE3MzM5NTkyMDksIm5hbWUiOiJyb2NpYm90MSIsInJvbGUiOiJjcmV3IiwiZXhwIjoxODIwMzU5MjEwfQ._KK8Zyf5qV6ICCR2qrPyh_-G15hTm_XKnXrzUKOlB28',
+      'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwRnczbjZFUVM4bXpFMTI2QUZKeDAiLCJpYXQiOjE3MzMyOTc5MTUsInJvbGUiOiJjcmV3IiwibmFtZSI6InJvY2lib3QiLCJleHAiOjE4MTk2OTc5MTV9.mmBeGC_r6y1p3YFqnMN5fRmwm5dBAOHBJVPVHIfOSNA',
+      'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwRnczbjZFUVM4bXpFMTI2QUZKeDIiLCJpYXQiOjE3MzM5NTkyNzUsIm5hbWUiOiJyb2NpYm90MiIsInJvbGUiOiJjcmV3IiwiZXhwIjoxODIwMzU5Mjc1fQ.qGQTHFmnPyfAu3xGlWyEuSREcnwcZCKwyiW9ckRrPZY',
+      'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwRnczbjZFUVM4bXpFMTI2QUZKeDMiLCJpYXQiOjE3MzM5NzQwMDIsIm5hbWUiOiJyb2NpYm90MyIsInJvbGUiOiJjcmV3IiwiZXhwIjoxODIwMzc0MDA0fQ.dpXsIDlMzNUlQpWY0c3Vh1hrBo36hNDmsXHyy59NhaQ',
+      'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwRnczbjZFUVM4bXpFMTI2QUZKeDQiLCJpYXQiOjE3MzM5NzM5NDUsIm5hbWUiOiJyb2NpYm90NCIsInJvbGUiOiJjcmV3IiwiZXhwIjoxODIwMzczOTQ1fQ.MDaVc59EXXDpiUbod2cJ3GwcJhAJ5KJa88CuuWT4P2o',
+    ];
 
 const DELAY_START = parseInt(process.env.DELAY_START ?? '0');
 const DELAY_PER_ITERATION = parseInt(process.env.DELAY_PER_ITERATION ?? '4800');
@@ -22,24 +25,27 @@ const DIRECT_URL = process.env.DIRECT_URL ?? `${SITE_URL}/issue/${ISSUE_ID}`;
 const PERCENT_DIRECT = parseFloat(process.env.PERCENT_DIRECT ?? '0.75');
 const AWS_BATCH_JOB_ARRAY_INDEX = process.env.AWS_BATCH_JOB_ARRAY_INDEX ?? '-1';
 const ENTER_PASSWORD = process.env.ENTER_PASSWORD === '1';
+const NO_JWT = process.env.NO_JWT === '1';
 const ADD_COMMENTS_AND_EMOJI =
   (process.env.ADD_COMMENTS_AND_EMOJI ?? '1') === '1';
 test('loadtest', async ({page, browser, context}) => {
   // print environment variables
   console.log(process.env);
   test.setTimeout(700000);
-  await page.context().addCookies([
-    {
-      name: 'jwt',
-      value: SITE_URL.includes('sandbox')
-        ? sandboxCookies[Math.floor(Math.random() * sandboxCookies.length)]
-        : userCookies[Math.floor(Math.random() * userCookies.length)],
-      domain: new URL(SITE_URL).host,
-      path: '/',
-      expires: -1,
-      httpOnly: false,
-    },
-  ]);
+  if (!NO_JWT) {
+    await page.context().addCookies([
+      {
+        name: 'jwt',
+        value: SITE_URL.includes('sandbox')
+          ? sandboxCookies[Math.floor(Math.random() * sandboxCookies.length)]
+          : userCookies[Math.floor(Math.random() * userCookies.length)],
+        domain: new URL(SITE_URL).host,
+        path: '/',
+        expires: -1,
+        httpOnly: false,
+      },
+    ]);
+  }
   const testID = Math.random().toString(36).substring(2, 8);
   if (DELAY_START > 0) {
     const delay = Math.random() * DELAY_START;
