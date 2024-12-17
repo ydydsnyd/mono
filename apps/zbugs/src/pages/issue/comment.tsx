@@ -71,6 +71,7 @@ const Comment = memo(({id, issueID, comment, height}: Props) => {
         />{' '}
         {comment.creator?.login}
       </p>
+      {comment.id}
       <span id={permalink} className={style.commentTimestamp}>
         <Link href={`#${permalink}`}>
           <RelativeTime timestamp={comment.created} />
