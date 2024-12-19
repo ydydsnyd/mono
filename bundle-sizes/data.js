@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734577561857,
+  "lastUpdate": 1734652411749,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50217,6 +50217,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32083,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "masylum@gmail.com",
+            "name": "Pau Ramon Revilla",
+            "username": "masylum"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "3fefbba77f8ce36801a09069f5d68a5565961749",
+          "message": "Expose `getDefaultPusher`\n\nCurrent workaround is:\r\n\r\nfunction getDefaultPusher() {\r\n\tconst r = new Replicache({ name: \"foo\", licenseKey: \"bar\" })\r\n\treturn r.pusher\r\n}",
+          "timestamp": "2024-12-19T13:52:42-10:00",
+          "tree_id": "aae4b9431d386915f85ca87da3c913d3d0d89063",
+          "url": "https://github.com/rocicorp/mono/commit/3fefbba77f8ce36801a09069f5d68a5565961749"
+        },
+        "date": 1734652402337,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 313672,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54784,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 115486,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32005,
             "unit": "bytes"
           }
         ]
