@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734007149495,
+  "lastUpdate": 1734577561857,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50153,6 +50153,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/321114ddca0a0357ff10d39d5474dff2c1a1e756"
         },
         "date": 1734007131931,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 313652,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54797,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 115463,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32083,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "8b5be1b7e5cfd3bb24740aaae89c9832873454f3",
+          "message": "chore: Remove LICENSE file from zbugs and replicache.\n\nThe entire repo is now Apache 2.",
+          "timestamp": "2024-12-18T17:04:47-10:00",
+          "tree_id": "0449ff2f628d32b795c4e4c4dec4acd030f24a6f",
+          "url": "https://github.com/rocicorp/mono/commit/8b5be1b7e5cfd3bb24740aaae89c9832873454f3"
+        },
+        "date": 1734577552308,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
