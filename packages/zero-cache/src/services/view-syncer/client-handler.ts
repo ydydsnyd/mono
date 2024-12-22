@@ -283,7 +283,7 @@ function makeRowPatch(patch: RowPatch, protocolVersion: number): RowPatchOp {
     case 'put': {
       const value = v.parse(ensureSafeJSON(patch.contents), rowSchema);
       const contents =
-        protocolVersion >= 3
+        protocolVersion >= 4
           ? {
               id: v.parse(id, primaryKeyValueRecordSchema),
               rest: rest(id, value),

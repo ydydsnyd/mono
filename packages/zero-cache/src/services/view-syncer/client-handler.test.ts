@@ -67,7 +67,7 @@ describe('view-syncer/client-handler', () => {
         'g1',
         'id3',
         'ws3',
-        2, // And is also at an older protocol version
+        3, // And is also at an older protocol version
         SHARD_ID,
         '11z',
         schemaVersion,
