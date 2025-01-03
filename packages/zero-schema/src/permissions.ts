@@ -13,7 +13,10 @@ import {
   type Parameter,
 } from '../../zero-protocol/src/ast.js';
 import {staticParam} from '../../zql/src/query/query-impl.js';
-import type {ExpressionBuilder} from '../../zql/src/query/expression.js';
+import type {
+  ExpressionBuilder,
+  ParameterProxy,
+} from '../../zql/src/query/expression.js';
 import {assert} from '../../shared/src/asserts.js';
 
 export const ANYONE_CAN = undefined;
@@ -25,7 +28,7 @@ export type Queries<TSchema extends Schema> = {
 };
 
 type PermissionRule<TAuthDataShape, TSchema extends TableSchema> = (
-  authData: TAuthDataShape,
+  authData: ParameterProxy<TAuthDataShape>,
   eb: ExpressionBuilder<TSchema>,
 ) => Condition;
 
@@ -134,7 +137,7 @@ function compileRules<TAuthDataShape, TSchema extends TableSchema>(
     rule =>
       [
         'allow',
-        rule(authDataRef as TAuthDataShape, expressionBuilder),
+        rule(authDataRef as ParameterProxy<TAuthDataShape>, expressionBuilder),
       ] as const,
   );
 }

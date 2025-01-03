@@ -20,6 +20,12 @@ export type ParameterReference = {
   [toStaticParam](): Parameter;
 };
 
+export type ParameterProxy<TShape> = {
+  [K in keyof TShape]: ParameterProxy<TShape[K]> extends object | undefined
+    ? ParameterReference & ParameterProxy<TShape[K]>
+    : ParameterReference;
+};
+
 /**
  * A factory function that creates a condition. This is used to create
  * complex conditions that can be passed to the `where` method of a query.

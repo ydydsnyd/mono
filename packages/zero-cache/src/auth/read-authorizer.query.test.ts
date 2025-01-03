@@ -22,7 +22,10 @@ import {Catch} from '../../../zql/src/ivm/catch.js';
 import type {Node} from '../../../zql/src/ivm/data.js';
 import {MemoryStorage} from '../../../zql/src/ivm/memory-storage.js';
 import type {Source} from '../../../zql/src/ivm/source.js';
-import type {ExpressionBuilder} from '../../../zql/src/query/expression.js';
+import type {
+  ExpressionBuilder,
+  ParameterProxy,
+} from '../../../zql/src/query/expression.js';
 import {
   completedAstSymbol,
   newQuery,
@@ -313,19 +316,16 @@ const permissions = must(
     ) => exists('issue', q => q.where(eb => canSeeIssue(authData, eb)));
 
     const isAdmin = (
-      authData: AuthData,
+      authData: ParameterProxy<AuthData>,
       {cmpLit}: ExpressionBuilder<TableSchema>,
     ) => cmpLit(authData.role, '=', 'admin');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    type TODO = any;
     const isAdminThroughNestedData = (
-      authData: AuthData,
+      authData: ParameterProxy<AuthData>,
       {cmpLit}: ExpressionBuilder<TableSchema>,
-      // TODO: proxy should return parameter references instead....
-    ) => cmpLit(authData.properties?.role as TODO, 'IS', 'admin');
+    ) => cmpLit(authData.properties?.role, 'IS', 'admin');
 
     const isMemberOfProject = (
-      authData: AuthData,
+      authData: ParameterProxy<AuthData>,
       {exists}: ExpressionBuilder<typeof schema.tables.issue>,
     ) =>
       exists('project', q =>
@@ -338,7 +338,7 @@ const permissions = must(
     ) => cmp('ownerId', '=', authData.sub);
 
     const isIssueCreator = (
-      authData: AuthData,
+      authData: ParameterProxy<AuthData>,
       {cmp}: ExpressionBuilder<typeof schema.tables.issue>,
     ) => cmp('creatorId', '=', authData.sub);
 
@@ -356,10 +356,7 @@ const permissions = must(
       issue: {
         row: {
           insert: [
-            (
-              authData: AuthData,
-              eb: ExpressionBuilder<typeof schema.tables.issue>,
-            ) =>
+            (authData, eb: ExpressionBuilder<typeof schema.tables.issue>) =>
               eb.and(
                 isIssueCreator(authData, eb),
                 eb.or(isAdmin(authData, eb), isMemberOfProject(authData, eb)),
